@@ -1,0 +1,66 @@
+.gaugeContainer {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.svg {
+  transform: rotate(150deg);
+  overflow: visible;
+}
+
+.track {
+  stroke-dasharray: 251.2 376.8; /* circumference * 0.666, circumference */
+  /* Note: roughly 2/3 of a full circle. Actual circumference = 2 * pi * 60 ~= 377 */
+}
+
+.optimalTrack {
+  transform-origin: center;
+}
+
+.valueTrack {
+  transition: stroke-dashoffset 0.8s cubic-bezier(0.4, 0, 0.2, 1), stroke 0.4s ease;
+}
+
+.glowTrack {
+  transition: stroke-dashoffset 0.8s cubic-bezier(0.4, 0, 0.2, 1), stroke 0.4s ease;
+  filter: blur(8px);
+  opacity: 0.6;
+}
+
+.content {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  margin-top: 15px;
+}
+
+.value {
+  font-size: 32px;
+  font-weight: 800;
+  font-family: var(--font-mono);
+  line-height: 1;
+  text-shadow: 0 0 16px currentColor;
+  transition: color 0.4s ease;
+}
+
+.label {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-top: 4px;
+}
+
+.unit {
+  font-size: 11px;
+  color: var(--text-muted);
+}

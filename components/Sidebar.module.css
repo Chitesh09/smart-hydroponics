@@ -1,0 +1,221 @@
+.sidebar {
+  width: 240px;
+  min-height: 100vh;
+  background: linear-gradient(180deg, #090f18 0%, #0a1520 100%);
+  border-right: 1px solid rgba(0, 212, 170, 0.1);
+  display: flex;
+  flex-direction: column;
+  position: fixed;
+  left: 0; top: 0; bottom: 0;
+  z-index: 100;
+  padding: 20px 12px;
+  gap: 4px;
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px 20px;
+  border-bottom: 1px solid rgba(0, 212, 170, 0.08);
+  margin-bottom: 8px;
+}
+
+.logoIcon {
+  width: 40px; height: 40px;
+  background: linear-gradient(135deg, #00d4aa20, #00d4aa08);
+  border: 1px solid rgba(0, 212, 170, 0.3);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #00d4aa;
+  flex-shrink: 0;
+}
+
+.logoName {
+  font-size: 17px;
+  font-weight: 800;
+  color: #e2f0f9;
+  letter-spacing: -0.02em;
+}
+
+.logoSub {
+  font-size: 10px;
+  color: #445d6e;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.healthCard {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(0, 212, 170, 0.1);
+  border-radius: 12px;
+  padding: 10px 12px;
+  margin-bottom: 16px;
+}
+
+.healthIndicator {
+  flex-shrink: 0;
+}
+
+.healthDot {
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  background: var(--status-color, #22c55e);
+  box-shadow: 0 0 8px var(--status-color, #22c55e);
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.healthLabel {
+  font-size: 12px;
+  font-weight: 600;
+  color: #e2f0f9;
+}
+
+.healthSub {
+  font-size: 10px;
+  color: #445d6e;
+  margin-top: 1px;
+}
+
+.activityIcon {
+  margin-left: auto;
+  color: #445d6e;
+  flex-shrink: 0;
+}
+
+.nav {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+}
+
+.navLabel {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #445d6e;
+  padding: 4px 12px 8px;
+}
+
+.navItem {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  color: #7aadcc;
+  transition: all 0.2s ease;
+  position: relative;
+  text-decoration: none;
+}
+
+.navItem:hover {
+  background: rgba(0, 212, 170, 0.06);
+  color: #e2f0f9;
+}
+
+.navItemActive {
+  background: linear-gradient(135deg, rgba(0, 212, 170, 0.15), rgba(0, 212, 170, 0.05));
+  color: #00d4aa;
+  border: 1px solid rgba(0, 212, 170, 0.2);
+}
+
+.navItemActive:hover {
+  background: linear-gradient(135deg, rgba(0, 212, 170, 0.2), rgba(0, 212, 170, 0.08));
+  color: #00d4aa;
+}
+
+.navIcon {
+  width: 34px; height: 34px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255,255,255,0.04);
+  flex-shrink: 0;
+}
+
+.navItemActive .navIcon {
+  background: rgba(0, 212, 170, 0.15);
+}
+
+.navText {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  flex: 1;
+}
+
+.navLabel2 {
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.navDesc {
+  font-size: 10px;
+  color: #445d6e;
+  line-height: 1;
+}
+
+.navItemActive .navDesc {
+  color: rgba(0, 212, 170, 0.6);
+}
+
+.navBadge {
+  background: #ef4444;
+  color: white;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 999px;
+  min-width: 20px;
+  text-align: center;
+}
+
+.navArrow {
+  color: rgba(0, 212, 170, 0.5);
+}
+
+.bottom {
+  padding-top: 16px;
+  border-top: 1px solid rgba(0, 212, 170, 0.08);
+  margin-top: 8px;
+}
+
+.sdgBadges {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+
+.sdgBadge {
+  background: rgba(0, 212, 170, 0.08);
+  border: 1px solid rgba(0, 212, 170, 0.2);
+  color: #00d4aa;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 999px;
+  letter-spacing: 0.05em;
+}
+
+.bottomMeta {
+  font-size: 10px;
+  color: #445d6e;
+  text-align: center;
+}

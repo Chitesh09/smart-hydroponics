@@ -1,0 +1,49 @@
+.backgroundContainer {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.backgroundImage {
+  position: absolute;
+  inset: -5%; /* Slight bleed to allow floating/parallax if wanted */
+  background-image: url('/bg-calm.png');
+  background-size: cover;
+  background-position: center;
+  filter: saturate(0.8) brightness(0.6) blur(2px);
+}
+
+.overlay {
+  position: absolute;
+  inset: 0;
+  /* Deep dark bluish overlay to blend with the app's existing theme */
+  background: linear-gradient(180deg, rgba(5, 11, 18, 0.85) 0%, rgba(5, 11, 18, 0.95) 100%);
+}
+
+.floater {
+  position: absolute;
+  bottom: -150px;
+  background: radial-gradient(circle, rgba(0, 212, 170, 0.15) 0%, transparent 70%);
+  border-radius: 50%;
+  filter: blur(10px);
+  animation: floatUp linear infinite;
+}
+
+@keyframes floatUp {
+  0% {
+    transform: translateY(0) scale(0.8);
+    opacity: 0;
+  }
+  20% {
+    opacity: 1;
+  }
+  80% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-120vh) scale(1.5);
+    opacity: 0;
+  }
+}
