@@ -26,9 +26,16 @@ const systemItems = [
 interface SidebarProps {
   systemStatus?: 'stable' | 'correcting' | 'fault';
   alertCount?: number;
+  isOpen?: boolean;
+  onClose?: () => void;
 }
 
-export function Sidebar({ systemStatus = 'stable', alertCount = 0 }: SidebarProps) {
+export function Sidebar({ 
+  systemStatus = 'stable', 
+  alertCount = 0,
+  isOpen = false,
+  onClose
+}: SidebarProps) {
   const pathname = usePathname();
 
   // Vibrant semantic mapping matching design tokens
@@ -52,6 +59,7 @@ export function Sidebar({ systemStatus = 'stable', alertCount = 0 }: SidebarProp
         key={href}
         href={href}
         className={`${styles.navItem} ${isActive ? styles.navItemActive : ''}`}
+        onClick={onClose}
       >
         <div className={styles.navIcon}>
           <Icon size={18} />
@@ -69,7 +77,7 @@ export function Sidebar({ systemStatus = 'stable', alertCount = 0 }: SidebarProp
   };
 
   return (
-    <aside className={`${styles.sidebar} sidebar-animate`}>
+    <aside className={`${styles.sidebar} ${isOpen ? styles.sidebarOpen : ''} sidebar-animate`}>
       {/* Logo */}
       <div className={styles.logo}>
         <div className={styles.logoIcon}>

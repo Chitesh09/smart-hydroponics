@@ -259,7 +259,7 @@ export default function Dashboard() {
             </span>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '32px', flexWrap: 'wrap' }}>
+          <div className={styles.reservoirFlex}>
             {/* industrial reservoir tank visualizer */}
             <div style={{ 
               position: 'relative', 

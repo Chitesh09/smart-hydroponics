@@ -1,0 +1,57 @@
+.desktopDiagram {
+  display: block;
+}
+
+.mobileFlowDiagram {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .desktopDiagram {
+    display: none;
+  }
+  
+  .mobileFlowDiagram {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    padding: 16px 0;
+  }
+}
+
+.flowCard {
+  width: 100%;
+  max-width: 320px;
+  background: #0D1B2A;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-md);
+  padding: 14px;
+  text-align: center;
+}
+
+.flowCardActive {
+  border-color: #00E5FF;
+}
+
+.flowCardTitle {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #F4F7FB;
+  margin-bottom: 4px;
+}
+
+.flowCardDesc {
+  font-size: 10.5px;
+  color: #8FA3B8;
+}
+
+.flowArrow {
+  font-size: 18px;
+  font-weight: 700;
+  color: #5A738E;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}

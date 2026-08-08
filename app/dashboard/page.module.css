@@ -95,3 +95,18 @@
   border: 1px solid rgba(0, 229, 255, 0.2);
   color: var(--color-primary);
 }
+
+.reservoirFlex {
+  display: flex;
+  align-items: center;
+  gap: 32px;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 640px) {
+  .reservoirFlex {
+    justify-content: center;
+    gap: 20px;
+    text-align: center;
+  }
+}

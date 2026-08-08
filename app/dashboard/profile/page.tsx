@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { User, Mail, Shield, Bell, LogOut, CheckCircle } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { toast, Toaster } from 'react-hot-toast';
+import styles from './page.module.css';
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -47,7 +48,7 @@ export default function ProfilePage() {
         <p className="text-secondary">Manage your account settings, preferences, and security.</p>
       </div>
 
-      <div className="grid-2" style={{ gridTemplateColumns: '1fr 2fr', gap: '24px' }}>
+      <div className={styles.profileGrid}>
         
         {/* Left column - Account Basics */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>

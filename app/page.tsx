@@ -148,7 +148,7 @@ export default function EntryPage() {
               {authMode === 'signin' && (
                 <div className={styles.checkboxContainer}>
                   <label className={styles.checkboxLabel}>
-                    <input type="checkbox" defaultChecked style={{ accentColor: '#00d4aa' }} />
+                    <input type="checkbox" defaultChecked style={{ accentColor: '#00E5FF' }} />
                     <span>Remember this station</span>
                   </label>
                 </div>
@@ -175,7 +175,7 @@ export default function EntryPage() {
       {/* 2. Connecting / System Loading Page */}
       {flowState === 'connecting' && (
         <div className={styles.transitionContainer}>
-          <CheckCircle2 size={44} className="text-primary" style={{ marginBottom: '24px', color: '#00d4aa' }} />
+          <CheckCircle2 size={44} className="text-primary" style={{ marginBottom: '24px', color: '#00E5FF' }} />
           <h2 className={styles.transitionTitle}>Authorization Granted</h2>
           <p className={styles.transitionSubtitle}>Synchronizing metrics with ESP32 receiver...</p>
           <div className={styles.spinner} />

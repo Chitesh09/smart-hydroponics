@@ -10,6 +10,25 @@
   padding: 32px 40px;
   position: relative;
   z-index: 10;
+  min-width: 0; /* Prevents overflow from children */
+}
+
+.mobileHeader {
+  display: none;
+}
+
+.backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(3, 7, 18, 0.55);
+  backdrop-filter: blur(3px);
+  z-index: 95;
+  animation: fadeIn 0.22s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 @media (max-width: 768px) {
@@ -18,7 +37,34 @@
   }
   .main {
     margin-left: 0;
-    margin-bottom: 80px; /* Space for bottom nav if we added one */
-    padding: 20px;
+    margin-top: 56px; /* Space for the top header */
+    padding: 24px 16px;
+  }
+  .mobileHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 56px;
+    background: #0D1B2A;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    padding: 0 16px;
+    z-index: 100;
+  }
+  .menuBtn {
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 8px;
+    margin-left: -8px;
+    cursor: pointer;
+  }
+  .mobileLogo {
+    display: flex;
+    align-items: center;
   }
 }

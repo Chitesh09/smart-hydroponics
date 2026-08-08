@@ -1,6 +1,7 @@
 'use client';
 
 import { Cpu, HardDrive, Layers, Zap } from 'lucide-react';
+import styles from './page.module.css';
 
 export default function HardwarePage() {
   return (
@@ -12,14 +13,14 @@ export default function HardwarePage() {
       </div>
 
       {/* Central Architecture Flow Diagram */}
-      <div className="glass-card" style={{ padding: '32px' }}>
+      <div className="glass-card" style={{ padding: '24px' }}>
         <h2 className="text-lg font-bold mb-lg" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <Layers size={18} className="text-primary" /> Core System Schematic
         </h2>
 
-        {/* Visual SVG Block Diagram */}
-        <div style={{ position: 'relative', width: '100%', overflowX: 'auto', padding: '24px 0' }}>
-          <svg viewBox="0 0 800 240" style={{ width: '100%', minWidth: '700px', height: 'auto' }}>
+        {/* 1. Desktop Architecture Diagram (Hidden on Mobile) */}
+        <div className={styles.desktopDiagram} style={{ position: 'relative', width: '100%', padding: '16px 0' }}>
+          <svg viewBox="0 0 800 240" style={{ width: '100%', height: 'auto' }}>
             <defs>
               <marker id="arrow" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
                 <path d="M 0 0 L 10 5 L 0 10 z" fill="#00E5FF" />
@@ -27,17 +28,14 @@ export default function HardwarePage() {
             </defs>
 
             {/* Sensor Blocks */}
-            {/* pH Sensor */}
             <rect x="20" y="20" width="160" height="48" rx="4" fill="#0D1B2A" stroke="rgba(255, 255, 255, 0.08)" />
             <text x="35" y="48" fill="#F4F7FB" fontSize="12" fontWeight="700">pH Electrode Probe</text>
             <text x="35" y="60" fill="#8FA3B8" fontSize="9">Analog input (Pin VP / ADC)</text>
 
-            {/* TDS Sensor */}
             <rect x="20" y="96" width="160" height="48" rx="4" fill="#0D1B2A" stroke="rgba(255, 255, 255, 0.08)" />
             <text x="35" y="124" fill="#F4F7FB" fontSize="12" fontWeight="700">TDS Conductivity Probe</text>
             <text x="35" y="136" fill="#8FA3B8" fontSize="9">Analog input (Pin 34 / ADC)</text>
 
-            {/* Ultrasonic Sensor */}
             <rect x="20" y="172" width="160" height="48" rx="4" fill="#0D1B2A" stroke="rgba(255, 255, 255, 0.08)" />
             <text x="35" y="200" fill="#F4F7FB" fontSize="12" fontWeight="700">HC-SR04 Ultrasonic</text>
             <text x="35" y="212" fill="#8FA3B8" fontSize="9">Digital (Pins 12 Trig / 13 Echo)</text>
@@ -62,11 +60,42 @@ export default function HardwarePage() {
             <text x="515" y="112" fill="#00E5FF" fontSize="9" fontFamily="var(--font-mono)">115200 Baud</text>
           </svg>
         </div>
+
+        {/* 2. Mobile/Tablet Vertical Flow Diagram (Visible on Mobile) */}
+        <div className={styles.mobileFlowDiagram}>
+          <div className={styles.flowCard}>
+            <div className={styles.flowCardTitle}>pH Electrode Probe</div>
+            <div className={styles.flowCardDesc}>Analog Input (Pin VP / ADC)</div>
+          </div>
+          <div className={styles.flowArrow}>↓</div>
+
+          <div className={styles.flowCard}>
+            <div className={styles.flowCardTitle}>TDS Conductivity Probe</div>
+            <div className={styles.flowCardDesc}>Analog Input (Pin 34 / ADC)</div>
+          </div>
+          <div className={styles.flowArrow}>↓</div>
+
+          <div className={styles.flowCard}>
+            <div className={styles.flowCardTitle}>HC-SR04 Ultrasonic Sensor</div>
+            <div className={styles.flowCardDesc}>Digital Trigger (GPIO 12) & Echo (GPIO 13)</div>
+          </div>
+          <div className={styles.flowArrow}>↓</div>
+
+          <div className={`${styles.flowCard} ${styles.flowCardActive}`}>
+            <div className={styles.flowCardTitle} style={{ color: '#00E5FF' }}>ESP32 Microcontroller Core</div>
+            <div className={styles.flowCardDesc}>Aggregates telemetry, formats to JSON lines, and transmits</div>
+          </div>
+          <div className={styles.flowArrow} style={{ color: '#00E5FF' }}>↓ (115200 Baud Serial)</div>
+
+          <div className={styles.flowCard} style={{ borderColor: '#B7FF3C' }}>
+            <div className={styles.flowCardTitle} style={{ color: '#B7FF3C' }}>Web Dashboard Console</div>
+            <div className={styles.flowCardDesc}>Receives telemetry packets in browser state</div>
+          </div>
+        </div>
       </div>
 
       {/* Component Details Card List */}
       <div className="grid-2">
-        {/* ESP32 Controller Card */}
         <div className="glass-card" style={{ padding: '24px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
             <Cpu size={20} className="text-primary" />
@@ -80,7 +109,6 @@ export default function HardwarePage() {
           </ul>
         </div>
 
-        {/* Ultrasonic Water Level Calibration */}
         <div className="glass-card" style={{ padding: '24px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
             <Zap size={20} className="text-accent" />

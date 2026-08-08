@@ -207,12 +207,21 @@ input, select, textarea { font-family: inherit; }
 
 /* ---------- Typography ---------- */
 .text-xs   { font-size: 11px; }
-.text-sm   { font-size: 12.5px; }
-.text-base { font-size: 14.5px; }
-.text-lg   { font-size: 17.5px; }
-.text-xl   { font-size: 21px; }
-.text-2xl  { font-size: 26px; }
-.text-3xl  { font-size: 32px; }
+.text-sm   { font-size: 12px; }
+.text-base { font-size: 13.5px; }
+.text-lg   { font-size: 16px; }
+.text-xl   { font-size: 18px; }
+.text-2xl  { font-size: 21px; }
+.text-3xl  { font-size: 24px; }
+
+@media (min-width: 768px) {
+  .text-sm   { font-size: 12.5px; }
+  .text-base { font-size: 14.5px; }
+  .text-lg   { font-size: 17.5px; }
+  .text-xl   { font-size: 21px; }
+  .text-2xl  { font-size: 26px; }
+  .text-3xl  { font-size: 32px; }
+}
 
 .font-mono    { font-family: var(--font-mono); }
 .font-medium  { font-weight: 500; }
