@@ -5,8 +5,20 @@ import { AlertBanner, AlertData } from '@/components/AlertBanner';
 import { BellRing, ShieldAlert, Bug } from 'lucide-react';
 import { toast, Toaster } from 'react-hot-toast';
 
+// Helper defined outside component to remain pure during render
+function createFaultAlert(faultType: string): AlertData {
+  return {
+    id: `fault-${Date.now()}-${Math.random()}`,
+    type: 'danger',
+    title: 'Sensor Hardware Anomaly Detected',
+    message: `Abnormal rapid flux detected in sensor channel: ${faultType}.`,
+    timestamp: Date.now()
+  };
+}
+
 export default function AlertsPage() {
-  const [alerts, setAlerts] = useState<AlertData[]>([
+  // Use a lazy initializer function to make render pure and satisfy React 19 rules
+  const [alerts, setAlerts] = useState<AlertData[]>(() => [
     {
       id: '1',
       type: 'danger',
@@ -40,20 +52,10 @@ export default function AlertsPage() {
   const handleInjectFault = async (faultType: string) => {
     toast('Injecting hardware fault...', { icon: '🐛' });
     try {
-      // Create quick temporary api route for this, or simulate manually locally 
-      // For this demo structure, we can just send it a reset or specific state.
-      // But since we want the simulator to catch it, let's just show a toast for demo.
       toast.error(`Simulated ${faultType} fault injected into pipeline!`);
-      
-      const newAlert: AlertData = {
-        id: Date.now().toString(),
-        type: 'danger',
-        title: 'Sensor Hardware Anomaly Detected',
-        message: `Abnormal rapid flux detected in sensor channel: ${faultType}.`,
-        timestamp: Date.now()
-      };
+      const newAlert = createFaultAlert(faultType);
       setAlerts(prev => [newAlert, ...prev]);
-    } catch (e) {
+    } catch (_e) {
       toast.error('Simulation injected failed');
     }
   };
@@ -96,7 +98,9 @@ export default function AlertsPage() {
               <Bug size={20} className="text-accent" />
               <h2 className="text-lg font-bold">Simulator Controls</h2>
            </div>
-           <p className="text-sm text-secondary mb-lg">For demonstration purposes, you can forcefully inject errors into the ESP32 simulator to test the system's resilience.</p>
+           <p className="text-sm text-secondary mb-lg">
+             For demonstration purposes, you can forcefully inject errors into the ESP32 simulator to test the system&apos;s resilience.
+           </p>
            
            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
              {INJECTABLE_FAULTS.map(f => (

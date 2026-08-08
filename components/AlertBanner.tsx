@@ -1,7 +1,7 @@
 'use client';
 
 import { AlertTriangle, X, Info, CheckCircle, AlertOctagon } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import styles from './AlertBanner.module.css';
 
 export interface AlertData {
@@ -21,6 +21,13 @@ interface AlertBannerProps {
 export function AlertBanner({ alert, onDismiss, autoDismiss = true }: AlertBannerProps) {
   const [isVisible, setIsVisible] = useState(true);
 
+  const handleDismiss = useCallback(() => {
+    setIsVisible(false);
+    setTimeout(() => {
+      onDismiss?.(alert.id);
+    }, 300); // match fade-out transition duration
+  }, [alert.id, onDismiss]);
+
   useEffect(() => {
     if (autoDismiss) {
       const timer = setTimeout(() => {
@@ -28,14 +35,7 @@ export function AlertBanner({ alert, onDismiss, autoDismiss = true }: AlertBanne
       }, 8000);
       return () => clearTimeout(timer);
     }
-  }, [alert.id, autoDismiss]);
-
-  const handleDismiss = () => {
-    setIsVisible(false);
-    setTimeout(() => {
-      onDismiss?.(alert.id);
-    }, 300); // match fade-out transition duration
-  };
+  }, [autoDismiss, handleDismiss]);
 
   const Icon = {
     info: Info,

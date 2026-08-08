@@ -5,21 +5,22 @@ import { usePathname } from 'next/navigation';
 import {
   LayoutDashboard,
   BarChart3,
-  Sliders,
-  BellRing,
+  Cpu,
+  Settings,
   Leaf,
   Activity,
-  ChevronRight,
-  User
+  ChevronRight
 } from 'lucide-react';
 import styles from './Sidebar.module.css';
 
-const navItems = [
+const overviewItems = [
   { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard', description: 'Live monitoring' },
   { href: '/dashboard/analytics', icon: BarChart3, label: 'Analytics', description: 'Historical data' },
-  { href: '/dashboard/control', icon: Sliders, label: 'Control', description: 'Pump management' },
-  { href: '/dashboard/alerts', icon: BellRing, label: 'Alerts', description: 'Notifications' },
-  { href: '/dashboard/profile', icon: User, label: 'Profile', description: 'Account settings' },
+];
+
+const systemItems = [
+  { href: '/dashboard/hardware', icon: Cpu, label: 'Hardware', description: 'System Overview' },
+  { href: '/dashboard/profile', icon: Settings, label: 'Settings', description: 'Station config' },
 ];
 
 interface SidebarProps {
@@ -30,20 +31,45 @@ interface SidebarProps {
 export function Sidebar({ systemStatus = 'stable', alertCount = 0 }: SidebarProps) {
   const pathname = usePathname();
 
+  // Vibrant semantic mapping matching design tokens
   const statusColor = {
-    stable: '#22c55e',
-    correcting: '#f59e0b',
-    fault: '#ef4444',
+    stable: '#B7FF3C',      // Vibrant Lime
+    correcting: '#FFC857',  // Amber
+    fault: '#FF6B4A',       // Coral
   }[systemStatus];
 
   const statusLabel = {
-    stable: 'System Stable',
-    correcting: 'Correcting…',
-    fault: 'Fault Detected',
+    stable: 'System Optimal',
+    correcting: 'Stabilizing...',
+    fault: 'Action Required',
   }[systemStatus];
 
+  const renderLink = (href: string, Icon: React.ElementType, label: string, description: string) => {
+    const isActive = pathname === href;
+    const showBadge = href === '/dashboard/alerts' && alertCount > 0;
+    return (
+      <Link
+        key={href}
+        href={href}
+        className={`${styles.navItem} ${isActive ? styles.navItemActive : ''}`}
+      >
+        <div className={styles.navIcon}>
+          <Icon size={18} />
+        </div>
+        <div className={styles.navText}>
+          <span className={styles.navLabel2}>{label}</span>
+          <span className={styles.navDesc}>{description}</span>
+        </div>
+        {showBadge && (
+          <span className={styles.navBadge}>{alertCount}</span>
+        )}
+        {isActive && <ChevronRight size={14} className={styles.navArrow} />}
+      </Link>
+    );
+  };
+
   return (
-    <aside className={styles.sidebar}>
+    <aside className={`${styles.sidebar} sidebar-animate`}>
       {/* Logo */}
       <div className={styles.logo}>
         <div className={styles.logoIcon}>
@@ -51,7 +77,7 @@ export function Sidebar({ systemStatus = 'stable', alertCount = 0 }: SidebarProp
         </div>
         <div>
           <div className={styles.logoName}>HydroSmart</div>
-          <div className={styles.logoSub}>v1.0 — Phase 1</div>
+          <div className={styles.logoSub}>v1.2 — Expo Ready</div>
         </div>
       </div>
 
@@ -62,37 +88,22 @@ export function Sidebar({ systemStatus = 'stable', alertCount = 0 }: SidebarProp
         </div>
         <div>
           <div className={styles.healthLabel}>{statusLabel}</div>
-          <div className={styles.healthSub}>ESP32 · Firebase</div>
+          <div className={styles.healthSub}>ESP32 · Live Link</div>
         </div>
-        <Activity size={16} className={styles.activityIcon} />
+        <Activity size={15} className={styles.activityIcon} style={{ color: statusColor }} />
       </div>
 
       {/* Navigation */}
       <nav className={styles.nav}>
-        <div className={styles.navLabel}>Navigation</div>
-        {navItems.map(({ href, icon: Icon, label, description }) => {
-          const isActive = pathname === href;
-          const showBadge = href === '/dashboard/alerts' && alertCount > 0;
-          return (
-            <Link
-              key={href}
-              href={href}
-              className={`${styles.navItem} ${isActive ? styles.navItemActive : ''}`}
-            >
-              <div className={styles.navIcon}>
-                <Icon size={18} />
-              </div>
-              <div className={styles.navText}>
-                <span className={styles.navLabel2}>{label}</span>
-                <span className={styles.navDesc}>{description}</span>
-              </div>
-              {showBadge && (
-                <span className={styles.navBadge}>{alertCount}</span>
-              )}
-              {isActive && <ChevronRight size={14} className={styles.navArrow} />}
-            </Link>
-          );
-        })}
+        <div className={styles.navLabel}>Overview</div>
+        {overviewItems.map(({ href, icon, label, description }) => 
+          renderLink(href, icon, label, description)
+        )}
+        
+        <div className={styles.navLabel} style={{ marginTop: '16px' }}>System</div>
+        {systemItems.map(({ href, icon, label, description }) => 
+          renderLink(href, icon, label, description)
+        )}
       </nav>
 
       {/* Bottom */}

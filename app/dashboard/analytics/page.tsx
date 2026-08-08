@@ -1,70 +1,42 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useESP32Serial } from '@/lib/esp32/ESP32SerialContext';
 import { LiveLineChart } from '@/components/LiveLineChart';
-import { BarChart3, Download } from 'lucide-react';
+import { BarChart3, Download, RefreshCw } from 'lucide-react';
 
 export default function AnalyticsPage() {
-  const [history, setHistory] = useState<{
-    labels: string[], ph: number[], tds: number[], temp: number[]
-  }>({ labels: [], ph: [], tds: [], temp: [] });
+  const { history, mode } = useESP32Serial();
 
-  useEffect(() => {
-    // For demo purposes, we will build a history array from the live data stream
-    // In a real app this would query the Firebase / MongoDB backend for historical data
-    
-    // Seed some initial demo data to make charts look good immediately
-    const labels: string[] = [];
-    const phData: number[] = [];
-    const tdsData: number[] = [];
-    const tempData: number[] = [];
-    const now = new Date();
-    
-    for (let i = 40; i >= 0; i--) {
-       const time = new Date(now.getTime() - i * 2000);
-       labels.push(time.toLocaleTimeString([], { hour: '2-digit', minute:'2-digit', second:'2-digit' }));
-       // simulate a past drop and correction
-       phData.push(6.0 + (Math.sin(i * 0.2) * 0.1) + (Math.random() * 0.05));
-       tdsData.push(1000 - (i * 2) + Math.random() * 10);
-       tempData.push(22 + Math.random() * 0.2);
-    }
-    setHistory({ labels, ph: phData, tds: tdsData, temp: tempData });
-
-    const poll = async () => {
-      try {
-        const res = await fetch('/api/simulate');
-        if (res.ok) {
-          const data = await res.json();
-          const timeLabel = new Date(data.reading.timestamp).toLocaleTimeString([], { hour: '2-digit', minute:'2-digit', second:'2-digit' });
-          
-          setHistory(prev => {
-            const newLabels = [...prev.labels, timeLabel].slice(-40);
-            const newPh = [...prev.ph, data.reading.ph].slice(-40);
-            const newTds = [...prev.tds, data.reading.tds].slice(-40);
-            const newTemp = [...prev.temp, data.reading.temperature].slice(-40);
-            return { labels: newLabels, ph: newPh, tds: newTds, temp: newTemp };
-          });
-        }
-      } catch (e) {}
-    };
-
-    const init = setInterval(poll, 2000);
-    return () => clearInterval(init);
-  }, []);
+  // Dynamically map context history to labels and dataset arrays for the charts
+  const labels = history.map((item) =>
+    new Date(item.timestamp).toLocaleTimeString([], {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+    })
+  );
+  
+  const phData = history.map((item) => item.ph);
+  const tdsData = history.map((item) => item.tds);
+  const waterLevelData = history.map((item) => item.waterLevel);
+  const distanceData = history.map((item) => item.distance);
 
   const exportToCSV = () => {
+    if (history.length === 0) return;
+
     let csvContent = 'data:text/csv;charset=utf-8,';
-    csvContent += 'Timestamp,pH Level,TDS (PPM),Temperature (°C)\n';
-    
-    for (let i = 0; i < history.labels.length; i++) {
-       const row = `${history.labels[i]},${history.ph[i].toFixed(2)},${history.tds[i].toFixed(1)},${history.temp[i].toFixed(1)}`;
-       csvContent += row + '\n';
-    }
-    
+    csvContent += 'Timestamp,pH Level,TDS (PPM),Water Level (%),Distance (cm)\n';
+
+    history.forEach((item) => {
+      const timeStr = new Date(item.timestamp).toLocaleString();
+      const row = `"${timeStr}",${item.ph.toFixed(2)},${item.tds.toFixed(1)},${item.waterLevel.toFixed(1)},${item.distance.toFixed(1)}`;
+      csvContent += row + '\n';
+    });
+
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement('a');
     link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `hydroponics_history_${Date.now()}.csv`);
+    link.setAttribute('download', `hydroponics_history_${mode}_${Date.now()}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -77,22 +49,47 @@ export default function AnalyticsPage() {
           <h1 className="text-3xl font-bold text-primary mb-sm">Historical Analytics</h1>
           <p className="text-secondary">Track trends, identify anomalies, and optimize future yield.</p>
         </div>
-        <button className="btn btn-ghost" onClick={exportToCSV}>
+        <button 
+          className="btn btn-ghost" 
+          onClick={exportToCSV}
+          disabled={history.length === 0}
+        >
           <Download size={16} /> Export CSV
         </button>
       </div>
 
+      {/* Analytics Source Banner */}
+      <div className="glass-card" style={{ padding: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderLeft: mode === 'real' ? '4px solid var(--color-primary)' : '4px solid var(--color-warning)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <BarChart3 size={20} className={mode === 'real' ? 'text-primary' : 'text-warning'} />
+          <div>
+            <h4 style={{ fontWeight: 'bold' }}>
+              Data Source: {mode === 'real' ? 'Real ESP32 Telemetry (ESP32 LIVE)' : 'Simulation Engine (SIMULATION)'}
+            </h4>
+            <p className="text-sm text-secondary">
+              Currently plotting the last {history.length} data points in the rolling buffer.
+            </p>
+          </div>
+        </div>
+        {mode === 'real' && (
+          <span className="text-sm font-mono text-secondary" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <RefreshCw size={12} className="animate-spin" /> Stream Active
+          </span>
+        )}
+      </div>
+
+      {/* Main Chemistry Analytics */}
       <div className="grid-2">
         <div className="glass-card" style={{ padding: '24px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
              <BarChart3 size={20} className="text-primary" />
-             <h2 className="text-lg font-bold">pH Stability (24h)</h2>
+             <h2 className="text-lg font-bold">pH Stability (Rolling Buffer)</h2>
           </div>
           <LiveLineChart 
-             data={history.ph} 
-             labels={history.labels} 
+             data={phData} 
+             labels={labels} 
              title="pH Level" 
-             color="#00d4aa" 
+             color="#00E5FF" 
              min={4.0} 
              max={8.0} 
           />
@@ -101,15 +98,48 @@ export default function AnalyticsPage() {
         <div className="glass-card" style={{ padding: '24px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
              <BarChart3 size={20} className="text-accent" />
-             <h2 className="text-lg font-bold">TDS Depletion / Dosing</h2>
+             <h2 className="text-lg font-bold">TDS Nutrient Depletion</h2>
           </div>
           <LiveLineChart 
-             data={history.tds} 
-             labels={history.labels} 
+             data={tdsData} 
+             labels={labels} 
              title="TDS (PPM)" 
-             color="#7c3aed" 
+             color="#B7FF3C" 
              min={600} 
              max={1400} 
+          />
+        </div>
+      </div>
+
+      {/* Reservoir Level & Distance Analytics */}
+      <div className="grid-2">
+        <div className="glass-card" style={{ padding: '24px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
+             <BarChart3 size={20} style={{ color: '#00E5FF' }} />
+             <h2 className="text-lg font-bold">Reservoir Water Level (%)</h2>
+          </div>
+          <LiveLineChart 
+             data={waterLevelData} 
+             labels={labels} 
+             title="Water Level (%)" 
+             color="#00E5FF" 
+             min={0} 
+             max={100} 
+          />
+        </div>
+
+        <div className="glass-card" style={{ padding: '24px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
+             <BarChart3 size={20} style={{ color: '#FFC857' }} />
+             <h2 className="text-lg font-bold">Sensor Distance (cm)</h2>
+          </div>
+          <LiveLineChart 
+             data={distanceData} 
+             labels={labels} 
+             title="Distance (cm)" 
+             color="#FFC857" 
+             min={0} 
+             max={120} 
           />
         </div>
       </div>
@@ -128,34 +158,44 @@ export default function AnalyticsPage() {
               </tr>
             </thead>
             <tbody>
-              <tr>
-                <td>Today, 10:42 AM</td>
-                <td><span className="badge badge-warning">Low TDS</span></td>
-                <td>Nutrient Pump Actuated</td>
-                <td>12 sec</td>
-                <td><span className="text-success">+150 PPM Stabilized</span></td>
-              </tr>
-              <tr>
-                <td>Today, 08:15 AM</td>
-                <td><span className="badge badge-danger">High pH</span></td>
-                <td>pH-Down Pump Actuated</td>
-                <td>4 sec</td>
-                <td><span className="text-success">-0.3 pH Stabilized</span></td>
-              </tr>
-              <tr>
-                <td>Yesterday, 22:30 PM</td>
-                <td><span className="badge badge-warning">Low TDS</span></td>
-                <td>Nutrient Pump Actuated</td>
-                <td>18 sec</td>
-                <td><span className="text-success">+210 PPM Stabilized</span></td>
-              </tr>
-              <tr>
-                <td>Yesterday, 14:10 PM</td>
-                <td><span className="badge badge-info">Low pH</span></td>
-                <td>pH-Up Pump Actuated</td>
-                <td>2 sec</td>
-                <td><span className="text-success">+0.1 pH Stabilized</span></td>
-              </tr>
+              {mode === 'real' ? (
+                <tr>
+                  <td colSpan={5} style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '24px' }}>
+                    Telemetry mode engaged. Closed-loop chemical corrections are disabled (Monitoring Only).
+                  </td>
+                </tr>
+              ) : (
+                <>
+                  <tr>
+                    <td>Today, 10:42 AM</td>
+                    <td><span className="badge badge-warning">Low TDS</span></td>
+                    <td>Nutrient Pump Actuated</td>
+                    <td>12 sec</td>
+                    <td><span className="text-success">+150 PPM Stabilized</span></td>
+                  </tr>
+                  <tr>
+                    <td>Today, 08:15 AM</td>
+                    <td><span className="badge badge-danger">High pH</span></td>
+                    <td>pH-Down Pump Actuated</td>
+                    <td>4 sec</td>
+                    <td><span className="text-success">-0.3 pH Stabilized</span></td>
+                  </tr>
+                  <tr>
+                    <td>Yesterday, 22:30 PM</td>
+                    <td><span className="badge badge-warning">Low TDS</span></td>
+                    <td>Nutrient Pump Actuated</td>
+                    <td>18 sec</td>
+                    <td><span className="text-success">+210 PPM Stabilized</span></td>
+                  </tr>
+                  <tr>
+                    <td>Yesterday, 14:10 PM</td>
+                    <td><span className="badge badge-info">Low pH</span></td>
+                    <td>pH-Up Pump Actuated</td>
+                    <td>2 sec</td>
+                    <td><span className="text-success">+0.1 pH Stabilized</span></td>
+                  </tr>
+                </>
+              )}
             </tbody>
           </table>
         </div>

@@ -11,11 +11,15 @@ export default function ProfilePage() {
   const [userName, setUserName] = useState('Admin');
   const [userEmail, setUserEmail] = useState('admin@hydrosmart.app');
 
+  // Load user data on mount asynchronously to prevent hydration warnings
   useEffect(() => {
     const name = localStorage.getItem('hydro_user_name');
     const email = localStorage.getItem('hydro_user_email');
-    if (name) setUserName(name);
-    if (email) setUserEmail(email);
+    const timer = setTimeout(() => {
+      if (name) setUserName(name);
+      if (email) setUserEmail(email);
+    }, 0);
+    return () => clearTimeout(timer);
   }, []);
 
   const handleSave = (e: React.FormEvent) => {
@@ -25,8 +29,13 @@ export default function ProfilePage() {
 
   const handleLogout = () => {
     setLoading(true);
+    // Clear user session details from storage
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('hydro_user_email');
+      localStorage.removeItem('hydro_user_name');
+    }
     setTimeout(() => {
-      router.push('/login');
+      router.push('/');
     }, 1000);
   };
 

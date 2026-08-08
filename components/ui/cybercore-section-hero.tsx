@@ -20,7 +20,7 @@ const CybercoreBackground: React.FC<CybercoreBackgroundProps> = ({
     const generated = Array.from({ length: beamCount }).map((_, i) => {
       const riseDur = Math.random() * 3 + 5   // 5–8s rise
       const fadeDur = riseDur                // sync fade
-      const type = Math.random() < 0.15 ? 'secondary' : 'primary'
+      const type: 'primary' | 'secondary' = Math.random() < 0.15 ? 'secondary' : 'primary'
       return {
         id: i,
         type,
@@ -32,7 +32,10 @@ const CybercoreBackground: React.FC<CybercoreBackgroundProps> = ({
         },
       }
     })
-    setBeams(generated)
+    const timer = setTimeout(() => {
+      setBeams(generated)
+    }, 0)
+    return () => clearTimeout(timer)
   }, [beamCount])
 
   return (

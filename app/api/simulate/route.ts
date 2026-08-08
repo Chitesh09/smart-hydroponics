@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { tick, TargetRanges, resetSimulator } from '@/lib/simulator';
 import { pushSensorReading, firebaseAvailable, pushAlert } from '@/lib/firebase';
 
+import { getRealReading } from '@/lib/telemetryStore';
+
 // Mock targets (would normally come from DB)
 const currentTargets: TargetRanges = {
   phMin: 5.5,
@@ -16,13 +18,26 @@ const currentTargets: TargetRanges = {
 let currentMode: 'auto' | 'manual' = 'auto';
 
 export async function GET() {
-  // Tick the simulator
+  // Check if we have active real hardware data
+  const realReading = getRealReading();
+  if (realReading) {
+    return NextResponse.json({
+      reading: realReading,
+      pumps: { phUp: false, phDown: false, nutrient: false, circulation: true },
+      controlMode: 'manual',
+      status: realReading.waterLevel < 15 ? 'fault' : 'stable',
+      activeCorrection: null,
+      faultMessage: realReading.waterLevel < 15 ? 'Water level critically low — check reservoir (Hardware)' : null,
+      correctionCount: 0,
+      lastCorrectionTime: null
+    });
+  }
+
+  // Fall back to simulator if no real hardware is currently reporting
   const state = tick(currentTargets, currentMode);
   
   // Conditionally push to Firebase if configured
   if (firebaseAvailable) {
-    // Only push occasionally to save bandwidth in demo, or push every tick depending on need.
-    // For now we'll just return it in the response to the client.
     await pushSensorReading(state.reading);
     
     if (state.status === 'fault' && state.faultMessage) {

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useAnimatedNumber } from '@/lib/hooks/useAnimatedNumber';
 import styles from './GaugeChart.module.css';
 
 interface GaugeChartProps {
@@ -24,22 +24,18 @@ export function GaugeChart({
   unit,
   colorPrimary = '#00d4aa'
 }: GaugeChartProps) {
-  const [animatedValue, setAnimatedValue] = useState(min);
-
-  useEffect(() => {
-    // Smooth animation to the new value
-    setAnimatedValue(value);
-  }, [value]);
+  // Interpolate numerical value for central display readout
+  const animatedValue = useAnimatedNumber(value, 600);
 
   const radius = 60;
   const strokeWidth = 12;
   const circumference = 2 * Math.PI * radius;
   
-  // Calculate percentage (0 to 1)
+  // Calculate percentage (0 to 1) based on display value
   const percent = Math.max(0, Math.min(1, (animatedValue - min) / (max - min)));
   
   // The gauge uses 240 degrees out of 360 (which is 2/3 of the circle)
-  // We'll rotate it so the gap is at the bottom
+  // Rotate it so the gap is at the bottom
   const strokeDasharray = `${circumference} ${circumference}`;
   const strokeDashoffset = circumference - (percent * circumference * 0.666);
   
@@ -49,8 +45,8 @@ export function GaugeChart({
 
   // Status color logic based on optimal ranges
   let statusColor = colorPrimary;
-  if (value < optimalMin) statusColor = '#f59e0b'; // generic warning
-  if (value > optimalMax) statusColor = '#ef4444'; // generic danger (can be customized)
+  if (value < optimalMin) statusColor = '#f59e0b';
+  if (value > optimalMax) statusColor = '#ef4444';
 
   return (
     <div className={styles.gaugeContainer}>
@@ -104,7 +100,7 @@ export function GaugeChart({
       
       <div className={styles.content}>
         <div className={styles.value} style={{ color: statusColor }}>
-          {value.toFixed(1)}
+          {animatedValue.toFixed(1)}
         </div>
         <div className={styles.label}>{label}</div>
         <div className={styles.unit}>{unit}</div>

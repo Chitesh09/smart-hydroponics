@@ -1,36 +1,40 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 🌱 Smart Hydrophonic System (IoT + Next.js Dashboard)
 
-## Getting Started
+## 📌 Overview
+This project is an IoT-based smart hydrophonic system that monitors and maintains optimal nutrient conditions (pH, TDS, temperature) for plant growth. It uses a closed-loop control mechanism to automatically correct imbalances using pumps, reducing manual effort and improving efficiency.
 
-First, run the development server:
+The system also includes a Next.js-based dashboard for real-time monitoring and visualization.
+
+---
+
+## 🚀 Features
+- Real-time monitoring of pH, TDS, and temperature  
+- Automated correction using pumps  
+- Closed-loop control (Detect → Correct → Verify)  
+- Web dashboard for live data visualization  
+- Scalable for smart farming applications  
+
+---
+
+## ⚙️ Tech Stack
+- **Hardware:** ESP32, Sensors (pH, TDS, Temperature), Pumps, Relay  
+- **Frontend:** Next.js  
+- **Backend/IoT:** Firebase / MQTT  
+- **Programming:** Embedded C (Arduino IDE), JavaScript  
+
+---
+
+## 🧠 How It Works
+1. Sensors collect real-time data from the nutrient solution  
+2. ESP32 processes and compares with optimal values  
+3. If deviation occurs → pumps are activated  
+4. System rechecks values and stabilizes conditions  
+5. Data is sent to the dashboard for monitoring  
+
+---
+
+## 💻 Getting Started (Dashboard)
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
-
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
-
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.

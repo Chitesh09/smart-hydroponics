@@ -1,0 +1,97 @@
+@keyframes waveMove {
+  0% { transform: translateX(0); }
+  50% { transform: translateX(-25%); }
+  100% { transform: translateX(0); }
+}
+
+.waveEffect {
+  animation: waveMove 3s ease-in-out infinite;
+}
+
+@keyframes pulseGlow {
+  0% { box-shadow: 0 0 0 0 rgba(0, 229, 255, 0.4); }
+  70% { box-shadow: 0 0 0 10px rgba(0, 229, 255, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(0, 229, 255, 0); }
+}
+
+.telemetryPulse {
+  animation: pulseGlow 1.8s infinite;
+}
+
+.dashboardLayout {
+  display: grid;
+  grid-template-columns: 1fr 2fr;
+  gap: 24px;
+  align-items: start;
+}
+
+@media (max-width: 1024px) {
+  .dashboardLayout {
+    grid-template-columns: 1fr;
+  }
+}
+
+.sensorGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 24px;
+}
+
+@media (max-width: 1200px) {
+  .sensorGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .sensorGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.reservoirCard {
+  grid-column: span 2;
+}
+
+@media (max-width: 1200px) {
+  .reservoirCard {
+    grid-column: span 2;
+  }
+}
+
+@media (max-width: 640px) {
+  .reservoirCard {
+    grid-column: span 1;
+  }
+}
+
+/* Metric Tabs */
+.tabsContainer {
+  display: flex;
+  gap: 8px;
+  background: rgba(7, 17, 31, 0.4);
+  padding: 4px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-default);
+  align-self: flex-start;
+}
+
+.tabBtn {
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  transition: var(--transition-fast);
+}
+
+.tabBtn:hover {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.tabBtnActive {
+  background: var(--color-primary-dim);
+  border: 1px solid rgba(0, 229, 255, 0.2);
+  color: var(--color-primary);
+}
