@@ -176,6 +176,13 @@ export function ESP32SerialProvider({ children }: { children: React.ReactNode })
       const errObject = err as Error;
       if (errObject.name === 'NotFoundError' || errObject.message?.includes('user cancelled')) {
         setError('Connection cancelled by user.');
+      } else if (
+        errObject.name === 'NetworkError' || 
+        errObject.message?.includes('Failed to open serial port') || 
+        errObject.message?.includes('Access denied') ||
+        errObject.message?.includes('device or resource busy')
+      ) {
+        setError('Failed to open serial port: The COM port is currently busy/locked. Please close any other programs using this port (such as the Arduino IDE Serial Monitor, PuTTY, or other open browser tabs) and try again.');
       } else {
         setError(`Failed to open serial port: ${errObject.message || String(err)}`);
       }
