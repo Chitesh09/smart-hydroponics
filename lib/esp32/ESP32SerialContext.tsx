@@ -222,40 +222,67 @@ export function ESP32SerialProvider({ children }: { children: React.ReactNode })
           for (const line of lines) {
             const trimmed = line.trim();
             if (trimmed) {
+              let updatedFields: Partial<SensorReading> = {};
+
+              // 1. Try to parse as single-line JSON first
               try {
-                const parsed = JSON.parse(trimmed) as Record<string, unknown>;
-                
-                // Validate fields: waterLevel, distance, ph, tds
-                if (
-                  typeof parsed.waterLevel === 'number' &&
-                  typeof parsed.distance === 'number' &&
-                  typeof parsed.ph === 'number' &&
-                  typeof parsed.tds === 'number'
-                ) {
-                  const reading: SensorReading = {
-                    waterLevel: parsed.waterLevel,
-                    distance: parsed.distance,
-                    ph: parsed.ph,
-                    tds: parsed.tds,
+                const parsed = JSON.parse(trimmed);
+                if (parsed && typeof parsed === 'object') {
+                  if (typeof parsed.ph === 'number') updatedFields.ph = parsed.ph;
+                  if (typeof parsed.tds === 'number') updatedFields.tds = parsed.tds;
+                  if (typeof parsed.waterLevel === 'number') updatedFields.waterLevel = parsed.waterLevel;
+                  if (typeof parsed.distance === 'number') updatedFields.distance = parsed.distance;
+                }
+              } catch (_parseErr) {
+                // 2. Fallback to regex key-value extraction for plain text serial monitors
+                const phMatch = trimmed.match(/(?:ph|ph\s*value|ph=)\s*:?\s*([0-9.]+)/i);
+                const tdsMatch = trimmed.match(/(?:tds|tds\s*value|tds=)\s*:?\s*([0-9.]+)/i);
+                const wlMatch = trimmed.match(/(?:wl|water\s*level|percentage|level=)\s*:?\s*([0-9.]+)/i);
+                const distMatch = trimmed.match(/(?:distance|dist|distance=)\s*:?\s*([0-9.]+)/i);
+
+                if (phMatch) updatedFields.ph = parseFloat(phMatch[1]);
+                if (tdsMatch) updatedFields.tds = parseFloat(tdsMatch[1]);
+                if (wlMatch) updatedFields.waterLevel = parseFloat(wlMatch[1]);
+                if (distMatch) updatedFields.distance = parseFloat(distMatch[1]);
+              }
+
+              // 3. If any field matches, merge with the current reading state
+              if (Object.keys(updatedFields).length > 0) {
+                setLatestReading((prev) => {
+                  const base = prev || { ph: 6.0, tds: 1000, waterLevel: 85, distance: 23.5, timestamp: Date.now() };
+                  
+                  // Compute distance if water level is present (and vice versa)
+                  let targetWL = updatedFields.waterLevel !== undefined ? updatedFields.waterLevel : base.waterLevel;
+                  let targetDist = updatedFields.distance !== undefined ? updatedFields.distance : base.distance;
+                  
+                  // Keep them synchronized: Level = ((60 - Distance) / 50) * 100% => Distance = 60 - (Level * 0.5)
+                  if (updatedFields.waterLevel !== undefined && updatedFields.distance === undefined) {
+                    targetDist = 60.0 - (targetWL * 0.5);
+                  } else if (updatedFields.distance !== undefined && updatedFields.waterLevel === undefined) {
+                    targetWL = ((60.0 - targetDist) / 50.0) * 100.0;
+                  }
+
+                  const newReading: SensorReading = {
+                    ph: updatedFields.ph !== undefined ? updatedFields.ph : base.ph,
+                    tds: updatedFields.tds !== undefined ? updatedFields.tds : base.tds,
+                    waterLevel: parseFloat(targetWL.toFixed(1)),
+                    distance: parseFloat(targetDist.toFixed(2)),
                     timestamp: Date.now(),
                   };
 
-                  setLatestReading(reading);
-                  setLastUpdateTime(Date.now());
                   lastUpdateRef.current = Date.now();
-                  setIsStale(false);
-                  setError(null);
-
-                  setHistory((prev) => {
-                    const updated = [...prev, reading];
-                    return updated.slice(-60); // Bounded rolling history
+                  
+                  setHistory((historyPrev) => {
+                    const updated = [...historyPrev, newReading];
+                    return updated.slice(-60);
                   });
-                } else {
-                  console.warn('[ESP32 Web Serial] Parsed object missing expected properties:', parsed);
-                }
-              } catch (_parseErr) {
-                // Ignore malformed JSON chunks gracefully
-                console.warn('[ESP32 Web Serial] Ignored malformed JSON line:', trimmed);
+
+                  return newReading;
+                });
+
+                setLastUpdateTime(Date.now());
+                setIsStale(false);
+                setError(null);
               }
             }
           }
