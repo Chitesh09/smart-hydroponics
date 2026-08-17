@@ -121,8 +121,8 @@ export default function HardwarePage() {
           <div style={{ background: 'rgba(7, 17, 31, 0.5)', padding: '12px', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.05)', fontSize: '12px', fontFamily: 'var(--font-mono)' }}>
             <span style={{ color: '#00E5FF' }}>Calibration:</span><br />
             Empty Tank Distance = 60.0 cm<br />
-            Full Tank Distance = 10.0 cm<br />
-            Percent Level = ((60 - Distance) / 50) * 100%
+            Full Tank Distance = 13.0 cm<br />
+            Percent Level = ((60 - Distance) / 47) * 100%
           </div>
         </div>
       </div>

@@ -255,11 +255,11 @@ export function ESP32SerialProvider({ children }: { children: React.ReactNode })
                   let targetWL = updatedFields.waterLevel !== undefined ? updatedFields.waterLevel : base.waterLevel;
                   let targetDist = updatedFields.distance !== undefined ? updatedFields.distance : base.distance;
                   
-                  // Keep them synchronized: Level = ((60 - Distance) / 50) * 100% => Distance = 60 - (Level * 0.5)
+                  // Keep them synchronized: Level = ((60 - Distance) / 47) * 100% => Distance = 60 - (Level * 0.47)
                   if (updatedFields.waterLevel !== undefined && updatedFields.distance === undefined) {
-                    targetDist = 60.0 - (targetWL * 0.5);
+                    targetDist = 60.0 - (targetWL * 0.47);
                   } else if (updatedFields.distance !== undefined && updatedFields.waterLevel === undefined) {
-                    targetWL = ((60.0 - targetDist) / 50.0) * 100.0;
+                    targetWL = ((60.0 - targetDist) / 47.0) * 100.0;
                   }
 
                   const newReading: SensorReading = {

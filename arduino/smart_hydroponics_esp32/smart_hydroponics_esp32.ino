@@ -29,8 +29,8 @@
 #define TDS_PIN 33
 
 // Physical configuration of the reservoir
-const float TANK_EMPTY_DISTANCE = 100.0; // Distance in cm when reservoir is empty
-const float TANK_FULL_DISTANCE = 10.0;    // Distance in cm when reservoir is full
+const float TANK_EMPTY_DISTANCE = 60.0; // Distance in cm when reservoir is empty
+const float TANK_FULL_DISTANCE = 13.0;    // Distance in cm when reservoir is full
 
 void setup() {
   // Initialize Serial communication at 115200 baud

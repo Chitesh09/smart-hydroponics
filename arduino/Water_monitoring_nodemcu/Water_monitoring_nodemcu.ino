@@ -50,7 +50,8 @@ const char* password = "YOUR_WIFI_PASSWORD";
 // Example: "http://192.168.1.100:3000/api/telemetry"
 const char* serverUrl = "http://YOUR_LAPTOP_IP:3000/api/telemetry";
 
-const int tankHeight = 100; // Tank height in cm
+const int TANK_EMPTY_DISTANCE = 60; // Empty distance in cm
+const int TANK_FULL_DISTANCE = 13;  // Full distance in cm
 
 long duration;
 float distance;
@@ -114,13 +115,13 @@ void loop()
   duration = pulseIn(ECHO, HIGH);
   distance = duration * 0.034 / 2;
 
-  if (distance > tankHeight) {
-    distance = tankHeight;
+  if (distance <= TANK_FULL_DISTANCE) {
+    percentage = 100;
+  } else if (distance >= TANK_EMPTY_DISTANCE) {
+    percentage = 0;
+  } else {
+    percentage = (int)(((TANK_EMPTY_DISTANCE - distance) * 100.0) / (TANK_EMPTY_DISTANCE - TANK_FULL_DISTANCE));
   }
-
-  percentage = ((tankHeight - distance) * 100) / tankHeight;
-  if (percentage > 100) percentage = 100;
-  if (percentage < 0)   percentage = 0;
 
   // 2. READ ANALOG pH SENSOR (WITH NOISE FILTERING)
   int buffer_arr[10];
