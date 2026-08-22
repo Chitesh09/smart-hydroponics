@@ -105,6 +105,9 @@ export interface PredictionResult {
   message?: string;
 }
 
+import { PlantDetectionResult } from '@/lib/vision/plantDetector';
+export type { PlantDetectionResult };
+
 // Unified Multimodal Observation Model
 export interface PlantObservation {
   id: string;
@@ -113,6 +116,12 @@ export interface PlantObservation {
   // Multimodal Data Sources
   imageReference?: string; // Base64 data URL or storage reference
   cameraActive: boolean;
+  
+  // Real Computer Vision Plant Detection Metrics
+  isPlantDetected?: boolean;
+  plantDetectionConfidence?: number; // 0 - 100%
+  canopyCoveragePercent?: number;
+  vegetationIndex?: number;
   
   // Sensor Telemetry (from ESP32 or Simulator)
   ph?: number;

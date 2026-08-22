@@ -3,6 +3,8 @@
 import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
 import { useESP32Serial } from '@/lib/esp32/ESP32SerialContext';
 import { useCamera } from '@/lib/camera/CameraContext';
+import { usePlantMonitor } from '@/lib/camera/usePlantMonitor';
+import { PlantDetectionResult } from '@/lib/vision/plantDetector';
 import {
   PlantObservation,
   PlantIdentity,
@@ -31,6 +33,10 @@ interface PlantIntelligenceContextType {
   setCropIdentity: React.Dispatch<React.SetStateAction<PlantIdentity>>;
   observations: PlantObservation[];
   latestObservation: PlantObservation | null;
+  latestDetection: PlantDetectionResult | null;
+  isScanning: boolean;
+  setIsScanning: (scanning: boolean) => void;
+  analyzeNow: () => PlantDetectionResult | null;
   environmentalAssessment: EnvironmentalAssessment;
   healthReport: PlantHealthReport;
   activeAnomalies: AnomalyReport[];
@@ -46,6 +52,7 @@ const PlantIntelligenceContext = createContext<PlantIntelligenceContextType | un
 export function PlantIntelligenceProvider({ children }: { children: React.ReactNode }) {
   const { mode, isStale, latestReading } = useESP32Serial();
   const { status: cameraStatus, captureFrame } = useCamera();
+  const { latestDetection, isScanning, setIsScanning, analyzeNow } = usePlantMonitor();
 
   // Crop Identity State
   const [cropIdentity, setCropIdentity] = useState<PlantIdentity>(() => ({
@@ -107,14 +114,16 @@ export function PlantIntelligenceProvider({ children }: { children: React.ReactN
     );
   }, [activeAnomalies, currentPh, currentTds, currentWaterLevel, cropIdentity.targetProfile]);
 
-  // 4. Overall Health Assessment
+  // 4. Overall Health Assessment (fused with visual detection confidence if available)
   const healthReport = useMemo(() => {
-    return generateHealthReport(environmentalAssessment);
-  }, [environmentalAssessment]);
+    const visualScore = latestDetection?.isPlantDetected ? latestDetection.confidence : undefined;
+    return generateHealthReport(environmentalAssessment, visualScore);
+  }, [environmentalAssessment, latestDetection]);
 
   // Capture Current Webcam Frame + Telemetry to Save an Observation
   const captureAndObserve = useCallback((): PlantObservation | null => {
     const snapshot = captureFrame();
+    const detection = analyzeNow();
     const now = Date.now();
 
     const newObservation: PlantObservation = {
@@ -122,6 +131,10 @@ export function PlantIntelligenceProvider({ children }: { children: React.ReactN
       timestamp: now,
       imageReference: snapshot || undefined,
       cameraActive: cameraStatus === 'connected',
+      isPlantDetected: detection?.isPlantDetected,
+      plantDetectionConfidence: detection?.confidence,
+      canopyCoveragePercent: detection?.canopyCoveragePercent,
+      vegetationIndex: detection?.vegetationIndex,
       ph: currentPh,
       tds: currentTds,
       waterLevel: currentWaterLevel,
@@ -141,6 +154,7 @@ export function PlantIntelligenceProvider({ children }: { children: React.ReactN
     return newObservation;
   }, [
     captureFrame,
+    analyzeNow,
     cameraStatus,
     currentPh,
     currentTds,
@@ -177,6 +191,10 @@ export function PlantIntelligenceProvider({ children }: { children: React.ReactN
         setCropIdentity,
         observations,
         latestObservation,
+        latestDetection,
+        isScanning,
+        setIsScanning,
+        analyzeNow,
         environmentalAssessment,
         healthReport,
         activeAnomalies,

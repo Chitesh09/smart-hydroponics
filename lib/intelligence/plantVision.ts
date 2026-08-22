@@ -1,20 +1,52 @@
 // ============================================================
-// HydroSmart — Plant Vision & Visual Health Service Boundary
+// HydroSmart — Plant Vision & Visual Health Service
 // ============================================================
 
 import { VisualAnalysisResult } from './types';
+import { detectPlantPresence } from '@/lib/vision/plantDetector';
 
 /**
- * Service Boundary for Plant Vision & Visual Health Assessment.
- * Explicitly marked NOT IMPLEMENTED for Phase 1.
- * Future phases will integrate real-time leaf color segmentation and defect classifiers.
+ * Perform computer vision analysis on an image snapshot using
+ * chlorophyll ExG spectral indices and HSV segmentation.
  */
 export async function analyzePlantVision(
-  _imageBase64: string
+  imageBase64: string
 ): Promise<VisualAnalysisResult> {
-  return {
-    status: 'not_implemented',
-    timestamp: Date.now(),
-    message: 'Visual anomaly and canopy health neural network pipeline is scheduled for integration in a future phase. No synthetic diagnosis generated.',
-  };
+  if (typeof window === 'undefined' || !imageBase64) {
+    return {
+      status: 'error',
+      timestamp: Date.now(),
+      message: 'Invalid image input or non-browser execution environment.',
+    };
+  }
+
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      const detection = detectPlantPresence(img);
+      resolve({
+        status: 'ready',
+        timestamp: Date.now(),
+        canopyCoveragePercent: detection.canopyCoveragePercent,
+        visualHealthScore: detection.isPlantDetected ? detection.confidence : 0,
+        leafColorAssessment: detection.foliageColorAssessment === 'vibrant_green' 
+          ? 'healthy_green' 
+          : detection.foliageColorAssessment === 'chlorosis' 
+            ? 'chlorosis' 
+            : detection.foliageColorAssessment === 'pale_yellow' 
+              ? 'pale_yellow' 
+              : 'unknown',
+        message: detection.statusText,
+      });
+    };
+    img.onerror = () => {
+      resolve({
+        status: 'error',
+        timestamp: Date.now(),
+        message: 'Failed to decode image buffer for vision analysis.',
+      });
+    };
+    img.src = imageBase64;
+  });
 }
