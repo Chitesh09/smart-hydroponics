@@ -29,7 +29,10 @@ import {
   Compass,
   Calendar,
   Clock,
-  History
+  History,
+  LineChart,
+  ShieldAlert,
+  HelpCircle
 } from 'lucide-react';
 import styles from './page.module.css';
 
@@ -61,6 +64,8 @@ export default function IntelligencePage() {
     growthMetrics,
     plantJourney,
     memoryAnswers,
+    predictiveAnalytics,
+    statisticalAnomalies,
     activeAnomalies,
     activeRecommendations,
     activeScenario,
@@ -127,10 +132,10 @@ export default function IntelligencePage() {
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <h1 className="text-3xl font-bold text-primary">Multimodal Plant Intelligence</h1>
-            <span className="badge badge-success" style={{ fontSize: '10px' }}>Phase 6 Growth & Memory</span>
+            <span className="badge badge-success" style={{ fontSize: '10px' }}>Phase 7 Predictive Analytics</span>
           </div>
           <p className="text-secondary" style={{ marginTop: '4px' }}>
-            Computer-vision canopy monitoring, persistent Plant Journey timeline, and retrospective plant memory.
+            Time-series rate of change forecasting, statistical Z-score anomaly modeling, and advisory grower guidance.
           </p>
         </div>
 
@@ -465,41 +470,6 @@ export default function IntelligencePage() {
                   </p>
                 </div>
               )}
-
-              {identificationResult.rankedCandidates.length > 1 && (
-                <div style={{ marginTop: '16px' }}>
-                  <span className="text-xs font-bold text-secondary uppercase tracking-wider mb-sm" style={{ display: 'block' }}>
-                    Ranked Botanical Candidates
-                  </span>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    {identificationResult.rankedCandidates.map((cand) => (
-                      <div key={cand.id} className={styles.candidateRow}>
-                        <div>
-                          <div style={{ fontWeight: 700, fontSize: '13px', color: '#F4F7FB' }}>
-                            {cand.commonName} <span style={{ fontSize: '11px', color: '#8FA3B8', fontWeight: 400, fontStyle: 'italic' }}>({cand.scientificName})</span>
-                          </div>
-                          <div style={{ fontSize: '11px', color: '#5A738E' }}>
-                            pH {cand.targetProfile.phMin}-{cand.targetProfile.phMax} · TDS {cand.targetProfile.tdsMin}-{cand.targetProfile.tdsMax} PPM
-                          </div>
-                        </div>
-
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                          <span style={{ fontSize: '13px', fontWeight: 800, color: cand.confidence > 70 ? '#B7FF3C' : '#00E5FF', fontFamily: 'var(--font-mono)' }}>
-                            {cand.confidence}%
-                          </span>
-                          <button 
-                            className="btn btn-ghost"
-                            style={{ fontSize: '11px', padding: '4px 8px' }}
-                            onClick={() => handleApplyProfile(cand)}
-                          >
-                            Select
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
             </div>
           )}
 
@@ -581,27 +551,6 @@ export default function IntelligencePage() {
                   </div>
                 </div>
               </div>
-
-              {/* Indicators */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                {latestVisualHealth.indicators.map((ind) => (
-                  <div key={ind.id} className={styles.indicatorItem}>
-                    {ind.severity === 'nominal' ? (
-                      <CheckCircle2 size={16} style={{ color: '#B7FF3C', flexShrink: 0, marginTop: '2px' }} />
-                    ) : (
-                      <AlertTriangle size={16} style={{ color: ind.severity === 'critical' ? '#FF6B4A' : '#FFC857', flexShrink: 0, marginTop: '2px' }} />
-                    )}
-                    <div>
-                      <div style={{ fontWeight: 700, fontSize: '12.5px', color: '#F4F7FB' }}>
-                        {ind.label}
-                      </div>
-                      <div style={{ fontSize: '11px', color: '#8FA3B8', marginTop: '2px' }}>
-                        {ind.details}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
             </div>
           )}
 
@@ -670,8 +619,6 @@ export default function IntelligencePage() {
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              
-              {/* Question 1: How has the plant changed? */}
               <div className={styles.memoryCard}>
                 <div className={styles.memoryQuestion}>
                   <Sparkles size={15} /> How has the plant changed?
@@ -681,7 +628,6 @@ export default function IntelligencePage() {
                 </div>
               </div>
 
-              {/* Question 2: Is the plant healthier? */}
               <div className={styles.memoryCard}>
                 <div className={styles.memoryQuestion} style={{ color: '#B7FF3C' }}>
                   <HeartPulse size={15} /> Is the plant healthier than earlier?
@@ -691,7 +637,6 @@ export default function IntelligencePage() {
                 </div>
               </div>
 
-              {/* Question 3: What changed recently? */}
               <div className={styles.memoryCard}>
                 <div className={styles.memoryQuestion} style={{ color: '#FFC857' }}>
                   <Clock size={15} /> What changed recently?
@@ -700,7 +645,6 @@ export default function IntelligencePage() {
                   {memoryAnswers.whatChangedRecently}
                 </div>
               </div>
-
             </div>
           </div>
 
@@ -743,7 +687,7 @@ export default function IntelligencePage() {
 
         </div>
 
-        {/* Right Column: PLANT CONDITION Station & Epistemological Separation */}
+        {/* Right Column: PLANT CONDITION Station & Predictions / Anomalies / Recommendations */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
           
           {/* UNIFIED PLANT CONDITION STATION */}
@@ -794,8 +738,10 @@ export default function IntelligencePage() {
 
               <div style={{ background: 'rgba(7, 17, 31, 0.6)', padding: '12px', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.05)' }}>
                 <div className="text-xs text-muted">Active Anomalies</div>
-                <div style={{ fontSize: '15px', fontWeight: 800, color: multimodalAssessment.anomalies.length > 0 ? '#FFC857' : '#B7FF3C', marginTop: '2px' }}>
-                  {multimodalAssessment.anomalies.length > 0 ? multimodalAssessment.anomalies.length : 'None'}
+                <div style={{ fontSize: '15px', fontWeight: 800, color: (multimodalAssessment.anomalies.length > 0 || statisticalAnomalies.some(a => a.isAnomaly)) ? '#FFC857' : '#B7FF3C', marginTop: '2px' }}>
+                  {multimodalAssessment.anomalies.length + statisticalAnomalies.filter(a => a.isAnomaly).length > 0
+                    ? multimodalAssessment.anomalies.length + statisticalAnomalies.filter(a => a.isAnomaly).length
+                    : 'None'}
                 </div>
                 <div style={{ fontSize: '10.5px', color: '#8FA3B8' }}>
                   Cross-Domain Flags
@@ -824,8 +770,6 @@ export default function IntelligencePage() {
 
             {/* EPISTEMOLOGICAL SEPARATION SECTIONS */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              
-              {/* 1. OBSERVATIONS (Raw Facts) */}
               <div className={styles.epistemicSection}>
                 <div className={styles.epistemicHeader} style={{ color: '#00E5FF' }}>
                   <Search size={14} /> Observations (Sensory Facts)
@@ -840,7 +784,6 @@ export default function IntelligencePage() {
                 </div>
               </div>
 
-              {/* 2. INTERPRETATIONS (Cross-Domain Relationships) */}
               <div className={styles.epistemicSection}>
                 <div className={styles.epistemicHeader} style={{ color: '#FFC857' }}>
                   <Compass size={14} /> Interpretations (Cross-Domain Relationships)
@@ -855,7 +798,6 @@ export default function IntelligencePage() {
                 </div>
               </div>
 
-              {/* 3. EXPLANATIONS (Agronomic Physiological Reasoning) */}
               <div className={styles.epistemicSection}>
                 <div className={styles.epistemicHeader} style={{ color: '#B7FF3C' }}>
                   <Sparkles size={14} /> Agronomic Explanations (Reasoning)
@@ -869,7 +811,6 @@ export default function IntelligencePage() {
                   ))}
                 </div>
               </div>
-
             </div>
           </div>
 
@@ -926,17 +867,17 @@ export default function IntelligencePage() {
             </div>
           </div>
 
-          {/* Active Anomalies & Recommendations */}
+          {/* Environmental Rule-Based Anomalies Card */}
           <div className="glass-card" style={{ padding: '24px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px' }}>
               <AlertTriangle size={18} style={{ color: activeAnomalies.length > 0 ? '#FFC857' : '#B7FF3C' }} />
               <h3 className="text-md font-bold">
-                {activeAnomalies.length > 0 ? `Active Anomalies (${activeAnomalies.length})` : 'System Equilibrium'}
+                {activeAnomalies.length > 0 ? `Environmental Anomalies (${activeAnomalies.length})` : 'System Equilibrium'}
               </h3>
             </div>
 
             {activeAnomalies.length > 0 ? (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '18px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                 {activeAnomalies.map((anom) => (
                   <div 
                     key={anom.id}
@@ -960,31 +901,267 @@ export default function IntelligencePage() {
                 ))}
               </div>
             ) : (
-              <div style={{ padding: '12px', background: 'rgba(183, 255, 60, 0.05)', border: '1px solid rgba(183, 255, 60, 0.2)', borderRadius: '6px', marginBottom: '18px', fontSize: '12px', color: '#B7FF3C' }}>
-                ✓ No chemical or physical anomalies detected for {cropIdentity.commonName}.
+              <div style={{ padding: '12px', background: 'rgba(183, 255, 60, 0.05)', border: '1px solid rgba(183, 255, 60, 0.2)', borderRadius: '6px', fontSize: '12px', color: '#B7FF3C' }}>
+                ✓ No chemical or physical threshold violations detected for {cropIdentity.commonName}.
               </div>
             )}
-
-            <h4 className="text-xs font-bold text-secondary uppercase tracking-wider mb-sm">Agronomic Recommendations</h4>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              {activeRecommendations.map((rec) => (
-                <div key={rec.id} style={{ background: 'rgba(7, 17, 31, 0.5)', padding: '12px', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.05)' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                    <span style={{ fontWeight: 600, fontSize: '12.5px', color: '#00E5FF' }}>{rec.title}</span>
-                    <span className="badge badge-info">{rec.priority.toUpperCase()}</span>
-                  </div>
-                  <p style={{ fontSize: '11.5px', color: '#F4F7FB', marginBottom: '4px' }}>{rec.action}</p>
-                  <p style={{ fontSize: '10.5px', color: '#5A738E' }}><em>Reason:</em> {rec.reasoning}</p>
-                </div>
-              ))}
-            </div>
           </div>
 
         </div>
 
       </div>
 
-      {/* 3. PLANT JOURNEY — Chronological Growth Timeline */}
+      {/* 3. PREDICTIONS SECTION */}
+      <div className="glass-card" style={{ padding: '24px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '10px' }}>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <LineChart size={20} className="text-primary" />
+              <h3 className="text-lg font-bold">PREDICTIONS & DRIFT FORECASTING</h3>
+            </div>
+            <p className="text-xs text-secondary" style={{ marginTop: '2px' }}>
+              Mathematical rate-of-change regressions forecasting estimated time until crop target threshold crossing.
+            </p>
+          </div>
+          <span className="badge badge-info">Time-Series Linear Regression</span>
+        </div>
+
+        <div className={styles.predictionsGrid}>
+          
+          {/* pH Prediction */}
+          <div className={styles.predictionCard}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontWeight: 700, fontSize: '13px', color: '#00E5FF' }}>pH Chemical Balance</span>
+              <span className={`badge badge-${predictiveAnalytics.predictions.ph.trendDirection === 'rising' ? 'warning' : predictiveAnalytics.predictions.ph.trendDirection === 'falling' ? 'info' : 'success'}`}>
+                {predictiveAnalytics.predictions.ph.trendDirection.toUpperCase()}
+              </span>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+              <div>
+                <span className="text-xs text-muted">Current: </span>
+                <strong style={{ fontSize: '16px', fontFamily: 'var(--font-mono)', color: '#F4F7FB' }}>
+                  {predictiveAnalytics.predictions.ph.currentValue.toFixed(2)}
+                </strong>
+              </div>
+              <div>
+                <span className="text-xs text-muted">Trend: </span>
+                <strong style={{ fontSize: '13px', fontFamily: 'var(--font-mono)', color: predictiveAnalytics.predictions.ph.driftPerDay >= 0 ? '#00E5FF' : '#FFC857' }}>
+                  {predictiveAnalytics.predictions.ph.driftPerDay >= 0 ? `+${predictiveAnalytics.predictions.ph.driftPerDay}` : predictiveAnalytics.predictions.ph.driftPerDay} pH/day
+                </strong>
+              </div>
+            </div>
+
+            <div style={{ background: 'rgba(0,0,0,0.3)', padding: '10px 12px', borderRadius: '6px', fontSize: '11.5px', color: '#F4F7FB', lineHeight: 1.45 }}>
+              <div style={{ color: '#8FA3B8', fontSize: '10.5px', marginBottom: '2px' }}>Estimated Threshold Crossing:</div>
+              <strong style={{ color: predictiveAnalytics.predictions.ph.estimatedDaysToThreshold !== null ? '#FFC857' : '#B7FF3C' }}>
+                {predictiveAnalytics.predictions.ph.estimatedDaysToThreshold !== null
+                  ? `~${predictiveAnalytics.predictions.ph.estimatedDaysToThreshold} Days`
+                  : 'Stable Equilibrium (>7 Days)'}
+              </strong>
+              <div style={{ marginTop: '4px', fontSize: '11px', color: '#8FA3B8' }}>
+                {predictiveAnalytics.predictions.ph.forecastSummary}
+              </div>
+            </div>
+          </div>
+
+          {/* TDS Prediction */}
+          <div className={styles.predictionCard}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontWeight: 700, fontSize: '13px', color: '#B7FF3C' }}>TDS Nutrient Salinity</span>
+              <span className={`badge badge-${predictiveAnalytics.predictions.tds.trendDirection === 'falling' ? 'warning' : predictiveAnalytics.predictions.tds.trendDirection === 'rising' ? 'warning' : 'success'}`}>
+                {predictiveAnalytics.predictions.tds.trendDirection.toUpperCase()}
+              </span>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+              <div>
+                <span className="text-xs text-muted">Current: </span>
+                <strong style={{ fontSize: '16px', fontFamily: 'var(--font-mono)', color: '#F4F7FB' }}>
+                  {predictiveAnalytics.predictions.tds.currentValue} PPM
+                </strong>
+              </div>
+              <div>
+                <span className="text-xs text-muted">Trend: </span>
+                <strong style={{ fontSize: '13px', fontFamily: 'var(--font-mono)', color: predictiveAnalytics.predictions.tds.driftPerDay >= 0 ? '#00E5FF' : '#FFC857' }}>
+                  {predictiveAnalytics.predictions.tds.driftPerDay >= 0 ? `+${predictiveAnalytics.predictions.tds.driftPerDay}` : predictiveAnalytics.predictions.tds.driftPerDay} PPM/day
+                </strong>
+              </div>
+            </div>
+
+            <div style={{ background: 'rgba(0,0,0,0.3)', padding: '10px 12px', borderRadius: '6px', fontSize: '11.5px', color: '#F4F7FB', lineHeight: 1.45 }}>
+              <div style={{ color: '#8FA3B8', fontSize: '10.5px', marginBottom: '2px' }}>Estimated Threshold Crossing:</div>
+              <strong style={{ color: predictiveAnalytics.predictions.tds.estimatedDaysToThreshold !== null ? '#FFC857' : '#B7FF3C' }}>
+                {predictiveAnalytics.predictions.tds.estimatedDaysToThreshold !== null
+                  ? `~${predictiveAnalytics.predictions.tds.estimatedDaysToThreshold} Days`
+                  : 'Stable Absorption (>7 Days)'}
+              </strong>
+              <div style={{ marginTop: '4px', fontSize: '11px', color: '#8FA3B8' }}>
+                {predictiveAnalytics.predictions.tds.forecastSummary}
+              </div>
+            </div>
+          </div>
+
+          {/* Water Level Prediction */}
+          <div className={styles.predictionCard}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontWeight: 700, fontSize: '13px', color: '#00E5FF' }}>Reservoir Capacity</span>
+              <span className={`badge badge-${predictiveAnalytics.predictions.waterLevel.trendDirection === 'falling' ? 'warning' : 'success'}`}>
+                {predictiveAnalytics.predictions.waterLevel.trendDirection.toUpperCase()}
+              </span>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+              <div>
+                <span className="text-xs text-muted">Current: </span>
+                <strong style={{ fontSize: '16px', fontFamily: 'var(--font-mono)', color: '#F4F7FB' }}>
+                  {predictiveAnalytics.predictions.waterLevel.currentValue}%
+                </strong>
+              </div>
+              <div>
+                <span className="text-xs text-muted">Trend: </span>
+                <strong style={{ fontSize: '13px', fontFamily: 'var(--font-mono)', color: predictiveAnalytics.predictions.waterLevel.driftPerDay >= 0 ? '#00E5FF' : '#FFC857' }}>
+                  {predictiveAnalytics.predictions.waterLevel.driftPerDay >= 0 ? `+${predictiveAnalytics.predictions.waterLevel.driftPerDay}` : predictiveAnalytics.predictions.waterLevel.driftPerDay}%/day
+                </strong>
+              </div>
+            </div>
+
+            <div style={{ background: 'rgba(0,0,0,0.3)', padding: '10px 12px', borderRadius: '6px', fontSize: '11.5px', color: '#F4F7FB', lineHeight: 1.45 }}>
+              <div style={{ color: '#8FA3B8', fontSize: '10.5px', marginBottom: '2px' }}>Estimated Critical Level (&lt;18%):</div>
+              <strong style={{ color: predictiveAnalytics.predictions.waterLevel.estimatedDaysToThreshold !== null ? '#FF6B4A' : '#B7FF3C' }}>
+                {predictiveAnalytics.predictions.waterLevel.estimatedDaysToThreshold !== null
+                  ? `~${predictiveAnalytics.predictions.waterLevel.estimatedDaysToThreshold} Days`
+                  : 'Sufficient Volume (>7 Days)'}
+              </strong>
+              <div style={{ marginTop: '4px', fontSize: '11px', color: '#8FA3B8' }}>
+                {predictiveAnalytics.predictions.waterLevel.forecastSummary}
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <div className={styles.limitationsBox} style={{ marginTop: '16px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#00E5FF', fontWeight: 700, marginBottom: '2px' }}>
+            <Info size={13} /> Mathematical Forecasting Notice
+          </div>
+          <div>{predictiveAnalytics.disclaimer}</div>
+        </div>
+      </div>
+
+      {/* 4. STATISTICAL ANOMALIES SECTION */}
+      <div className="glass-card" style={{ padding: '24px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '10px' }}>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <ShieldAlert size={20} className="text-accent" />
+              <h3 className="text-lg font-bold">STATISTICAL ANOMALY DETECTION</h3>
+            </div>
+            <p className="text-xs text-secondary" style={{ marginTop: '2px' }}>
+              Continuous Z-score ($\mu$, $\sigma$) outlier detection evaluating whether sensor drift exceeds normal biological variation.
+            </p>
+          </div>
+          <span className="badge badge-info">Z-Score Outlier Filter (|Z| &ge; 2.0&sigma;)</span>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '12px' }}>
+          {statisticalAnomalies.map((stat) => (
+            <div 
+              key={stat.id} 
+              className={styles.statAnomalyCard}
+              style={{
+                borderColor: stat.isAnomaly
+                  ? stat.severity === 'critical' ? 'rgba(255, 107, 74, 0.4)' : 'rgba(255, 200, 87, 0.4)'
+                  : 'rgba(255, 255, 255, 0.06)'
+              }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontWeight: 700, fontSize: '13px', color: '#F4F7FB' }}>
+                  {stat.label}
+                </span>
+                <span className={`badge badge-${stat.severity === 'critical' ? 'danger' : stat.severity === 'warning' ? 'warning' : 'success'}`}>
+                  {stat.isAnomaly ? `${stat.severity.toUpperCase()} OUTLIER` : 'NOMINAL (Z < 2.0)'}
+                </span>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '6px', background: 'rgba(0,0,0,0.25)', padding: '8px', borderRadius: '4px', fontSize: '11px', fontFamily: 'var(--font-mono)' }}>
+                <div>
+                  <span style={{ color: '#5A738E' }}>Mean (&mu;):</span><br />
+                  <strong>{stat.rollingMean}</strong>
+                </div>
+                <div>
+                  <span style={{ color: '#5A738E' }}>StdDev (&sigma;):</span><br />
+                  <strong>{stat.standardDeviation}</strong>
+                </div>
+                <div>
+                  <span style={{ color: '#5A738E' }}>Z-Score:</span><br />
+                  <strong style={{ color: Math.abs(stat.zScore) >= 2.0 ? '#FFC857' : '#B7FF3C' }}>
+                    {stat.zScore > 0 ? `+${stat.zScore}` : stat.zScore}&sigma;
+                  </strong>
+                </div>
+              </div>
+
+              <p style={{ fontSize: '11.5px', color: '#8FA3B8', lineHeight: 1.4 }}>
+                {stat.description}
+              </p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* 5. RECOMMENDATIONS SECTION (ADVISORY ONLY) */}
+      <div className="glass-card" style={{ padding: '24px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '10px' }}>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Sparkles size={20} className="text-primary" />
+              <h3 className="text-lg font-bold">GROWER RECOMMENDATIONS</h3>
+            </div>
+            <p className="text-xs text-secondary" style={{ marginTop: '2px' }}>
+              Structured, prioritized agronomic action steps based on predictive threshold crossings and sensor trends.
+            </p>
+          </div>
+          <span className="badge badge-info">{activeRecommendations.length} Action Items</span>
+        </div>
+
+        {/* Advisory Only Banner */}
+        <div className={styles.advisoryBanner} style={{ marginBottom: '16px' }}>
+          <HelpCircle size={18} style={{ flexShrink: 0 }} />
+          <div>
+            <strong>ADVISORY GUIDANCE ONLY — MANUAL GROWER ACTION REQUIRED:</strong> This hydroponic installation does not operate automatic dosing pumps or mechanical actuators. All recommendations represent diagnostic advice for human grower implementation.
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          {activeRecommendations.map((rec) => (
+            <div 
+              key={rec.id} 
+              style={{
+                background: 'rgba(7, 17, 31, 0.6)',
+                border: '1px solid rgba(255, 255, 255, 0.07)',
+                borderRadius: '6px',
+                padding: '14px 16px',
+                borderLeft: `4px solid ${rec.priority === 'immediate' ? '#FF6B4A' : rec.priority === 'high' ? '#FFC857' : '#00E5FF'}`
+              }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                <span style={{ fontWeight: 700, fontSize: '13.5px', color: '#F4F7FB' }}>{rec.title}</span>
+                <span className={`badge badge-${rec.priority === 'immediate' ? 'danger' : rec.priority === 'high' ? 'warning' : 'info'}`}>
+                  {rec.priority.toUpperCase()}
+                </span>
+              </div>
+              <div style={{ fontSize: '12px', color: '#00E5FF', fontWeight: 600, marginBottom: '4px' }}>
+                👉 Action: {rec.action}
+              </div>
+              <div style={{ fontSize: '11.5px', color: '#8FA3B8', lineHeight: 1.4 }}>
+                <em>Agronomic Reasoning:</em> {rec.reasoning}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* 6. PLANT JOURNEY — Chronological Growth Timeline */}
       <div className="glass-card" style={{ padding: '24px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '10px' }}>
           <div>

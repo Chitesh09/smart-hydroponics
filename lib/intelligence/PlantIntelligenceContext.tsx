@@ -22,7 +22,9 @@ import {
   HistoricalHealthInput,
   PlantGrowthMetrics,
   PlantJourneyMilestone,
-  PlantMemoryAnswers
+  PlantMemoryAnswers,
+  PredictiveAnalyticsResult,
+  StatisticalAnomalyResult
 } from './types';
 import {
   DEFAULT_CROP_PROFILE,
@@ -30,7 +32,6 @@ import {
   generateHealthReport
 } from './healthScore';
 import { detectEnvironmentalAnomalies } from './anomalyDetection';
-import { generateRecommendations } from './recommendations';
 import { identifyPlant } from './plantIdentification';
 import { multimodalHealthEngine } from './multimodalEngine';
 import {
@@ -38,6 +39,7 @@ import {
   compilePlantJourney,
   answerPlantMemoryQueries
 } from './plantMemory';
+import { runPredictiveAnalytics } from './predictiveAnalytics';
 import {
   getStoredObservations,
   saveObservation,
@@ -65,6 +67,8 @@ interface PlantIntelligenceContextType {
   growthMetrics: PlantGrowthMetrics;
   plantJourney: PlantJourneyMilestone[];
   memoryAnswers: PlantMemoryAnswers;
+  predictiveAnalytics: PredictiveAnalyticsResult;
+  statisticalAnomalies: StatisticalAnomalyResult[];
   activeAnomalies: AnomalyReport[];
   activeRecommendations: RecommendationItem[];
   activeScenario: DemoScenario;
@@ -134,16 +138,19 @@ export function PlantIntelligenceProvider({ children }: { children: React.ReactN
     );
   }, [currentPh, currentTds, currentWaterLevel, currentDistance, cropIdentity.targetProfile]);
 
-  // 3. Actionable Recommendations Generation
-  const activeRecommendations = useMemo(() => {
-    return generateRecommendations(
-      activeAnomalies,
+  // 3. Phase 7: Predictive Analytics & Statistical Anomaly Engine
+  const predictiveAnalytics = useMemo(() => {
+    return runPredictiveAnalytics(
       currentPh,
       currentTds,
       currentWaterLevel,
+      observations,
       cropIdentity.targetProfile
     );
-  }, [activeAnomalies, currentPh, currentTds, currentWaterLevel, cropIdentity.targetProfile]);
+  }, [currentPh, currentTds, currentWaterLevel, observations, cropIdentity.targetProfile]);
+
+  const statisticalAnomalies = predictiveAnalytics.anomalies;
+  const activeRecommendations = predictiveAnalytics.recommendations;
 
   // 4. Overall Health Assessment
   const healthReport = useMemo(() => {
@@ -293,7 +300,7 @@ export function PlantIntelligenceProvider({ children }: { children: React.ReactN
       environmentalHealthScore: environmentalAssessment.compositeEnvironmentalScore,
       overallHealthScore: multimodalAssessment.overallScore,
       multimodalAssessment,
-      anomalyDetected: activeAnomalies.length > 0 || isVisualAnomaly,
+      anomalyDetected: activeAnomalies.length > 0 || isVisualAnomaly || statisticalAnomalies.some(a => a.isAnomaly),
       activeAnomalies: activeAnomalies.map(a => a.title),
       recommendations: activeRecommendations.map(r => r.title),
     };
@@ -316,6 +323,7 @@ export function PlantIntelligenceProvider({ children }: { children: React.ReactN
     environmentalAssessment.compositeEnvironmentalScore,
     multimodalAssessment,
     activeAnomalies,
+    statisticalAnomalies,
     activeRecommendations
   ]);
 
@@ -356,6 +364,8 @@ export function PlantIntelligenceProvider({ children }: { children: React.ReactN
         growthMetrics,
         plantJourney,
         memoryAnswers,
+        predictiveAnalytics,
+        statisticalAnomalies,
         activeAnomalies,
         activeRecommendations,
         activeScenario,

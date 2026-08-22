@@ -1,6 +1,6 @@
 // ============================================================
 // HydroSmart Multimodal Intelligence Engine — Core Types
-// Phase 1, Phase 2, Phase 3, Phase 4, Phase 5, Phase 6
+// Phase 1, Phase 2, Phase 3, Phase 4, Phase 5, Phase 6, Phase 7
 // ============================================================
 
 export type ServiceStatus = 'active' | 'ready' | 'standby' | 'simulated' | 'error' | 'not_implemented';
@@ -249,6 +249,52 @@ export interface PlantMemoryAnswers {
   isPlantHealthier: string;
   whatChangedRecently: string;
   confidenceScore: number;
+}
+
+// ============================================================
+// Phase 7: Predictive Analytics & Recommendation Engine Types
+// ============================================================
+
+export interface ParameterPrediction {
+  metric: 'ph' | 'tds' | 'waterLevel';
+  label: string;
+  currentValue: number;
+  unit: string;
+  driftPerDay: number;              // Rate of change (ΔUnit/day)
+  trendDirection: 'rising' | 'falling' | 'stable';
+  targetMin: number;
+  targetMax: number;
+  isInsideTarget: boolean;
+  estimatedDaysToThreshold: number | null; // e.g. 3.4 days, or null if stable/improving
+  thresholdType: 'depletion_min' | 'toxicity_max' | 'critical_water' | 'none';
+  forecastSummary: string;
+  confidenceScore: number;          // 0 - 100%
+}
+
+export interface StatisticalAnomalyResult {
+  id: string;
+  metric: 'ph' | 'tds' | 'waterLevel';
+  label: string;
+  currentValue: number;
+  rollingMean: number;              // μ
+  standardDeviation: number;        // σ
+  zScore: number;                   // Z = (x - μ) / σ
+  isAnomaly: boolean;               // True if |Z| >= 2.0
+  severity: 'nominal' | 'warning' | 'critical';
+  rateOfChange: number;
+  description: string;
+}
+
+export interface PredictiveAnalyticsResult {
+  timestamp: number;
+  predictions: {
+    ph: ParameterPrediction;
+    tds: ParameterPrediction;
+    waterLevel: ParameterPrediction;
+  };
+  anomalies: StatisticalAnomalyResult[];
+  recommendations: RecommendationItem[];
+  disclaimer: string;
 }
 
 // Unified Multimodal Observation Model
