@@ -1,6 +1,6 @@
 // ============================================================
 // HydroSmart Multimodal Intelligence Engine — Core Types
-// Phase 1, Phase 2, Phase 3, Phase 4, Phase 5
+// Phase 1, Phase 2, Phase 3, Phase 4, Phase 5, Phase 6
 // ============================================================
 
 export type ServiceStatus = 'active' | 'ready' | 'standby' | 'simulated' | 'error' | 'not_implemented';
@@ -211,6 +211,44 @@ export interface MultimodalHealthAssessment {
   interpretations: string[];  // Cross-domain evaluated relationships
   explanations: string[];     // Agronomic reasoning without definitive disease claims
   confidence: number;         // 0 - 100% based on active sensor modalities
+}
+
+// ============================================================
+// Phase 6: Plant Growth Tracking & Memory Types
+// ============================================================
+
+export interface PlantGrowthMetrics {
+  initialCanopyCoverage: number;    // % on Day 1
+  latestCanopyCoverage: number;     // % current
+  cumulativeGrowthDelta: number;    // +% or -% change
+  dailyGrowthVelocity: number;      // %/day
+  daysMonitored: number;            // Total days span
+  growthState: 'expanding' | 'steady' | 'contracting' | 'insufficient_data';
+  disclaimer: string;
+}
+
+export interface PlantJourneyMilestone {
+  id: string;
+  dayNumber: number;               // Day 1, Day 7, Day 14
+  dayLabel: string;                // "Day 1 · Initial Baseline"
+  dateString: string;              // "Aug 8, 2026"
+  timestamp: number;
+  imageReference?: string;
+  healthScore: number;
+  healthState: 'optimal' | 'warning' | 'critical';
+  canopyCoveragePercent?: number;
+  canopyDeltaPercent?: number;      // Change from Day 1
+  ph?: number;
+  tds?: number;
+  waterLevel?: number;
+  anomaliesSummary?: string;
+}
+
+export interface PlantMemoryAnswers {
+  howHasPlantChanged: string;
+  isPlantHealthier: string;
+  whatChangedRecently: string;
+  confidenceScore: number;
 }
 
 // Unified Multimodal Observation Model

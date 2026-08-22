@@ -26,7 +26,10 @@ import {
   TrendingDown,
   Minus,
   Sparkles,
-  Compass
+  Compass,
+  Calendar,
+  Clock,
+  History
 } from 'lucide-react';
 import styles from './page.module.css';
 
@@ -55,6 +58,9 @@ export default function IntelligencePage() {
     applyIdentifiedSpecies,
     environmentalAssessment,
     multimodalAssessment,
+    growthMetrics,
+    plantJourney,
+    memoryAnswers,
     activeAnomalies,
     activeRecommendations,
     activeScenario,
@@ -121,10 +127,10 @@ export default function IntelligencePage() {
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <h1 className="text-3xl font-bold text-primary">Multimodal Plant Intelligence</h1>
-            <span className="badge badge-success" style={{ fontSize: '10px' }}>Phase 5 Fusion Engine</span>
+            <span className="badge badge-success" style={{ fontSize: '10px' }}>Phase 6 Growth & Memory</span>
           </div>
           <p className="text-secondary" style={{ marginTop: '4px' }}>
-            Cross-domain relational fusion synthesizing Computer Vision, ESP32 Physical Chemistry, and Historical Trends.
+            Computer-vision canopy monitoring, persistent Plant Journey timeline, and retrospective plant memory.
           </p>
         </div>
 
@@ -363,7 +369,6 @@ export default function IntelligencePage() {
                 </button>
               )}
 
-              {/* Multiple Device Picker */}
               {availableDevices.length > 1 && (
                 <select 
                   className="select" 
@@ -382,132 +387,6 @@ export default function IntelligencePage() {
                 <CheckCircle2 size={14} /> {captureFeedback}
               </div>
             )}
-          </div>
-
-          {/* VISUAL PLANT HEALTH / STRESS ANALYSIS CARD */}
-          <div className="glass-card" style={{ padding: '24px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
-              <div>
-                <span className="text-xs font-bold text-secondary uppercase tracking-wider">Computer Vision Diagnostics</span>
-                <h3 className="text-lg font-bold text-primary" style={{ marginTop: '2px' }}>
-                  VISUAL PLANT HEALTH / STRESS ANALYSIS
-                </h3>
-              </div>
-
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <span className={`badge badge-${latestVisualHealth?.healthState === 'healthy' ? 'success' : latestVisualHealth?.healthState === 'mild_stress' ? 'info' : latestVisualHealth?.healthState === 'unknown' ? 'secondary' : 'warning'}`}>
-                  {latestVisualHealth?.healthState ? latestVisualHealth.healthState.replace('_', ' ').toUpperCase() : 'UNKNOWN'}
-                </span>
-                <div 
-                  className={styles.healthScoreCircle}
-                  style={{ borderColor: visualStateColor, color: visualStateColor }}
-                >
-                  {latestVisualHealth?.visualHealthScore ?? 0}
-                </div>
-              </div>
-            </div>
-
-            {latestVisualHealth && latestVisualHealth.healthState !== 'unknown' ? (
-              <>
-                <p className="text-xs text-secondary mb-md">
-                  {latestVisualHealth.statusText}
-                </p>
-
-                {/* 4-Factor Reproducible Breakdown */}
-                <h4 className="text-xs font-bold text-secondary uppercase tracking-wider mb-sm">
-                  Reproducible 4-Factor Scoring Breakdown
-                </h4>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', background: 'rgba(7, 17, 31, 0.5)', padding: '14px', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.05)', marginBottom: '16px' }}>
-                  
-                  <div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', marginBottom: '4px' }}>
-                      <span className="text-secondary">1. Color Condition (Weight: 35%)</span>
-                      <span style={{ fontWeight: 700, color: latestVisualHealth.breakdown.colorConditionScore > 80 ? '#B7FF3C' : '#FFC857' }}>
-                        {latestVisualHealth.breakdown.colorConditionScore}/100
-                      </span>
-                    </div>
-                    <div className="progress-bar">
-                      <div className="progress-fill" style={{ width: `${latestVisualHealth.breakdown.colorConditionScore}%`, background: latestVisualHealth.breakdown.colorConditionScore > 80 ? '#B7FF3C' : '#FFC857' }} />
-                    </div>
-                  </div>
-
-                  <div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', marginBottom: '4px' }}>
-                      <span className="text-secondary">2. Surface Uniformity & Spots (Weight: 25%)</span>
-                      <span style={{ fontWeight: 700, color: latestVisualHealth.breakdown.surfaceUniformityScore > 80 ? '#B7FF3C' : '#FFC857' }}>
-                        {latestVisualHealth.breakdown.surfaceUniformityScore}/100
-                      </span>
-                    </div>
-                    <div className="progress-bar">
-                      <div className="progress-fill" style={{ width: `${latestVisualHealth.breakdown.surfaceUniformityScore}%`, background: latestVisualHealth.breakdown.surfaceUniformityScore > 80 ? '#B7FF3C' : '#FFC857' }} />
-                    </div>
-                  </div>
-
-                  <div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', marginBottom: '4px' }}>
-                      <span className="text-secondary">3. Canopy Vigor & Stature (Weight: 20%)</span>
-                      <span style={{ fontWeight: 700, color: latestVisualHealth.breakdown.canopyVigorScore > 80 ? '#B7FF3C' : '#FFC857' }}>
-                        {latestVisualHealth.breakdown.canopyVigorScore}/100
-                      </span>
-                    </div>
-                    <div className="progress-bar">
-                      <div className="progress-fill" style={{ width: `${latestVisualHealth.breakdown.canopyVigorScore}%`, background: latestVisualHealth.breakdown.canopyVigorScore > 80 ? '#B7FF3C' : '#FFC857' }} />
-                    </div>
-                  </div>
-
-                  <div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', marginBottom: '4px' }}>
-                      <span className="text-secondary">4. Anomaly Deductions (Weight: 20%)</span>
-                      <span style={{ fontWeight: 700, color: latestVisualHealth.breakdown.anomalyPenaltyScore > 80 ? '#B7FF3C' : '#FF6B4A' }}>
-                        {latestVisualHealth.breakdown.anomalyPenaltyScore}/100
-                      </span>
-                    </div>
-                    <div className="progress-bar">
-                      <div className="progress-fill" style={{ width: `${latestVisualHealth.breakdown.anomalyPenaltyScore}%`, background: latestVisualHealth.breakdown.anomalyPenaltyScore > 80 ? '#B7FF3C' : '#FF6B4A' }} />
-                    </div>
-                  </div>
-
-                </div>
-
-                {/* Detected Optical Indicators */}
-                <h4 className="text-xs font-bold text-secondary uppercase tracking-wider mb-sm">
-                  Detected Visual Stress Indicators
-                </h4>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '16px' }}>
-                  {latestVisualHealth.indicators.map((ind) => (
-                    <div key={ind.id} className={styles.indicatorItem}>
-                      {ind.severity === 'nominal' ? (
-                        <CheckCircle2 size={16} style={{ color: '#B7FF3C', flexShrink: 0, marginTop: '2px' }} />
-                      ) : (
-                        <AlertTriangle size={16} style={{ color: ind.severity === 'critical' ? '#FF6B4A' : '#FFC857', flexShrink: 0, marginTop: '2px' }} />
-                      )}
-                      <div>
-                        <div style={{ fontWeight: 700, fontSize: '12.5px', color: '#F4F7FB' }}>
-                          {ind.label}
-                        </div>
-                        <div style={{ fontSize: '11px', color: '#8FA3B8', marginTop: '2px' }}>
-                          {ind.details}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </>
-            ) : (
-              <div style={{ padding: '20px', background: 'rgba(7, 17, 31, 0.4)', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.05)', textAlign: 'center', color: 'var(--text-muted)', fontSize: '13px', marginBottom: '16px' }}>
-                Visual health analysis unavailable. Start the camera and point it at a plant to evaluate optical stress markers.
-              </div>
-            )}
-
-            {/* Documented Optical Limitations Box */}
-            <div className={styles.limitationsBox}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#00E5FF', fontWeight: 700, marginBottom: '4px' }}>
-                <Info size={14} /> Documented Optical Sensing Limitations
-              </div>
-              <div>
-                Visual stress analysis is based on chromatic reflectance and morphological edge analysis. Variations in ambient lighting, direct sunlight glare, or camera auto-white-balance drift may affect confidence. This tool does not claim definitive microbiological disease diagnosis.
-              </div>
-            </div>
           </div>
 
           {/* Plant Species Identification Results Card */}
@@ -624,6 +503,207 @@ export default function IntelligencePage() {
             </div>
           )}
 
+          {/* VISUAL PLANT HEALTH / STRESS ANALYSIS CARD */}
+          {latestVisualHealth && latestVisualHealth.healthState !== 'unknown' && (
+            <div className="glass-card" style={{ padding: '24px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
+                <div>
+                  <span className="text-xs font-bold text-secondary uppercase tracking-wider">Computer Vision Diagnostics</span>
+                  <h3 className="text-lg font-bold text-primary" style={{ marginTop: '2px' }}>
+                    VISUAL PLANT HEALTH / STRESS ANALYSIS
+                  </h3>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <span className={`badge badge-${latestVisualHealth.healthState === 'healthy' ? 'success' : latestVisualHealth.healthState === 'mild_stress' ? 'info' : 'warning'}`}>
+                    {latestVisualHealth.healthState.replace('_', ' ').toUpperCase()}
+                  </span>
+                  <div 
+                    className={styles.healthScoreCircle}
+                    style={{ borderColor: visualStateColor, color: visualStateColor }}
+                  >
+                    {latestVisualHealth.visualHealthScore}
+                  </div>
+                </div>
+              </div>
+
+              <p className="text-xs text-secondary mb-md">
+                {latestVisualHealth.statusText}
+              </p>
+
+              {/* 4-Factor Breakdown */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', background: 'rgba(7, 17, 31, 0.5)', padding: '14px', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.05)', marginBottom: '16px' }}>
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', marginBottom: '4px' }}>
+                    <span className="text-secondary">1. Color Condition (35% Weight)</span>
+                    <span style={{ fontWeight: 700, color: latestVisualHealth.breakdown.colorConditionScore > 80 ? '#B7FF3C' : '#FFC857' }}>
+                      {latestVisualHealth.breakdown.colorConditionScore}/100
+                    </span>
+                  </div>
+                  <div className="progress-bar">
+                    <div className="progress-fill" style={{ width: `${latestVisualHealth.breakdown.colorConditionScore}%`, background: latestVisualHealth.breakdown.colorConditionScore > 80 ? '#B7FF3C' : '#FFC857' }} />
+                  </div>
+                </div>
+
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', marginBottom: '4px' }}>
+                    <span className="text-secondary">2. Surface Uniformity (25% Weight)</span>
+                    <span style={{ fontWeight: 700, color: latestVisualHealth.breakdown.surfaceUniformityScore > 80 ? '#B7FF3C' : '#FFC857' }}>
+                      {latestVisualHealth.breakdown.surfaceUniformityScore}/100
+                    </span>
+                  </div>
+                  <div className="progress-bar">
+                    <div className="progress-fill" style={{ width: `${latestVisualHealth.breakdown.surfaceUniformityScore}%`, background: latestVisualHealth.breakdown.surfaceUniformityScore > 80 ? '#B7FF3C' : '#FFC857' }} />
+                  </div>
+                </div>
+
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', marginBottom: '4px' }}>
+                    <span className="text-secondary">3. Canopy Vigor (20% Weight)</span>
+                    <span style={{ fontWeight: 700, color: latestVisualHealth.breakdown.canopyVigorScore > 80 ? '#B7FF3C' : '#FFC857' }}>
+                      {latestVisualHealth.breakdown.canopyVigorScore}/100
+                    </span>
+                  </div>
+                  <div className="progress-bar">
+                    <div className="progress-fill" style={{ width: `${latestVisualHealth.breakdown.canopyVigorScore}%`, background: latestVisualHealth.breakdown.canopyVigorScore > 80 ? '#B7FF3C' : '#FFC857' }} />
+                  </div>
+                </div>
+
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', marginBottom: '4px' }}>
+                    <span className="text-secondary">4. Anomaly Deductions (20% Weight)</span>
+                    <span style={{ fontWeight: 700, color: latestVisualHealth.breakdown.anomalyPenaltyScore > 80 ? '#B7FF3C' : '#FF6B4A' }}>
+                      {latestVisualHealth.breakdown.anomalyPenaltyScore}/100
+                    </span>
+                  </div>
+                  <div className="progress-bar">
+                    <div className="progress-fill" style={{ width: `${latestVisualHealth.breakdown.anomalyPenaltyScore}%`, background: latestVisualHealth.breakdown.anomalyPenaltyScore > 80 ? '#B7FF3C' : '#FF6B4A' }} />
+                  </div>
+                </div>
+              </div>
+
+              {/* Indicators */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {latestVisualHealth.indicators.map((ind) => (
+                  <div key={ind.id} className={styles.indicatorItem}>
+                    {ind.severity === 'nominal' ? (
+                      <CheckCircle2 size={16} style={{ color: '#B7FF3C', flexShrink: 0, marginTop: '2px' }} />
+                    ) : (
+                      <AlertTriangle size={16} style={{ color: ind.severity === 'critical' ? '#FF6B4A' : '#FFC857', flexShrink: 0, marginTop: '2px' }} />
+                    )}
+                    <div>
+                      <div style={{ fontWeight: 700, fontSize: '12.5px', color: '#F4F7FB' }}>
+                        {ind.label}
+                      </div>
+                      <div style={{ fontSize: '11px', color: '#8FA3B8', marginTop: '2px' }}>
+                        {ind.details}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* IMAGE-DERIVED GROWTH ESTIMATES STATION */}
+          <div className="glass-card" style={{ padding: '24px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <TrendingUp size={18} className="text-primary" />
+                <h3 className="text-md font-bold">IMAGE-DERIVED GROWTH ESTIMATES</h3>
+              </div>
+              <span className={`badge badge-${growthMetrics.growthState === 'expanding' ? 'success' : growthMetrics.growthState === 'contracting' ? 'warning' : 'info'}`}>
+                {growthMetrics.growthState.toUpperCase()}
+              </span>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px', marginBottom: '14px' }}>
+              <div style={{ background: 'rgba(7, 17, 31, 0.5)', padding: '12px', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                <span className="text-xs text-muted">Cumulative Expansion</span>
+                <div style={{ fontSize: '18px', fontWeight: 800, color: growthMetrics.cumulativeGrowthDelta >= 0 ? '#B7FF3C' : '#FFC857', fontFamily: 'var(--font-mono)', marginTop: '2px' }}>
+                  {growthMetrics.cumulativeGrowthDelta >= 0 ? `+${growthMetrics.cumulativeGrowthDelta}%` : `${growthMetrics.cumulativeGrowthDelta}%`}
+                </div>
+                <span style={{ fontSize: '10.5px', color: '#8FA3B8' }}>
+                  From {growthMetrics.initialCanopyCoverage}% Baseline
+                </span>
+              </div>
+
+              <div style={{ background: 'rgba(7, 17, 31, 0.5)', padding: '12px', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                <span className="text-xs text-muted">Expansion Velocity</span>
+                <div style={{ fontSize: '18px', fontWeight: 800, color: '#00E5FF', fontFamily: 'var(--font-mono)', marginTop: '2px' }}>
+                  {growthMetrics.dailyGrowthVelocity >= 0 ? `+${growthMetrics.dailyGrowthVelocity}` : growthMetrics.dailyGrowthVelocity} <span style={{ fontSize: '11px', fontWeight: 400 }}>%/day</span>
+                </div>
+                <span style={{ fontSize: '10.5px', color: '#8FA3B8' }}>
+                  2D Optical Spread Rate
+                </span>
+              </div>
+
+              <div style={{ background: 'rgba(7, 17, 31, 0.5)', padding: '12px', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                <span className="text-xs text-muted">Monitoring Span</span>
+                <div style={{ fontSize: '18px', fontWeight: 800, color: '#F4F7FB', fontFamily: 'var(--font-mono)', marginTop: '2px' }}>
+                  {growthMetrics.daysMonitored} <span style={{ fontSize: '11px', fontWeight: 400 }}>Days</span>
+                </div>
+                <span style={{ fontSize: '10.5px', color: '#8FA3B8' }}>
+                  {observations.length} Snapshots Logged
+                </span>
+              </div>
+            </div>
+
+            <div className={styles.limitationsBox}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#00E5FF', fontWeight: 700, marginBottom: '2px' }}>
+                <Info size={13} /> Optical Growth Modeling Disclaimer
+              </div>
+              <div>{growthMetrics.disclaimer}</div>
+            </div>
+          </div>
+
+          {/* PLANT MEMORY RETROSPECTIVE STATION */}
+          <div className="glass-card" style={{ padding: '24px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
+              <History size={18} className="text-primary" />
+              <div>
+                <h3 className="text-md font-bold">PLANT MEMORY</h3>
+                <p className="text-xs text-secondary">
+                  Retrospective intelligence answering longitudinal questions about plant development.
+                </p>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              
+              {/* Question 1: How has the plant changed? */}
+              <div className={styles.memoryCard}>
+                <div className={styles.memoryQuestion}>
+                  <Sparkles size={15} /> How has the plant changed?
+                </div>
+                <div className={styles.memoryAnswer}>
+                  {memoryAnswers.howHasPlantChanged}
+                </div>
+              </div>
+
+              {/* Question 2: Is the plant healthier? */}
+              <div className={styles.memoryCard}>
+                <div className={styles.memoryQuestion} style={{ color: '#B7FF3C' }}>
+                  <HeartPulse size={15} /> Is the plant healthier than earlier?
+                </div>
+                <div className={styles.memoryAnswer} style={{ borderLeftColor: '#B7FF3C' }}>
+                  {memoryAnswers.isPlantHealthier}
+                </div>
+              </div>
+
+              {/* Question 3: What changed recently? */}
+              <div className={styles.memoryCard}>
+                <div className={styles.memoryQuestion} style={{ color: '#FFC857' }}>
+                  <Clock size={15} /> What changed recently?
+                </div>
+                <div className={styles.memoryAnswer} style={{ borderLeftColor: '#FFC857' }}>
+                  {memoryAnswers.whatChangedRecently}
+                </div>
+              </div>
+
+            </div>
+          </div>
+
           {/* Demo Intelligence Scenarios (Simulation Mode) */}
           <div className="glass-card" style={{ padding: '24px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
@@ -676,7 +756,6 @@ export default function IntelligencePage() {
                 </h3>
               </div>
 
-              {/* Overall Health Score Circle */}
               <div style={{ textAlign: 'center' }}>
                 <div 
                   className={styles.healthScoreCircle} 
@@ -886,7 +965,6 @@ export default function IntelligencePage() {
               </div>
             )}
 
-            {/* Explainable Recommendations */}
             <h4 className="text-xs font-bold text-secondary uppercase tracking-wider mb-sm">Agronomic Recommendations</h4>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               {activeRecommendations.map((rec) => (
@@ -906,69 +984,78 @@ export default function IntelligencePage() {
 
       </div>
 
-      {/* 3. Multimodal Observation History Timeline */}
+      {/* 3. PLANT JOURNEY — Chronological Growth Timeline */}
       <div className="glass-card" style={{ padding: '24px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '10px' }}>
           <div>
-            <h3 className="text-md font-bold">Multimodal Observation Log</h3>
-            <p className="text-xs text-secondary">
-              Synchronized records combining webcam snapshots, plant species identification, visual stress scores, and hardware telemetry.
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Calendar size={18} className="text-primary" />
+              <h3 className="text-lg font-bold">PLANT JOURNEY</h3>
+            </div>
+            <p className="text-xs text-secondary" style={{ marginTop: '2px' }}>
+              Chronological visual memory tracking development from initial seedling transplant to harvest readiness.
             </p>
           </div>
-          <span className="badge badge-info">{observations.length} Observations</span>
+          <span className="badge badge-info">{plantJourney.length} Milestones Tracked</span>
         </div>
 
-        {observations.length === 0 ? (
+        {plantJourney.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '36px 16px', color: 'var(--text-muted)', fontSize: '13px' }}>
-            No observations recorded yet. Start your camera above and click <strong>&quot;Capture Record&quot;</strong> to create a multimodal record.
+            No journey milestones recorded yet. Capture camera snapshots above to begin building your plant&apos;s chronological visual journey.
           </div>
         ) : (
-          <div className={styles.observationTimeline}>
-            {observations.slice(0, 6).map((obs) => (
-              <div key={obs.id} className={styles.observationCard}>
-                {obs.imageReference ? (
+          <div className={styles.journeyTimeline}>
+            {plantJourney.map((milestone) => (
+              <div key={milestone.id} className={styles.journeyCard}>
+                
+                {/* Milestone Header */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontWeight: 800, fontSize: '13px', color: '#00E5FF' }}>
+                    {milestone.dayLabel}
+                  </span>
+                  <span className="text-xs text-muted">{milestone.dateString}</span>
+                </div>
+
+                {/* Milestone Photo / Thumbnail */}
+                {milestone.imageReference ? (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={obs.imageReference} alt="Plant observation" className={styles.observationThumbnail} />
+                  <img src={milestone.imageReference} alt={milestone.dayLabel} className={styles.journeyThumbnail} />
                 ) : (
                   <div className={styles.thumbnailPlaceholder}>
-                    No image attached (Camera Idle)
+                    <Leaf size={28} style={{ color: '#5A738E' }} />
+                    <span>Baseline Milestone Snapshot</span>
                   </div>
                 )}
 
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '11px', color: '#8FA3B8' }}>
-                  <span>{new Date(obs.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>
-                  <span className={`badge badge-${obs.overallHealthScore && obs.overallHealthScore > 75 ? 'success' : 'warning'}`}>
-                    Overall: {obs.overallHealthScore ?? '--'}/100
+                {/* Health & Growth Delta Row */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div>
+                    <span className="text-xs text-muted">Health: </span>
+                    <strong style={{ color: milestone.healthScore > 80 ? '#B7FF3C' : '#FFC857', fontSize: '13px' }}>
+                      {milestone.healthScore} / 100
+                    </strong>
+                  </div>
+                  <span className={`badge badge-${milestone.canopyDeltaPercent !== undefined && milestone.canopyDeltaPercent >= 0 ? 'success' : 'info'}`}>
+                    {milestone.canopyDeltaPercent !== undefined && milestone.canopyDeltaPercent >= 0 ? `+${milestone.canopyDeltaPercent}% Canopy` : `${milestone.canopyDeltaPercent}% Canopy`}
                   </span>
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '6px', background: 'rgba(0,0,0,0.2)', padding: '6px 8px', borderRadius: '4px', fontSize: '11px', fontFamily: 'var(--font-mono)' }}>
+                {/* Environmental Chips */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '6px', background: 'rgba(0,0,0,0.25)', padding: '8px', borderRadius: '4px', fontSize: '11px', fontFamily: 'var(--font-mono)' }}>
                   <div>
                     <span style={{ color: '#5A738E' }}>pH: </span>
-                    <strong>{obs.ph?.toFixed(2) ?? '--'}</strong>
+                    <strong>{milestone.ph?.toFixed(2) ?? '--'}</strong>
                   </div>
                   <div>
                     <span style={{ color: '#5A738E' }}>TDS: </span>
-                    <strong>{obs.tds ? Math.round(obs.tds) : '--'}</strong>
+                    <strong>{milestone.tds ? Math.round(milestone.tds) : '--'}</strong>
                   </div>
                   <div>
                     <span style={{ color: '#5A738E' }}>WL: </span>
-                    <strong>{obs.waterLevel ? `${Math.round(obs.waterLevel)}%` : '--'}</strong>
+                    <strong>{milestone.waterLevel ? `${Math.round(milestone.waterLevel)}%` : '--'}</strong>
                   </div>
                 </div>
 
-                {obs.canopyCoveragePercent !== undefined && (
-                  <div style={{ fontSize: '10.5px', color: '#00E5FF', display: 'flex', justifyContent: 'space-between' }}>
-                    <span>Canopy: {obs.canopyCoveragePercent}%</span>
-                    <span>State: {obs.visualHealthState ?? 'nominal'}</span>
-                  </div>
-                )}
-
-                {obs.activeAnomalies && obs.activeAnomalies.length > 0 && (
-                  <div style={{ fontSize: '10.5px', color: 'var(--color-warning)' }}>
-                    ⚠️ {obs.activeAnomalies[0]}
-                  </div>
-                )}
               </div>
             ))}
           </div>

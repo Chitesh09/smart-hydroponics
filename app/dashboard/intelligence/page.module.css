@@ -171,6 +171,36 @@
   gap: 10px;
 }
 
+/* Plant Memory & Epistemic Sections */
+.memoryCard {
+  background: rgba(7, 17, 31, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: var(--radius-md);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.memoryQuestion {
+  font-size: 13px;
+  font-weight: 700;
+  color: #00E5FF;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.memoryAnswer {
+  font-size: 12px;
+  color: #F4F7FB;
+  line-height: 1.5;
+  background: rgba(0, 0, 0, 0.25);
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  border-left: 3px solid #00E5FF;
+}
+
 .epistemicSection {
   background: rgba(7, 17, 31, 0.5);
   border: 1px solid rgba(255, 255, 255, 0.06);
@@ -236,23 +266,31 @@
   border-color: #00E5FF;
 }
 
-.observationTimeline {
+/* Plant Journey Timeline */
+.journeyTimeline {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: 16px;
 }
 
-.observationCard {
+.journeyCard {
   background: rgba(7, 17, 31, 0.6);
   border: 1px solid rgba(255, 255, 255, 0.06);
   border-radius: var(--radius-md);
-  padding: 14px;
+  padding: 16px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
+  position: relative;
+  transition: var(--transition-base);
 }
 
-.observationThumbnail {
+.journeyCard:hover {
+  border-color: rgba(0, 229, 255, 0.3);
+  transform: translateY(-2px);
+}
+
+.journeyThumbnail {
   width: 100%;
   height: 140px;
   object-fit: cover;
@@ -267,8 +305,10 @@
   border: 1px dashed rgba(255, 255, 255, 0.1);
   border-radius: var(--radius-sm);
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
+  gap: 6px;
   color: var(--text-muted);
   font-size: 11px;
 }

@@ -19,7 +19,10 @@ import {
   MultimodalHealthAssessment,
   CameraHealthInput,
   ESP32HealthInput,
-  HistoricalHealthInput
+  HistoricalHealthInput,
+  PlantGrowthMetrics,
+  PlantJourneyMilestone,
+  PlantMemoryAnswers
 } from './types';
 import {
   DEFAULT_CROP_PROFILE,
@@ -30,6 +33,11 @@ import { detectEnvironmentalAnomalies } from './anomalyDetection';
 import { generateRecommendations } from './recommendations';
 import { identifyPlant } from './plantIdentification';
 import { multimodalHealthEngine } from './multimodalEngine';
+import {
+  computeGrowthEstimates,
+  compilePlantJourney,
+  answerPlantMemoryQueries
+} from './plantMemory';
 import {
   getStoredObservations,
   saveObservation,
@@ -54,6 +62,9 @@ interface PlantIntelligenceContextType {
   environmentalAssessment: EnvironmentalAssessment;
   healthReport: PlantHealthReport;
   multimodalAssessment: MultimodalHealthAssessment;
+  growthMetrics: PlantGrowthMetrics;
+  plantJourney: PlantJourneyMilestone[];
+  memoryAnswers: PlantMemoryAnswers;
   activeAnomalies: AnomalyReport[];
   activeRecommendations: RecommendationItem[];
   activeScenario: DemoScenario;
@@ -142,7 +153,7 @@ export function PlantIntelligenceProvider({ children }: { children: React.ReactN
     return generateHealthReport(environmentalAssessment, visualScore);
   }, [environmentalAssessment, latestVisualHealth]);
 
-  // 5. Phase 5 Multimodal Health Engine (Cross-domain fusion of Camera + ESP32 + History)
+  // 5. Phase 5 Multimodal Health Engine
   const multimodalAssessment = useMemo(() => {
     const cameraInput: CameraHealthInput = {
       isPlantDetected: latestDetection?.isPlantDetected,
@@ -188,6 +199,19 @@ export function PlantIntelligenceProvider({ children }: { children: React.ReactN
     mode,
     observations
   ]);
+
+  // 6. Phase 6 Plant Growth & Memory Calculations
+  const growthMetrics = useMemo(() => {
+    return computeGrowthEstimates(observations);
+  }, [observations]);
+
+  const plantJourney = useMemo(() => {
+    return compilePlantJourney(observations);
+  }, [observations]);
+
+  const memoryAnswers = useMemo(() => {
+    return answerPlantMemoryQueries(observations, cropIdentity.commonName);
+  }, [observations, cropIdentity.commonName]);
 
   // Identify plant from current camera frame
   const identifyCurrentPlant = useCallback(async (): Promise<PlantIdentificationResponse | null> => {
@@ -329,6 +353,9 @@ export function PlantIntelligenceProvider({ children }: { children: React.ReactN
         environmentalAssessment,
         healthReport,
         multimodalAssessment,
+        growthMetrics,
+        plantJourney,
+        memoryAnswers,
         activeAnomalies,
         activeRecommendations,
         activeScenario,
