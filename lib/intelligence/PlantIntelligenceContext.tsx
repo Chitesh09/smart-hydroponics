@@ -8,6 +8,8 @@ import { PlantDetectionResult } from '@/lib/vision/plantDetector';
 import {
   PlantObservation,
   PlantIdentity,
+  PlantCandidate,
+  PlantIdentificationResponse,
   EnvironmentalAssessment,
   PlantHealthReport,
   AnomalyReport,
@@ -21,6 +23,7 @@ import {
 } from './healthScore';
 import { detectEnvironmentalAnomalies } from './anomalyDetection';
 import { generateRecommendations } from './recommendations';
+import { identifyPlant } from './plantIdentification';
 import {
   getStoredObservations,
   saveObservation,
@@ -37,6 +40,10 @@ interface PlantIntelligenceContextType {
   isScanning: boolean;
   setIsScanning: (scanning: boolean) => void;
   analyzeNow: () => PlantDetectionResult | null;
+  identificationResult: PlantIdentificationResponse | null;
+  isIdentifying: boolean;
+  identifyCurrentPlant: () => Promise<PlantIdentificationResponse | null>;
+  applyIdentifiedSpecies: (candidate: PlantCandidate, imageRef?: string) => void;
   environmentalAssessment: EnvironmentalAssessment;
   healthReport: PlantHealthReport;
   activeAnomalies: AnomalyReport[];
@@ -54,15 +61,20 @@ export function PlantIntelligenceProvider({ children }: { children: React.ReactN
   const { status: cameraStatus, captureFrame } = useCamera();
   const { latestDetection, isScanning, setIsScanning, analyzeNow } = usePlantMonitor();
 
-  // Crop Identity State
+  // Crop Identity State (Initial defaults to Butterhead Lettuce)
   const [cropIdentity, setCropIdentity] = useState<PlantIdentity>(() => ({
-    cropKey: 'lettuce_butterhead',
+    cropKey: 'butterhead_lettuce',
     commonName: 'Butterhead Lettuce',
     scientificName: 'Lactuca sativa var. capitata',
+    family: 'Asteraceae',
     plantedTimestamp: undefined,
     growthStage: 'vegetative',
     targetProfile: DEFAULT_CROP_PROFILE,
   }));
+
+  // Identification State
+  const [identificationResult, setIdentificationResult] = useState<PlantIdentificationResponse | null>(null);
+  const [isIdentifying, setIsIdentifying] = useState<boolean>(false);
 
   // Multimodal Observation History (loaded asynchronously on client mount)
   const [observations, setObservations] = useState<PlantObservation[]>([]);
@@ -76,7 +88,7 @@ export function PlantIntelligenceProvider({ children }: { children: React.ReactN
     return () => clearTimeout(timer);
   }, []);
 
-  // Active reading values (fallback to defaults if hardware not connected or simulator not reporting yet)
+  // Active reading values
   const currentPh = latestReading?.ph;
   const currentTds = latestReading?.tds;
   const currentWaterLevel = latestReading?.waterLevel;
@@ -114,11 +126,55 @@ export function PlantIntelligenceProvider({ children }: { children: React.ReactN
     );
   }, [activeAnomalies, currentPh, currentTds, currentWaterLevel, cropIdentity.targetProfile]);
 
-  // 4. Overall Health Assessment (fused with visual detection confidence if available)
+  // 4. Overall Health Assessment
   const healthReport = useMemo(() => {
     const visualScore = latestDetection?.isPlantDetected ? latestDetection.confidence : undefined;
     return generateHealthReport(environmentalAssessment, visualScore);
   }, [environmentalAssessment, latestDetection]);
+
+  // Identify plant from current camera frame
+  const identifyCurrentPlant = useCallback(async (): Promise<PlantIdentificationResponse | null> => {
+    const snapshot = captureFrame();
+    if (!snapshot) return null;
+
+    setIsIdentifying(true);
+    try {
+      const response = await identifyPlant(snapshot);
+      setIdentificationResult(response);
+      return response;
+    } catch (err) {
+      console.error('[PlantIntelligence] Identification error:', err);
+      const errorResp: PlantIdentificationResponse = {
+        status: 'error',
+        rankedCandidates: [],
+        overallConfidence: 0,
+        confidenceLevel: 'uncertain',
+        guidanceMessage: 'An error occurred during botanical identification.',
+        timestamp: Date.now(),
+      };
+      setIdentificationResult(errorResp);
+      return errorResp;
+    } finally {
+      setIsIdentifying(false);
+    }
+  }, [captureFrame]);
+
+  // Apply identified candidate as active crop profile
+  const applyIdentifiedSpecies = useCallback((candidate: PlantCandidate, imageRef?: string) => {
+    const now = Date.now();
+    setCropIdentity({
+      cropKey: candidate.id,
+      commonName: candidate.commonName,
+      scientificName: candidate.scientificName,
+      family: candidate.family,
+      confidence: candidate.confidence,
+      identificationTimestamp: now,
+      imageReference: imageRef || identificationResult?.imageReference,
+      plantedTimestamp: now - 7 * 86400000, // estimated 1 week vegetative growth
+      growthStage: 'vegetative',
+      targetProfile: candidate.targetProfile,
+    });
+  }, [identificationResult]);
 
   // Capture Current Webcam Frame + Telemetry to Save an Observation
   const captureAndObserve = useCallback((): PlantObservation | null => {
@@ -142,6 +198,7 @@ export function PlantIntelligenceProvider({ children }: { children: React.ReactN
       telemetryMode: mode,
       isTelemetryStale: isStale,
       plantSpecies: cropIdentity.commonName,
+      speciesConfidence: cropIdentity.confidence,
       environmentalHealthScore: environmentalAssessment.compositeEnvironmentalScore,
       overallHealthScore: healthReport.overallHealthScore,
       anomalyDetected: activeAnomalies.length > 0,
@@ -163,6 +220,7 @@ export function PlantIntelligenceProvider({ children }: { children: React.ReactN
     mode,
     isStale,
     cropIdentity.commonName,
+    cropIdentity.confidence,
     environmentalAssessment.compositeEnvironmentalScore,
     healthReport.overallHealthScore,
     activeAnomalies,
@@ -195,6 +253,10 @@ export function PlantIntelligenceProvider({ children }: { children: React.ReactN
         isScanning,
         setIsScanning,
         analyzeNow,
+        identificationResult,
+        isIdentifying,
+        identifyCurrentPlant,
+        applyIdentifiedSpecies,
         environmentalAssessment,
         healthReport,
         activeAnomalies,

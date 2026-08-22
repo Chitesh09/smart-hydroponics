@@ -23,10 +23,42 @@ export interface CropTargetProfile {
   optimalTempMax?: number;
 }
 
+export interface PlantCandidate {
+  id: string;
+  commonName: string;
+  scientificName: string;
+  family: string;
+  confidence: number; // 0 - 100%
+  description: string;
+  targetProfile: CropTargetProfile;
+}
+
+export interface PlantIdentificationResponse {
+  status: 'success' | 'low_confidence' | 'no_plant_detected' | 'error';
+  primaryCandidate?: PlantCandidate;
+  rankedCandidates: PlantCandidate[];
+  overallConfidence: number; // 0 - 100%
+  confidenceLevel: 'high' | 'moderate' | 'low' | 'uncertain';
+  guidanceMessage: string;
+  timestamp: number;
+  imageReference?: string;
+  extractedFeatures?: {
+    aspectRatio: number;
+    meanExG: number;
+    meanHue: number;
+    edgeComplexity: number;
+    canopyCoverage: number;
+  };
+}
+
 export interface PlantIdentity {
   cropKey: string;
   commonName: string;
   scientificName?: string;
+  family?: string;
+  confidence?: number;
+  identificationTimestamp?: number;
+  imageReference?: string;
   plantedTimestamp?: number;
   growthStage?: 'germination' | 'seedling' | 'vegetative' | 'flowering' | 'fruiting' | 'harvest_ready';
   targetProfile: CropTargetProfile;

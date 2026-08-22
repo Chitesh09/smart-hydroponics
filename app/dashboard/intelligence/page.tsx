@@ -5,7 +5,7 @@ import { usePlantIntelligence } from '@/lib/intelligence/PlantIntelligenceContex
 import { useESP32Serial } from '@/lib/esp32/ESP32SerialContext';
 import { useCamera } from '@/lib/camera/CameraContext';
 import { DEMO_SCENARIOS } from '@/lib/intelligence/demoScenarios';
-import { DemoScenario } from '@/lib/intelligence/types';
+import { DemoScenario, PlantCandidate } from '@/lib/intelligence/types';
 import {
   Camera,
   CameraOff,
@@ -17,7 +17,10 @@ import {
   Layers,
   Eye,
   Activity,
-  Scan
+  Scan,
+  Leaf,
+  Check,
+  Search
 } from 'lucide-react';
 import styles from './page.module.css';
 
@@ -40,6 +43,10 @@ export default function IntelligencePage() {
     isScanning,
     setIsScanning,
     analyzeNow,
+    identificationResult,
+    isIdentifying,
+    identifyCurrentPlant,
+    applyIdentifiedSpecies,
     environmentalAssessment,
     healthReport,
     activeAnomalies,
@@ -51,6 +58,7 @@ export default function IntelligencePage() {
   } = usePlantIntelligence();
 
   const [captureFeedback, setCaptureFeedback] = useState<string | null>(null);
+  const [appliedFeedback, setAppliedFeedback] = useState<string | null>(null);
 
   const handleCapture = () => {
     const obs = captureAndObserve();
@@ -58,6 +66,12 @@ export default function IntelligencePage() {
       setCaptureFeedback(`Multimodal observation recorded at ${new Date(obs.timestamp).toLocaleTimeString()}`);
       setTimeout(() => setCaptureFeedback(null), 4000);
     }
+  };
+
+  const handleApplyProfile = (candidate: PlantCandidate) => {
+    applyIdentifiedSpecies(candidate);
+    setAppliedFeedback(`Applied ${candidate.commonName} targets (pH ${candidate.targetProfile.phMin}-${candidate.targetProfile.phMax}, TDS ${candidate.targetProfile.tdsMin}-${candidate.targetProfile.tdsMax}) to system.`);
+    setTimeout(() => setAppliedFeedback(null), 5000);
   };
 
   const handleExport = () => {
@@ -86,11 +100,11 @@ export default function IntelligencePage() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <h1 className="text-3xl font-bold text-primary">Live Plant Camera Monitor</h1>
-            <span className="badge badge-success" style={{ fontSize: '10px' }}>Phase 2 Live CV</span>
+            <h1 className="text-3xl font-bold text-primary">Plant Intelligence & Vision</h1>
+            <span className="badge badge-success" style={{ fontSize: '10px' }}>Phase 3 Plant ID</span>
           </div>
           <p className="text-secondary" style={{ marginTop: '4px' }}>
-            Real-time computer vision canopy detection, chlorophyll spectral index ($ExG$), and multimodal telemetry fusion.
+            Computer-vision canopy monitoring, botanical species identification, and calibrated agronomic diagnostics.
           </p>
         </div>
 
@@ -157,16 +171,23 @@ export default function IntelligencePage() {
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span className="text-xs text-secondary font-mono">
-            Crop: <strong style={{ color: '#F4F7FB' }}>{cropIdentity.commonName}</strong>
+          <span className="badge badge-info" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <Leaf size={13} />
+            <span>Active: <strong>{cropIdentity.commonName}</strong></span>
           </span>
         </div>
       </div>
 
+      {appliedFeedback && (
+        <div style={{ padding: '12px 16px', background: 'rgba(183, 255, 60, 0.1)', border: '1px solid rgba(183, 255, 60, 0.3)', borderRadius: '6px', fontSize: '13px', color: '#B7FF3C', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <CheckCircle2 size={16} /> {appliedFeedback}
+        </div>
+      )}
+
       {/* 2. Main Intelligence Grid */}
       <div className={styles.intelligenceLayout}>
         
-        {/* Left Column: LIVE PLANT VIEW & Scenarios */}
+        {/* Left Column: LIVE PLANT VIEW & Identification Station */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
           
           {/* Live Plant View Card */}
@@ -207,7 +228,7 @@ export default function IntelligencePage() {
                   <div className={styles.cameraHudBar}>
                     <div className={styles.hudPill} style={{ color: '#00E5FF' }}>
                       <Activity size={12} />
-                      <span>FPS: 60 (Hardware Stream)</span>
+                      <span>FPS: 60 (Live Stream)</span>
                     </div>
 
                     <div 
@@ -248,7 +269,7 @@ export default function IntelligencePage() {
                   <div>
                     <div style={{ fontWeight: 700, color: '#F4F7FB', fontSize: '15px' }}>Live Plant Camera Inactive</div>
                     <div style={{ fontSize: '12px', color: '#8FA3B8', marginTop: '4px' }}>
-                      Click below to activate laptop camera for real-time computer vision canopy detection.
+                      Click below to activate laptop camera for real-time botanical vision and plant identification.
                     </div>
                   </div>
                 </div>
@@ -296,20 +317,24 @@ export default function IntelligencePage() {
             <div className={styles.cameraControls}>
               {cameraStatus === 'connected' ? (
                 <>
-                  <button className="btn btn-primary" onClick={handleCapture}>
-                    <Camera size={16} /> Capture Observation
+                  <button 
+                    className="btn btn-primary" 
+                    onClick={() => identifyCurrentPlant()}
+                    disabled={isIdentifying}
+                  >
+                    <Search size={16} /> {isIdentifying ? 'Analyzing Plant...' : 'Identify Plant Species'}
+                  </button>
+                  <button className="btn btn-ghost" onClick={handleCapture}>
+                    <Camera size={16} /> Capture Record
                   </button>
                   <button 
                     className={`btn btn-${isScanning ? 'ghost' : 'secondary'}`} 
                     onClick={() => setIsScanning(!isScanning)}
                   >
-                    <Scan size={16} /> {isScanning ? 'Auto-Scan: Active' : 'Auto-Scan: Paused'}
-                  </button>
-                  <button className="btn btn-ghost" onClick={() => analyzeNow()} title="Trigger immediate scan">
-                    Scan Frame
+                    <Scan size={16} /> {isScanning ? 'Auto-Scan: ON' : 'Auto-Scan: OFF'}
                   </button>
                   <button className="btn btn-ghost" onClick={stopCamera}>
-                    <CameraOff size={16} /> Stop Camera
+                    <CameraOff size={16} /> Stop
                   </button>
                 </>
               ) : (
@@ -342,6 +367,125 @@ export default function IntelligencePage() {
               </div>
             )}
           </div>
+
+          {/* Plant Species Identification Results Card */}
+          {identificationResult && (
+            <div className="glass-card" style={{ padding: '24px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <Leaf size={18} className="text-primary" />
+                  <h3 className="text-md font-bold">PLANT IDENTIFICATION</h3>
+                </div>
+                <span className={`badge badge-${identificationResult.confidenceLevel === 'high' ? 'success' : identificationResult.confidenceLevel === 'moderate' ? 'info' : 'warning'}`}>
+                  {identificationResult.confidenceLevel.toUpperCase()} CONFIDENCE
+                </span>
+              </div>
+
+              {/* Primary Candidate Result */}
+              {identificationResult.primaryCandidate && identificationResult.status === 'success' ? (
+                <div className={styles.identificationCard}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '10px' }}>
+                    <div>
+                      <div style={{ fontSize: '20px', fontWeight: 800, color: '#F4F7FB' }}>
+                        {identificationResult.primaryCandidate.commonName}
+                      </div>
+                      <div style={{ fontSize: '13px', color: '#00E5FF', fontStyle: 'italic' }}>
+                        {identificationResult.primaryCandidate.scientificName} · Family: {identificationResult.primaryCandidate.family}
+                      </div>
+                    </div>
+
+                    <div style={{ textAlign: 'right' }}>
+                      <div className="text-xs text-muted">Confidence</div>
+                      <div style={{ fontSize: '20px', fontWeight: 800, color: '#B7FF3C', fontFamily: 'var(--font-mono)' }}>
+                        {identificationResult.primaryCandidate.confidence}%
+                      </div>
+                    </div>
+                  </div>
+
+                  <p style={{ fontSize: '12px', color: '#8FA3B8', lineHeight: 1.5 }}>
+                    {identificationResult.primaryCandidate.description}
+                  </p>
+
+                  {/* Target envelope for this plant */}
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px', background: 'rgba(0,0,0,0.3)', padding: '10px', borderRadius: '6px', fontSize: '11.5px', fontFamily: 'var(--font-mono)' }}>
+                    <div>
+                      <span className="text-muted">Target pH:</span><br />
+                      <strong style={{ color: '#00E5FF' }}>
+                        {identificationResult.primaryCandidate.targetProfile.phMin} - {identificationResult.primaryCandidate.targetProfile.phMax}
+                      </strong>
+                    </div>
+                    <div>
+                      <span className="text-muted">Target TDS:</span><br />
+                      <strong style={{ color: '#B7FF3C' }}>
+                        {identificationResult.primaryCandidate.targetProfile.tdsMin} - {identificationResult.primaryCandidate.targetProfile.tdsMax} PPM
+                      </strong>
+                    </div>
+                    <div>
+                      <span className="text-muted">Optimal Temp:</span><br />
+                      <strong style={{ color: '#FFC857' }}>
+                        {identificationResult.primaryCandidate.targetProfile.optimalTempMin ?? 18} - {identificationResult.primaryCandidate.targetProfile.optimalTempMax ?? 26}°C
+                      </strong>
+                    </div>
+                  </div>
+
+                  {/* Action Button: Recalibrate System to this Crop */}
+                  <button 
+                    className="btn btn-primary"
+                    onClick={() => handleApplyProfile(identificationResult.primaryCandidate!)}
+                    style={{ alignSelf: 'flex-start' }}
+                  >
+                    <Check size={16} /> Apply {identificationResult.primaryCandidate.commonName} Target Profile
+                  </button>
+                </div>
+              ) : (
+                /* Low Confidence / Uncertain Guidance Message */
+                <div style={{ padding: '16px', background: 'rgba(255, 200, 87, 0.08)', border: '1px solid rgba(255, 200, 87, 0.25)', borderRadius: '6px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#FFC857', fontWeight: 700, fontSize: '13px', marginBottom: '4px' }}>
+                    <AlertTriangle size={16} /> Identification Uncertain
+                  </div>
+                  <p style={{ fontSize: '12px', color: '#F4F7FB', lineHeight: 1.4 }}>
+                    {identificationResult.guidanceMessage}
+                  </p>
+                </div>
+              )}
+
+              {/* Ranked Alternate Candidates List */}
+              {identificationResult.rankedCandidates.length > 1 && (
+                <div style={{ marginTop: '16px' }}>
+                  <span className="text-xs font-bold text-secondary uppercase tracking-wider mb-sm" style={{ display: 'block' }}>
+                    Ranked Botanical Candidates
+                  </span>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    {identificationResult.rankedCandidates.map((cand) => (
+                      <div key={cand.id} className={styles.candidateRow}>
+                        <div>
+                          <div style={{ fontWeight: 700, fontSize: '13px', color: '#F4F7FB' }}>
+                            {cand.commonName} <span style={{ fontSize: '11px', color: '#8FA3B8', fontWeight: 400, fontStyle: 'italic' }}>({cand.scientificName})</span>
+                          </div>
+                          <div style={{ fontSize: '11px', color: '#5A738E' }}>
+                            pH {cand.targetProfile.phMin}-{cand.targetProfile.phMax} · TDS {cand.targetProfile.tdsMin}-{cand.targetProfile.tdsMax} PPM
+                          </div>
+                        </div>
+
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          <span style={{ fontSize: '13px', fontWeight: 800, color: cand.confidence > 70 ? '#B7FF3C' : '#00E5FF', fontFamily: 'var(--font-mono)' }}>
+                            {cand.confidence}%
+                          </span>
+                          <button 
+                            className="btn btn-ghost"
+                            style={{ fontSize: '11px', padding: '4px 8px' }}
+                            onClick={() => handleApplyProfile(cand)}
+                          >
+                            Select
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Demo Intelligence Scenarios (Simulation Mode) */}
           <div className="glass-card" style={{ padding: '24px' }}>
@@ -390,14 +534,14 @@ export default function IntelligencePage() {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <Cpu size={18} className="text-accent" />
-                <h3 className="text-md font-bold">Synchronized Telemetry</h3>
+                <h3 className="text-md font-bold">Calibrated Telemetry</h3>
               </div>
               <span className="badge badge-info">{mode === 'real' ? 'HARDWARE' : 'SIMULATION'}</span>
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px' }}>
               <div style={{ background: 'rgba(7, 17, 31, 0.5)', padding: '12px', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.05)' }}>
-                <span className="text-xs text-muted">pH Level</span>
+                <span className="text-xs text-muted">pH Chemical Level</span>
                 <div style={{ fontSize: '20px', fontWeight: 800, color: '#00E5FF', fontFamily: 'var(--font-mono)', marginTop: '2px' }}>
                   {latestReading?.ph ? latestReading.ph.toFixed(2) : '--'}
                 </div>
@@ -442,7 +586,7 @@ export default function IntelligencePage() {
           <div className="glass-card" style={{ padding: '24px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
               <div>
-                <span className="text-xs font-bold text-secondary uppercase tracking-wider">Multimodal Health</span>
+                <span className="text-xs font-bold text-secondary uppercase tracking-wider">Calibrated Health</span>
                 <h3 className="text-lg font-bold text-primary" style={{ marginTop: '2px' }}>
                   {healthReport.healthState === 'optimal' ? 'Optimal Balance' : healthReport.healthState === 'warning' ? 'Moderate Stress' : 'Critical Hazard'}
                 </h3>
@@ -465,7 +609,7 @@ export default function IntelligencePage() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', background: 'rgba(7, 17, 31, 0.5)', padding: '14px', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.05)' }}>
               <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', marginBottom: '4px' }}>
-                  <span className="text-secondary">pH Chemical Index</span>
+                  <span className="text-secondary">pH Index ({cropIdentity.commonName})</span>
                   <span style={{ fontWeight: 700, color: environmentalAssessment.phStatus === 'optimal' ? '#B7FF3C' : '#FFC857' }}>
                     {environmentalAssessment.phScore}/100
                   </span>
@@ -477,7 +621,7 @@ export default function IntelligencePage() {
 
               <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', marginBottom: '4px' }}>
-                  <span className="text-secondary">TDS Nutrient Salinity</span>
+                  <span className="text-secondary">TDS Salinity ({cropIdentity.commonName})</span>
                   <span style={{ fontWeight: 700, color: environmentalAssessment.tdsStatus === 'optimal' ? '#B7FF3C' : '#FFC857' }}>
                     {environmentalAssessment.tdsScore}/100
                   </span>
@@ -489,7 +633,7 @@ export default function IntelligencePage() {
 
               <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', marginBottom: '4px' }}>
-                  <span className="text-secondary">Reservoir Capacity</span>
+                  <span className="text-secondary">Reservoir Volume</span>
                   <span style={{ fontWeight: 700, color: environmentalAssessment.waterLevelStatus === 'optimal' ? '#B7FF3C' : '#FF6B4A' }}>
                     {environmentalAssessment.waterLevelScore}/100
                   </span>
@@ -536,7 +680,7 @@ export default function IntelligencePage() {
               </div>
             ) : (
               <div style={{ padding: '12px', background: 'rgba(183, 255, 60, 0.05)', border: '1px solid rgba(183, 255, 60, 0.2)', borderRadius: '6px', marginBottom: '18px', fontSize: '12px', color: '#B7FF3C' }}>
-                ✓ No chemical or physical anomalies detected. All sensors are within biological safety bands.
+                ✓ No chemical or physical anomalies detected for {cropIdentity.commonName}.
               </div>
             )}
 
@@ -566,7 +710,7 @@ export default function IntelligencePage() {
           <div>
             <h3 className="text-md font-bold">Multimodal Observation Log</h3>
             <p className="text-xs text-secondary">
-              Synchronized records combining webcam snapshots, computer vision metrics, and hardware telemetry.
+              Synchronized records combining webcam snapshots, plant species identification, and hardware telemetry.
             </p>
           </div>
           <span className="badge badge-info">{observations.length} Observations</span>
@@ -574,7 +718,7 @@ export default function IntelligencePage() {
 
         {observations.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '36px 16px', color: 'var(--text-muted)', fontSize: '13px' }}>
-            No observations recorded yet. Start your camera above and click <strong>&quot;Capture Observation&quot;</strong> to create a multimodal record.
+            No observations recorded yet. Start your camera above and click <strong>&quot;Capture Record&quot;</strong> to create a multimodal record.
           </div>
         ) : (
           <div className={styles.observationTimeline}>
@@ -592,7 +736,7 @@ export default function IntelligencePage() {
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '11px', color: '#8FA3B8' }}>
                   <span>{new Date(obs.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>
                   <span className={`badge badge-${obs.isPlantDetected ? 'success' : 'warning'}`}>
-                    {obs.isPlantDetected ? `Plant (${obs.plantDetectionConfidence ?? '--'}%)` : 'No Plant'}
+                    {obs.plantSpecies ? obs.plantSpecies : obs.isPlantDetected ? 'Plant' : 'No Plant'}
                   </span>
                 </div>
 
@@ -614,7 +758,7 @@ export default function IntelligencePage() {
                 {obs.canopyCoveragePercent !== undefined && (
                   <div style={{ fontSize: '10.5px', color: '#00E5FF', display: 'flex', justifyContent: 'space-between' }}>
                     <span>Canopy: {obs.canopyCoveragePercent}%</span>
-                    <span>ExG: {obs.vegetationIndex ?? '--'}</span>
+                    <span>Conf: {obs.plantDetectionConfidence ?? '--'}%</span>
                   </div>
                 )}
 
