@@ -222,7 +222,7 @@ export function ESP32SerialProvider({ children }: { children: React.ReactNode })
           for (const line of lines) {
             const trimmed = line.trim();
             if (trimmed) {
-              let updatedFields: Partial<SensorReading> = {};
+              const updatedFields: Partial<SensorReading> = {};
 
               // 1. Try to parse as single-line JSON first
               try {

@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { Sidebar } from '@/components/Sidebar';
 import { ESP32SerialProvider, useESP32Serial } from '@/lib/esp32/ESP32SerialContext';
+import { CameraProvider } from '@/lib/camera/CameraContext';
+import { PlantIntelligenceProvider } from '@/lib/intelligence/PlantIntelligenceContext';
 import { Menu, Leaf } from 'lucide-react';
 import styles from './layout.module.css';
 
@@ -14,7 +16,11 @@ export default function DashboardLayout({
 }) {
   return (
     <ESP32SerialProvider>
-      <DashboardLayoutContent>{children}</DashboardLayoutContent>
+      <CameraProvider>
+        <PlantIntelligenceProvider>
+          <DashboardLayoutContent>{children}</DashboardLayoutContent>
+        </PlantIntelligenceProvider>
+      </CameraProvider>
     </ESP32SerialProvider>
   );
 }

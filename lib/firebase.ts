@@ -3,7 +3,7 @@
 // For demo: works with mock data if Firebase not configured
 
 import { initializeApp, getApps, type FirebaseApp } from 'firebase/app';
-import { getDatabase, ref, set, push, onValue, query, limitToLast, type Database } from 'firebase/database';
+import { getDatabase, ref, push, onValue, query, limitToLast, type Database } from 'firebase/database';
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || 'demo-key',
@@ -29,13 +29,13 @@ try {
     db = getDatabase(app);
     firebaseAvailable = true;
   }
-} catch (e) {
+} catch (_e) {
   console.warn('Firebase not configured — using local state only');
 }
 
 export { firebaseAvailable };
 
-export async function pushSensorReading(data: any) {
+export async function pushSensorReading(data: object) {
   if (!db) return;
   try {
     const readingsRef = ref(db, 'hydroponics/readings');
@@ -45,7 +45,7 @@ export async function pushSensorReading(data: any) {
   }
 }
 
-export async function pushAlert(alert: any) {
+export async function pushAlert(alert: object) {
   if (!db) return;
   try {
     const alertsRef = ref(db, 'hydroponics/alerts');

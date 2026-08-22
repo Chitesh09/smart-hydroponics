@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation';
 import {
   LayoutDashboard,
   BarChart3,
+  Sparkles,
   Cpu,
   Settings,
   Leaf,
@@ -16,6 +17,7 @@ import styles from './Sidebar.module.css';
 const overviewItems = [
   { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard', description: 'Live monitoring' },
   { href: '/dashboard/analytics', icon: BarChart3, label: 'Analytics', description: 'Historical data' },
+  { href: '/dashboard/intelligence', icon: Sparkles, label: 'Intelligence', description: 'Multimodal hub' },
 ];
 
 const systemItems = [

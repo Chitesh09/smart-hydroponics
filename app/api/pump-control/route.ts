@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { manualPumpActivate } from '@/lib/simulator';
+import { manualPumpActivate, PumpState } from '@/lib/simulator';
 import { pushAlert, firebaseAvailable } from '@/lib/firebase';
 
 export async function POST(request: Request) {
@@ -11,7 +11,7 @@ export async function POST(request: Request) {
     }
 
     // Trigger simulator manual activate
-    manualPumpActivate(pumpId as any, duration * 1000);
+    manualPumpActivate(pumpId as keyof PumpState, duration * 1000);
 
     if (firebaseAvailable) {
       await pushAlert({
@@ -25,7 +25,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ success: true, pumpId, duration });
     
-  } catch (err) {
+  } catch (_err) {
     return NextResponse.json({ error: 'Failed to trigger pump' }, { status: 500 });
   }
 }

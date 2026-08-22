@@ -44,7 +44,7 @@ export const CROP_PROFILES: Record<string, TargetRanges> = {
 };
 
 // Internal mutable state
-let internalState = {
+const internalState = {
   ph: 6.0,
   tds: 1000,
   temperature: 22.0,
