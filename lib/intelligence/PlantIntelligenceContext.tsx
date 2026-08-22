@@ -5,6 +5,7 @@ import { useESP32Serial } from '@/lib/esp32/ESP32SerialContext';
 import { useCamera } from '@/lib/camera/CameraContext';
 import { usePlantMonitor } from '@/lib/camera/usePlantMonitor';
 import { PlantDetectionResult } from '@/lib/vision/plantDetector';
+import { VisualHealthAnalysisResult } from '@/lib/vision/plantHealthAnalyzer';
 import {
   PlantObservation,
   PlantIdentity,
@@ -37,9 +38,10 @@ interface PlantIntelligenceContextType {
   observations: PlantObservation[];
   latestObservation: PlantObservation | null;
   latestDetection: PlantDetectionResult | null;
+  latestVisualHealth: VisualHealthAnalysisResult | null;
   isScanning: boolean;
   setIsScanning: (scanning: boolean) => void;
-  analyzeNow: () => PlantDetectionResult | null;
+  analyzeNow: () => { detection: PlantDetectionResult; health: VisualHealthAnalysisResult } | null;
   identificationResult: PlantIdentificationResponse | null;
   isIdentifying: boolean;
   identifyCurrentPlant: () => Promise<PlantIdentificationResponse | null>;
@@ -59,7 +61,7 @@ const PlantIntelligenceContext = createContext<PlantIntelligenceContextType | un
 export function PlantIntelligenceProvider({ children }: { children: React.ReactNode }) {
   const { mode, isStale, latestReading } = useESP32Serial();
   const { status: cameraStatus, captureFrame } = useCamera();
-  const { latestDetection, isScanning, setIsScanning, analyzeNow } = usePlantMonitor();
+  const { latestDetection, latestVisualHealth, isScanning, setIsScanning, analyzeNow } = usePlantMonitor();
 
   // Crop Identity State (Initial defaults to Butterhead Lettuce)
   const [cropIdentity, setCropIdentity] = useState<PlantIdentity>(() => ({
@@ -126,11 +128,13 @@ export function PlantIntelligenceProvider({ children }: { children: React.ReactN
     );
   }, [activeAnomalies, currentPh, currentTds, currentWaterLevel, cropIdentity.targetProfile]);
 
-  // 4. Overall Health Assessment
+  // 4. Overall Health Assessment (fusing 50% environmental + 50% reproducible visual health)
   const healthReport = useMemo(() => {
-    const visualScore = latestDetection?.isPlantDetected ? latestDetection.confidence : undefined;
+    const visualScore = latestVisualHealth && latestVisualHealth.healthState !== 'unknown'
+      ? latestVisualHealth.visualHealthScore
+      : undefined;
     return generateHealthReport(environmentalAssessment, visualScore);
-  }, [environmentalAssessment, latestDetection]);
+  }, [environmentalAssessment, latestVisualHealth]);
 
   // Identify plant from current camera frame
   const identifyCurrentPlant = useCallback(async (): Promise<PlantIdentificationResponse | null> => {
@@ -170,7 +174,7 @@ export function PlantIntelligenceProvider({ children }: { children: React.ReactN
       confidence: candidate.confidence,
       identificationTimestamp: now,
       imageReference: imageRef || identificationResult?.imageReference,
-      plantedTimestamp: now - 7 * 86400000, // estimated 1 week vegetative growth
+      plantedTimestamp: now - 7 * 86400000,
       growthStage: 'vegetative',
       targetProfile: candidate.targetProfile,
     });
@@ -179,8 +183,14 @@ export function PlantIntelligenceProvider({ children }: { children: React.ReactN
   // Capture Current Webcam Frame + Telemetry to Save an Observation
   const captureAndObserve = useCallback((): PlantObservation | null => {
     const snapshot = captureFrame();
-    const detection = analyzeNow();
+    const scan = analyzeNow();
+    const detection = scan?.detection;
+    const visualHealth = scan?.health;
     const now = Date.now();
+
+    const isVisualAnomaly = visualHealth
+      ? visualHealth.healthState === 'possible_anomaly' || visualHealth.healthState === 'significant_anomaly'
+      : false;
 
     const newObservation: PlantObservation = {
       id: `obs_${now}_${Math.random().toString(36).substring(2, 7)}`,
@@ -191,6 +201,10 @@ export function PlantIntelligenceProvider({ children }: { children: React.ReactN
       plantDetectionConfidence: detection?.confidence,
       canopyCoveragePercent: detection?.canopyCoveragePercent,
       vegetationIndex: detection?.vegetationIndex,
+      visualHealthScore: visualHealth?.visualHealthScore,
+      visualHealthState: visualHealth?.healthState,
+      visualScoreBreakdown: visualHealth?.breakdown,
+      visualIndicators: visualHealth?.indicators.map(i => i.label),
       ph: currentPh,
       tds: currentTds,
       waterLevel: currentWaterLevel,
@@ -201,7 +215,7 @@ export function PlantIntelligenceProvider({ children }: { children: React.ReactN
       speciesConfidence: cropIdentity.confidence,
       environmentalHealthScore: environmentalAssessment.compositeEnvironmentalScore,
       overallHealthScore: healthReport.overallHealthScore,
-      anomalyDetected: activeAnomalies.length > 0,
+      anomalyDetected: activeAnomalies.length > 0 || isVisualAnomaly,
       activeAnomalies: activeAnomalies.map(a => a.title),
       recommendations: activeRecommendations.map(r => r.title),
     };
@@ -250,6 +264,7 @@ export function PlantIntelligenceProvider({ children }: { children: React.ReactN
         observations,
         latestObservation,
         latestDetection,
+        latestVisualHealth,
         isScanning,
         setIsScanning,
         analyzeNow,

@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useCamera } from './CameraContext';
 import { detectPlantPresence, PlantDetectionResult } from '@/lib/vision/plantDetector';
+import { analyzeVisualPlantHealth, VisualHealthAnalysisResult } from '@/lib/vision/plantHealthAnalyzer';
 
 interface UsePlantMonitorOptions {
   sampleIntervalMs?: number;
@@ -16,6 +17,7 @@ export function usePlantMonitor({
   const { status: cameraStatus, videoRef } = useCamera();
 
   const [latestDetection, setLatestDetection] = useState<PlantDetectionResult | null>(null);
+  const [latestVisualHealth, setLatestVisualHealth] = useState<VisualHealthAnalysisResult | null>(null);
   const [isScanning, setIsScanning] = useState<boolean>(autoScanDefault);
   const [lastScanTime, setLastScanTime] = useState<number | null>(null);
 
@@ -23,15 +25,19 @@ export function usePlantMonitor({
   const historyWindowRef = useRef<boolean[]>([]);
 
   // Analyze single current frame immediately
-  const analyzeNow = useCallback((): PlantDetectionResult | null => {
+  const analyzeNow = useCallback((): {
+    detection: PlantDetectionResult;
+    health: VisualHealthAnalysisResult;
+  } | null => {
     if (!videoRef.current || cameraStatus !== 'connected') {
       return null;
     }
 
-    const result = detectPlantPresence(videoRef.current);
+    const detection = detectPlantPresence(videoRef.current);
+    const health = analyzeVisualPlantHealth(videoRef.current);
     
     // Apply temporal smoothing (rolling window of 3 frames)
-    historyWindowRef.current.push(result.isPlantDetected);
+    historyWindowRef.current.push(detection.isPlantDetected);
     if (historyWindowRef.current.length > 3) {
       historyWindowRef.current.shift();
     }
@@ -41,13 +47,18 @@ export function usePlantMonitor({
     const stabilizedDetected = positiveVotes >= 2;
 
     const smoothedResult: PlantDetectionResult = {
-      ...result,
+      ...detection,
       isPlantDetected: stabilizedDetected,
     };
 
     setLatestDetection(smoothedResult);
+    setLatestVisualHealth(health);
     setLastScanTime(Date.now());
-    return smoothedResult;
+
+    return {
+      detection: smoothedResult,
+      health,
+    };
   }, [cameraStatus, videoRef]);
 
   // Periodic sampling loop
@@ -71,6 +82,7 @@ export function usePlantMonitor({
     if (cameraStatus !== 'connected') {
       const timer = setTimeout(() => {
         setLatestDetection(null);
+        setLatestVisualHealth(null);
         historyWindowRef.current = [];
       }, 0);
       return () => clearTimeout(timer);
@@ -79,6 +91,7 @@ export function usePlantMonitor({
 
   return {
     latestDetection,
+    latestVisualHealth,
     isScanning,
     setIsScanning,
     lastScanTime,

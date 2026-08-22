@@ -138,7 +138,20 @@ export interface PredictionResult {
 }
 
 import { PlantDetectionResult } from '@/lib/vision/plantDetector';
-export type { PlantDetectionResult };
+import {
+  VisualHealthAnalysisResult,
+  VisualHealthState,
+  VisualScoreBreakdown,
+  VisualStressIndicator
+} from '@/lib/vision/plantHealthAnalyzer';
+
+export type {
+  PlantDetectionResult,
+  VisualHealthAnalysisResult,
+  VisualHealthState,
+  VisualScoreBreakdown,
+  VisualStressIndicator
+};
 
 // Unified Multimodal Observation Model
 export interface PlantObservation {
@@ -155,6 +168,12 @@ export interface PlantObservation {
   canopyCoveragePercent?: number;
   vegetationIndex?: number;
   
+  // Visual Health & Stress Analysis
+  visualHealthScore?: number; // 0 - 100
+  visualHealthState?: VisualHealthState;
+  visualScoreBreakdown?: VisualScoreBreakdown;
+  visualIndicators?: string[];
+
   // Sensor Telemetry (from ESP32 or Simulator)
   ph?: number;
   tds?: number;
@@ -166,10 +185,6 @@ export interface PlantObservation {
   // Plant Identification
   plantSpecies?: string;
   speciesConfidence?: number;
-
-  // Visual Analysis (Future ML)
-  visualHealthScore?: number;
-  visualAnomalies?: string[];
 
   // Environmental Assessment (Rule-based)
   environmentalHealthScore?: number;

@@ -15,12 +15,13 @@ import {
   Download,
   Trash2,
   Layers,
-  Eye,
   Activity,
   Scan,
   Leaf,
   Check,
-  Search
+  Search,
+  HeartPulse,
+  Info
 } from 'lucide-react';
 import styles from './page.module.css';
 
@@ -40,9 +41,9 @@ export default function IntelligencePage() {
     cropIdentity,
     observations,
     latestDetection,
+    latestVisualHealth,
     isScanning,
     setIsScanning,
-    analyzeNow,
     identificationResult,
     isIdentifying,
     identifyCurrentPlant,
@@ -93,6 +94,14 @@ export default function IntelligencePage() {
     critical: '#FF6B4A',
   }[healthReport.healthState];
 
+  const visualStateColor = {
+    healthy: '#B7FF3C',
+    mild_stress: '#00E5FF',
+    possible_anomaly: '#FFC857',
+    significant_anomaly: '#FF6B4A',
+    unknown: '#8FA3B8',
+  }[latestVisualHealth?.healthState || 'unknown'];
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
       
@@ -101,10 +110,10 @@ export default function IntelligencePage() {
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <h1 className="text-3xl font-bold text-primary">Plant Intelligence & Vision</h1>
-            <span className="badge badge-success" style={{ fontSize: '10px' }}>Phase 3 Plant ID</span>
+            <span className="badge badge-success" style={{ fontSize: '10px' }}>Phase 4 Stress Analysis</span>
           </div>
           <p className="text-secondary" style={{ marginTop: '4px' }}>
-            Computer-vision canopy monitoring, botanical species identification, and calibrated agronomic diagnostics.
+            Multimodal optical stress diagnostics, reproducible visual health scoring, and synchronized ESP32 telemetry.
           </p>
         </div>
 
@@ -154,16 +163,14 @@ export default function IntelligencePage() {
             </div>
           </div>
 
-          {/* Plant Detection Live Badge */}
+          {/* Visual Health Status */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Eye size={17} style={{ color: latestDetection?.isPlantDetected ? '#B7FF3C' : '#FFC857' }} />
+            <HeartPulse size={17} style={{ color: visualStateColor }} />
             <div>
-              <div className="text-xs text-muted">Vision Detection</div>
-              <div style={{ fontSize: '13px', fontWeight: 700, color: latestDetection?.isPlantDetected ? '#B7FF3C' : '#FFC857' }}>
-                {cameraStatus === 'connected' 
-                  ? (latestDetection?.isPlantDetected 
-                      ? `Plant Detected (${latestDetection.confidence}% Conf)` 
-                      : 'No Plant in Frame')
+              <div className="text-xs text-muted">Visual Health State</div>
+              <div style={{ fontSize: '13px', fontWeight: 700, color: visualStateColor, textTransform: 'capitalize' }}>
+                {latestVisualHealth && latestVisualHealth.healthState !== 'unknown'
+                  ? `${latestVisualHealth.healthState.replace('_', ' ')} (${latestVisualHealth.visualHealthScore}/100)`
                   : 'Awaiting Camera'}
               </div>
             </div>
@@ -173,7 +180,7 @@ export default function IntelligencePage() {
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <span className="badge badge-info" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
             <Leaf size={13} />
-            <span>Active: <strong>{cropIdentity.commonName}</strong></span>
+            <span>Active Crop: <strong>{cropIdentity.commonName}</strong></span>
           </span>
         </div>
       </div>
@@ -187,7 +194,7 @@ export default function IntelligencePage() {
       {/* 2. Main Intelligence Grid */}
       <div className={styles.intelligenceLayout}>
         
-        {/* Left Column: LIVE PLANT VIEW & Identification Station */}
+        {/* Left Column: LIVE PLANT VIEW & Visual Health Analysis */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
           
           {/* Live Plant View Card */}
@@ -256,7 +263,7 @@ export default function IntelligencePage() {
                       }}
                     >
                       <span className={styles.boundingBoxTag}>
-                        Plant Canopy · {latestDetection.confidence}%
+                        {cropIdentity.commonName} · {latestDetection.confidence}%
                       </span>
                     </div>
                   )}
@@ -269,7 +276,7 @@ export default function IntelligencePage() {
                   <div>
                     <div style={{ fontWeight: 700, color: '#F4F7FB', fontSize: '15px' }}>Live Plant Camera Inactive</div>
                     <div style={{ fontSize: '12px', color: '#8FA3B8', marginTop: '4px' }}>
-                      Click below to activate laptop camera for real-time botanical vision and plant identification.
+                      Click below to activate laptop camera for real-time computer vision canopy detection and visual health analysis.
                     </div>
                   </div>
                 </div>
@@ -322,7 +329,7 @@ export default function IntelligencePage() {
                     onClick={() => identifyCurrentPlant()}
                     disabled={isIdentifying}
                   >
-                    <Search size={16} /> {isIdentifying ? 'Analyzing Plant...' : 'Identify Plant Species'}
+                    <Search size={16} /> {isIdentifying ? 'Analyzing...' : 'Identify Plant'}
                   </button>
                   <button className="btn btn-ghost" onClick={handleCapture}>
                     <Camera size={16} /> Capture Record
@@ -366,6 +373,137 @@ export default function IntelligencePage() {
                 <CheckCircle2 size={14} /> {captureFeedback}
               </div>
             )}
+          </div>
+
+          {/* VISUAL PLANT HEALTH / STRESS ANALYSIS CARD */}
+          <div className="glass-card" style={{ padding: '24px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
+              <div>
+                <span className="text-xs font-bold text-secondary uppercase tracking-wider">Computer Vision Diagnostics</span>
+                <h3 className="text-lg font-bold text-primary" style={{ marginTop: '2px' }}>
+                  VISUAL PLANT HEALTH / STRESS ANALYSIS
+                </h3>
+              </div>
+
+              {/* Visual Health Score Badge */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <span className={`badge badge-${latestVisualHealth?.healthState === 'healthy' ? 'success' : latestVisualHealth?.healthState === 'mild_stress' ? 'info' : latestVisualHealth?.healthState === 'unknown' ? 'secondary' : 'warning'}`}>
+                  {latestVisualHealth?.healthState ? latestVisualHealth.healthState.replace('_', ' ').toUpperCase() : 'UNKNOWN'}
+                </span>
+                <div 
+                  className={styles.healthScoreCircle}
+                  style={{ borderColor: visualStateColor, color: visualStateColor }}
+                >
+                  {latestVisualHealth?.visualHealthScore ?? 0}
+                </div>
+              </div>
+            </div>
+
+            {latestVisualHealth && latestVisualHealth.healthState !== 'unknown' ? (
+              <>
+                <p className="text-xs text-secondary mb-md">
+                  {latestVisualHealth.statusText}
+                </p>
+
+                {/* 4-Factor Reproducible Breakdown */}
+                <h4 className="text-xs font-bold text-secondary uppercase tracking-wider mb-sm">
+                  Reproducible 4-Factor Scoring Breakdown
+                </h4>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', background: 'rgba(7, 17, 31, 0.5)', padding: '14px', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.05)', marginBottom: '16px' }}>
+                  
+                  {/* Factor 1: Color Condition */}
+                  <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', marginBottom: '4px' }}>
+                      <span className="text-secondary">1. Color Condition (Weight: 35%)</span>
+                      <span style={{ fontWeight: 700, color: latestVisualHealth.breakdown.colorConditionScore > 80 ? '#B7FF3C' : '#FFC857' }}>
+                        {latestVisualHealth.breakdown.colorConditionScore}/100
+                      </span>
+                    </div>
+                    <div className="progress-bar">
+                      <div className="progress-fill" style={{ width: `${latestVisualHealth.breakdown.colorConditionScore}%`, background: latestVisualHealth.breakdown.colorConditionScore > 80 ? '#B7FF3C' : '#FFC857' }} />
+                    </div>
+                  </div>
+
+                  {/* Factor 2: Surface Texture & Spotting */}
+                  <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', marginBottom: '4px' }}>
+                      <span className="text-secondary">2. Surface Uniformity & Spots (Weight: 25%)</span>
+                      <span style={{ fontWeight: 700, color: latestVisualHealth.breakdown.surfaceUniformityScore > 80 ? '#B7FF3C' : '#FFC857' }}>
+                        {latestVisualHealth.breakdown.surfaceUniformityScore}/100
+                      </span>
+                    </div>
+                    <div className="progress-bar">
+                      <div className="progress-fill" style={{ width: `${latestVisualHealth.breakdown.surfaceUniformityScore}%`, background: latestVisualHealth.breakdown.surfaceUniformityScore > 80 ? '#B7FF3C' : '#FFC857' }} />
+                    </div>
+                  </div>
+
+                  {/* Factor 3: Canopy Vigor */}
+                  <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', marginBottom: '4px' }}>
+                      <span className="text-secondary">3. Canopy Vigor & Stature (Weight: 20%)</span>
+                      <span style={{ fontWeight: 700, color: latestVisualHealth.breakdown.canopyVigorScore > 80 ? '#B7FF3C' : '#FFC857' }}>
+                        {latestVisualHealth.breakdown.canopyVigorScore}/100
+                      </span>
+                    </div>
+                    <div className="progress-bar">
+                      <div className="progress-fill" style={{ width: `${latestVisualHealth.breakdown.canopyVigorScore}%`, background: latestVisualHealth.breakdown.canopyVigorScore > 80 ? '#B7FF3C' : '#FFC857' }} />
+                    </div>
+                  </div>
+
+                  {/* Factor 4: Detected Anomaly Deductions */}
+                  <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', marginBottom: '4px' }}>
+                      <span className="text-secondary">4. Anomaly Deductions (Weight: 20%)</span>
+                      <span style={{ fontWeight: 700, color: latestVisualHealth.breakdown.anomalyPenaltyScore > 80 ? '#B7FF3C' : '#FF6B4A' }}>
+                        {latestVisualHealth.breakdown.anomalyPenaltyScore}/100
+                      </span>
+                    </div>
+                    <div className="progress-bar">
+                      <div className="progress-fill" style={{ width: `${latestVisualHealth.breakdown.anomalyPenaltyScore}%`, background: latestVisualHealth.breakdown.anomalyPenaltyScore > 80 ? '#B7FF3C' : '#FF6B4A' }} />
+                    </div>
+                  </div>
+
+                </div>
+
+                {/* Detected Optical Indicators */}
+                <h4 className="text-xs font-bold text-secondary uppercase tracking-wider mb-sm">
+                  Detected Visual Stress Indicators
+                </h4>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '16px' }}>
+                  {latestVisualHealth.indicators.map((ind) => (
+                    <div key={ind.id} className={styles.indicatorItem}>
+                      {ind.severity === 'nominal' ? (
+                        <CheckCircle2 size={16} style={{ color: '#B7FF3C', flexShrink: 0, marginTop: '2px' }} />
+                      ) : (
+                        <AlertTriangle size={16} style={{ color: ind.severity === 'critical' ? '#FF6B4A' : '#FFC857', flexShrink: 0, marginTop: '2px' }} />
+                      )}
+                      <div>
+                        <div style={{ fontWeight: 700, fontSize: '12.5px', color: '#F4F7FB' }}>
+                          {ind.label}
+                        </div>
+                        <div style={{ fontSize: '11px', color: '#8FA3B8', marginTop: '2px' }}>
+                          {ind.details}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </>
+            ) : (
+              <div style={{ padding: '20px', background: 'rgba(7, 17, 31, 0.4)', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.05)', textAlign: 'center', color: 'var(--text-muted)', fontSize: '13px', marginBottom: '16px' }}>
+                Visual health analysis unavailable. Start the camera and point it at a plant to evaluate optical stress markers.
+              </div>
+            )}
+
+            {/* Documented Optical Limitations Box */}
+            <div className={styles.limitationsBox}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#00E5FF', fontWeight: 700, marginBottom: '4px' }}>
+                <Info size={14} /> Documented Optical Sensing Limitations
+              </div>
+              <div>
+                Visual stress analysis is based on chromatic reflectance and morphological edge analysis. Variations in ambient lighting, direct sunlight glare, or camera auto-white-balance drift may affect confidence. This tool does not claim definitive microbiological disease diagnosis.
+              </div>
+            </div>
           </div>
 
           {/* Plant Species Identification Results Card */}
@@ -526,7 +664,7 @@ export default function IntelligencePage() {
 
         </div>
 
-        {/* Right Column: Synchronized Telemetry, Health Assessment & Recommendations */}
+        {/* Right Column: Synchronized Telemetry, Multimodal Health & Recommendations */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
           
           {/* Synchronized Sensor Telemetry Card */}
@@ -582,11 +720,11 @@ export default function IntelligencePage() {
             </div>
           </div>
 
-          {/* Real-time Health Assessment Card */}
+          {/* Multimodal Health Fusion Card */}
           <div className="glass-card" style={{ padding: '24px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
               <div>
-                <span className="text-xs font-bold text-secondary uppercase tracking-wider">Calibrated Health</span>
+                <span className="text-xs font-bold text-secondary uppercase tracking-wider">Multimodal Health Fusion</span>
                 <h3 className="text-lg font-bold text-primary" style={{ marginTop: '2px' }}>
                   {healthReport.healthState === 'optimal' ? 'Optimal Balance' : healthReport.healthState === 'warning' ? 'Moderate Stress' : 'Critical Hazard'}
                 </h3>
@@ -609,37 +747,25 @@ export default function IntelligencePage() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', background: 'rgba(7, 17, 31, 0.5)', padding: '14px', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.05)' }}>
               <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', marginBottom: '4px' }}>
-                  <span className="text-secondary">pH Index ({cropIdentity.commonName})</span>
-                  <span style={{ fontWeight: 700, color: environmentalAssessment.phStatus === 'optimal' ? '#B7FF3C' : '#FFC857' }}>
-                    {environmentalAssessment.phScore}/100
+                  <span className="text-secondary">Environmental Sensors (50% Weight)</span>
+                  <span style={{ fontWeight: 700, color: healthReport.environmentalScore > 80 ? '#B7FF3C' : '#FFC857' }}>
+                    {healthReport.environmentalScore}/100
                   </span>
                 </div>
                 <div className="progress-bar">
-                  <div className="progress-fill" style={{ width: `${environmentalAssessment.phScore}%`, background: environmentalAssessment.phStatus === 'optimal' ? '#B7FF3C' : '#FFC857' }} />
+                  <div className="progress-fill" style={{ width: `${healthReport.environmentalScore}%`, background: healthReport.environmentalScore > 80 ? '#B7FF3C' : '#FFC857' }} />
                 </div>
               </div>
 
               <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', marginBottom: '4px' }}>
-                  <span className="text-secondary">TDS Salinity ({cropIdentity.commonName})</span>
-                  <span style={{ fontWeight: 700, color: environmentalAssessment.tdsStatus === 'optimal' ? '#B7FF3C' : '#FFC857' }}>
-                    {environmentalAssessment.tdsScore}/100
+                  <span className="text-secondary">Visual Health Assessment (50% Weight)</span>
+                  <span style={{ fontWeight: 700, color: latestVisualHealth?.visualHealthScore && latestVisualHealth.visualHealthScore > 80 ? '#B7FF3C' : '#00E5FF' }}>
+                    {latestVisualHealth?.visualHealthScore ?? '--'}/100
                   </span>
                 </div>
                 <div className="progress-bar">
-                  <div className="progress-fill" style={{ width: `${environmentalAssessment.tdsScore}%`, background: environmentalAssessment.tdsStatus === 'optimal' ? '#B7FF3C' : '#FFC857' }} />
-                </div>
-              </div>
-
-              <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', marginBottom: '4px' }}>
-                  <span className="text-secondary">Reservoir Volume</span>
-                  <span style={{ fontWeight: 700, color: environmentalAssessment.waterLevelStatus === 'optimal' ? '#B7FF3C' : '#FF6B4A' }}>
-                    {environmentalAssessment.waterLevelScore}/100
-                  </span>
-                </div>
-                <div className="progress-bar">
-                  <div className="progress-fill" style={{ width: `${environmentalAssessment.waterLevelScore}%`, background: environmentalAssessment.waterLevelStatus === 'optimal' ? '#B7FF3C' : '#FF6B4A' }} />
+                  <div className="progress-fill" style={{ width: `${latestVisualHealth?.visualHealthScore ?? 0}%`, background: latestVisualHealth?.visualHealthScore && latestVisualHealth.visualHealthScore > 80 ? '#B7FF3C' : '#00E5FF' }} />
                 </div>
               </div>
             </div>
@@ -650,7 +776,7 @@ export default function IntelligencePage() {
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px' }}>
               <AlertTriangle size={18} style={{ color: activeAnomalies.length > 0 ? '#FFC857' : '#B7FF3C' }} />
               <h3 className="text-md font-bold">
-                {activeAnomalies.length > 0 ? `Detected Anomalies (${activeAnomalies.length})` : 'System Equilibrium'}
+                {activeAnomalies.length > 0 ? `Active Anomalies (${activeAnomalies.length})` : 'System Equilibrium'}
               </h3>
             </div>
 
@@ -710,7 +836,7 @@ export default function IntelligencePage() {
           <div>
             <h3 className="text-md font-bold">Multimodal Observation Log</h3>
             <p className="text-xs text-secondary">
-              Synchronized records combining webcam snapshots, plant species identification, and hardware telemetry.
+              Synchronized records combining webcam snapshots, plant species identification, visual stress scores, and hardware telemetry.
             </p>
           </div>
           <span className="badge badge-info">{observations.length} Observations</span>
@@ -735,8 +861,8 @@ export default function IntelligencePage() {
 
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '11px', color: '#8FA3B8' }}>
                   <span>{new Date(obs.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>
-                  <span className={`badge badge-${obs.isPlantDetected ? 'success' : 'warning'}`}>
-                    {obs.plantSpecies ? obs.plantSpecies : obs.isPlantDetected ? 'Plant' : 'No Plant'}
+                  <span className={`badge badge-${obs.visualHealthScore && obs.visualHealthScore > 75 ? 'success' : 'warning'}`}>
+                    Visual: {obs.visualHealthScore ?? '--'}/100
                   </span>
                 </div>
 
@@ -758,7 +884,7 @@ export default function IntelligencePage() {
                 {obs.canopyCoveragePercent !== undefined && (
                   <div style={{ fontSize: '10.5px', color: '#00E5FF', display: 'flex', justifyContent: 'space-between' }}>
                     <span>Canopy: {obs.canopyCoveragePercent}%</span>
-                    <span>Conf: {obs.plantDetectionConfidence ?? '--'}%</span>
+                    <span>State: {obs.visualHealthState ?? 'nominal'}</span>
                   </div>
                 )}
 
