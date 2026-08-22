@@ -24,7 +24,9 @@ import {
   PlantJourneyMilestone,
   PlantMemoryAnswers,
   PredictiveAnalyticsResult,
-  StatisticalAnomalyResult
+  StatisticalAnomalyResult,
+  StructuredPlantContext,
+  AIPlantMessage
 } from './types';
 import {
   DEFAULT_CROP_PROFILE,
@@ -40,6 +42,8 @@ import {
   answerPlantMemoryQueries
 } from './plantMemory';
 import { runPredictiveAnalytics } from './predictiveAnalytics';
+import { buildStructuredPlantContext } from './aiPlantContext';
+import { askAIPlant } from './aiPlantEngine';
 import {
   getStoredObservations,
   saveObservation,
@@ -69,6 +73,11 @@ interface PlantIntelligenceContextType {
   memoryAnswers: PlantMemoryAnswers;
   predictiveAnalytics: PredictiveAnalyticsResult;
   statisticalAnomalies: StatisticalAnomalyResult[];
+  structuredPlantContext: StructuredPlantContext;
+  aiMessages: AIPlantMessage[];
+  isAILoading: boolean;
+  askPlant: (query: string) => Promise<void>;
+  clearChat: () => void;
   activeAnomalies: AnomalyReport[];
   activeRecommendations: RecommendationItem[];
   activeScenario: DemoScenario;
@@ -102,6 +111,18 @@ export function PlantIntelligenceProvider({ children }: { children: React.ReactN
   // Multimodal Observation History (loaded asynchronously on client mount)
   const [observations, setObservations] = useState<PlantObservation[]>([]);
   const [activeScenario, setActiveScenarioState] = useState<DemoScenario>('healthy');
+
+  // AI Plant Conversation Thread
+  const [aiMessages, setAiMessages] = useState<AIPlantMessage[]>(() => [
+    {
+      id: 'msg_welcome',
+      sender: 'plant',
+      text: 'Hello grower! I am your monitored Butterhead Lettuce. Ask me how I am feeling, about my nutrient solution, water level, or future trend forecasts!',
+      timestamp: Date.now(),
+      epistemicBadges: ['measured_fact', 'visual_observation'],
+    },
+  ]);
+  const [isAILoading, setIsAILoading] = useState<boolean>(false);
 
   useEffect(() => {
     const stored = getStoredObservations();
@@ -219,6 +240,91 @@ export function PlantIntelligenceProvider({ children }: { children: React.ReactN
   const memoryAnswers = useMemo(() => {
     return answerPlantMemoryQueries(observations, cropIdentity.commonName);
   }, [observations, cropIdentity.commonName]);
+
+  // 7. Phase 8: Structured Plant Context Object
+  const structuredPlantContext = useMemo(() => {
+    return buildStructuredPlantContext(
+      cropIdentity,
+      latestVisualHealth,
+      latestDetection,
+      currentPh,
+      currentTds,
+      currentWaterLevel,
+      currentDistance,
+      mode,
+      isStale,
+      environmentalAssessment,
+      multimodalAssessment,
+      growthMetrics,
+      predictiveAnalytics,
+      observations
+    );
+  }, [
+    cropIdentity,
+    latestVisualHealth,
+    latestDetection,
+    currentPh,
+    currentTds,
+    currentWaterLevel,
+    currentDistance,
+    mode,
+    isStale,
+    environmentalAssessment,
+    multimodalAssessment,
+    growthMetrics,
+    predictiveAnalytics,
+    observations
+  ]);
+
+  // Handle Asking the AI Plant Companion
+  const askPlant = useCallback(async (queryText: string) => {
+    if (!queryText.trim()) return;
+
+    const userMsg: AIPlantMessage = {
+      id: `user_${Date.now()}`,
+      sender: 'user',
+      text: queryText.trim(),
+      timestamp: Date.now(),
+    };
+
+    setAiMessages(prev => [...prev, userMsg]);
+    setIsAILoading(true);
+
+    try {
+      const response = await askAIPlant(queryText, structuredPlantContext);
+      const plantMsg: AIPlantMessage = {
+        id: `plant_${Date.now()}`,
+        sender: 'plant',
+        text: response.message,
+        timestamp: Date.now(),
+        epistemicBadges: response.epistemicBadges,
+      };
+      setAiMessages(prev => [...prev, plantMsg]);
+    } catch (err) {
+      console.error('[AIPlant] Error processing query:', err);
+      const errorMsg: AIPlantMessage = {
+        id: `plant_err_${Date.now()}`,
+        sender: 'plant',
+        text: "I encountered an error processing that question against my plant telemetry context.",
+        timestamp: Date.now(),
+      };
+      setAiMessages(prev => [...prev, errorMsg]);
+    } finally {
+      setIsAILoading(false);
+    }
+  }, [structuredPlantContext]);
+
+  const clearChat = useCallback(() => {
+    setAiMessages([
+      {
+        id: `msg_welcome_${Date.now()}`,
+        sender: 'plant',
+        text: `Chat reset. I am your monitored ${cropIdentity.commonName}. How can I assist you with my telemetry or growth today?`,
+        timestamp: Date.now(),
+        epistemicBadges: ['measured_fact'],
+      },
+    ]);
+  }, [cropIdentity.commonName]);
 
   // Identify plant from current camera frame
   const identifyCurrentPlant = useCallback(async (): Promise<PlantIdentificationResponse | null> => {
@@ -366,6 +472,11 @@ export function PlantIntelligenceProvider({ children }: { children: React.ReactN
         memoryAnswers,
         predictiveAnalytics,
         statisticalAnomalies,
+        structuredPlantContext,
+        aiMessages,
+        isAILoading,
+        askPlant,
+        clearChat,
         activeAnomalies,
         activeRecommendations,
         activeScenario,

@@ -328,7 +328,7 @@
   flex-shrink: 0;
 }
 
-/* Phase 7: Predictions & Anomaly Stations */
+/* Predictions & Anomaly Stations */
 .predictionsGrid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -376,4 +376,174 @@
   display: flex;
   align-items: center;
   gap: 10px;
+}
+
+/* Phase 8: Context-Aware AI Plant Chat Terminal */
+.aiTerminalCard {
+  background: rgba(7, 17, 31, 0.75);
+  border: 1px solid rgba(0, 229, 255, 0.25);
+  border-radius: var(--radius-md);
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  box-shadow: 0 0 24px rgba(0, 229, 255, 0.08);
+}
+
+.aiHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.aiAvatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: rgba(0, 229, 255, 0.1);
+  border: 2px solid #00E5FF;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #00E5FF;
+  box-shadow: 0 0 12px rgba(0, 229, 255, 0.3);
+}
+
+.chatMessagesThread {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  max-height: 420px;
+  overflow-y: auto;
+  padding: 12px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.chatBubbleUser {
+  align-self: flex-end;
+  background: rgba(0, 229, 255, 0.15);
+  border: 1px solid rgba(0, 229, 255, 0.35);
+  color: #F4F7FB;
+  border-radius: 12px 12px 2px 12px;
+  padding: 10px 14px;
+  max-width: 80%;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.chatBubblePlant {
+  align-self: flex-start;
+  background: rgba(13, 27, 42, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-left: 3px solid #B7FF3C;
+  color: #F4F7FB;
+  border-radius: 12px 12px 12px 2px;
+  padding: 12px 16px;
+  max-width: 85%;
+  font-size: 13px;
+  line-height: 1.5;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.promptChipsRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.promptChip {
+  background: rgba(0, 229, 255, 0.08);
+  border: 1px solid rgba(0, 229, 255, 0.25);
+  color: #00E5FF;
+  border-radius: 20px;
+  padding: 6px 12px;
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--transition-base);
+}
+
+.promptChip:hover {
+  background: rgba(0, 229, 255, 0.2);
+  border-color: #00E5FF;
+  transform: translateY(-1px);
+}
+
+.chatInputBar {
+  display: flex;
+  gap: 10px;
+}
+
+.chatInputField {
+  flex: 1;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-sm);
+  color: #F4F7FB;
+  padding: 10px 14px;
+  font-size: 13px;
+  outline: none;
+  transition: var(--transition-base);
+}
+
+.chatInputField:focus {
+  border-color: #00E5FF;
+  box-shadow: 0 0 8px rgba(0, 229, 255, 0.25);
+}
+
+.epistemicBadge {
+  font-size: 9.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-family: var(--font-mono);
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.badgeMeasuredFact {
+  background: rgba(0, 229, 255, 0.15);
+  color: #00E5FF;
+  border: 1px solid rgba(0, 229, 255, 0.3);
+}
+
+.badgeVisualObservation {
+  background: rgba(183, 255, 60, 0.15);
+  color: #B7FF3C;
+  border: 1px solid rgba(183, 255, 60, 0.3);
+}
+
+.badgeProjection {
+  background: rgba(255, 200, 87, 0.15);
+  color: #FFC857;
+  border: 1px solid rgba(255, 200, 87, 0.3);
+}
+
+.badgeAdvisory {
+  background: rgba(255, 107, 74, 0.15);
+  color: #FF6B4A;
+  border: 1px solid rgba(255, 107, 74, 0.3);
+}
+
+.contextJsonBox {
+  background: #040911;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-sm);
+  padding: 12px;
+  font-size: 11px;
+  font-family: var(--font-mono);
+  color: #8FA3B8;
+  max-height: 240px;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  word-break: break-all;
 }

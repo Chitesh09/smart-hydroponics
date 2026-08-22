@@ -1,6 +1,6 @@
 // ============================================================
 // HydroSmart Multimodal Intelligence Engine — Core Types
-// Phase 1, Phase 2, Phase 3, Phase 4, Phase 5, Phase 6, Phase 7
+// Phase 1 to Phase 8 Unified Types
 // ============================================================
 
 export type ServiceStatus = 'active' | 'ready' | 'standby' | 'simulated' | 'error' | 'not_implemented';
@@ -295,6 +295,83 @@ export interface PredictiveAnalyticsResult {
   anomalies: StatisticalAnomalyResult[];
   recommendations: RecommendationItem[];
   disclaimer: string;
+}
+
+// ============================================================
+// Phase 8: Context-Aware AI Plant Types
+// ============================================================
+
+export interface StructuredPlantContext {
+  timestamp: number;
+  plant: {
+    species: string;
+    scientificName?: string;
+    family?: string;
+    confidence?: number;
+    growthStage: string;
+    daysMonitored: number;
+  };
+  visualState: {
+    healthScore?: number;
+    healthState: VisualHealthState;
+    canopyCoveragePercent?: number;
+    vegetationIndex?: number;
+    indicators: string[];
+    isPlantDetected: boolean;
+  };
+  environment: {
+    ph?: number;
+    tds?: number;
+    waterLevel?: number;
+    distance?: number;
+    telemetryMode: 'real' | 'simulation';
+    isTelemetryStale: boolean;
+    targetEnvelope: {
+      phMin: number;
+      phMax: number;
+      tdsMin: number;
+      tdsMax: number;
+    };
+    phStatus: string;
+    tdsStatus: string;
+    waterLevelStatus: string;
+  };
+  historical: {
+    totalObservations: number;
+    canopyGrowthDelta: number;
+    longitudinalTrend: HealthTrend;
+    overallHealthScore: number;
+    activeAnomalies: string[];
+  };
+  predictions: {
+    phDriftPerDay: number;
+    tdsDriftPerDay: number;
+    waterDriftPerDay: number;
+    phDaysToThreshold: number | null;
+    tdsDaysToThreshold: number | null;
+    waterDaysToThreshold: number | null;
+  };
+  recommendations: {
+    items: Array<{
+      title: string;
+      action: string;
+      priority: string;
+    }>;
+  };
+}
+
+export interface AIPlantMessage {
+  id: string;
+  sender: 'user' | 'plant';
+  text: string;
+  timestamp: number;
+  epistemicBadges?: Array<'measured_fact' | 'visual_observation' | 'mathematical_projection' | 'grower_advisory'>;
+}
+
+export interface AIPlantResponse {
+  message: string;
+  epistemicBadges: Array<'measured_fact' | 'visual_observation' | 'mathematical_projection' | 'grower_advisory'>;
+  groundedFacts: string[];
 }
 
 // Unified Multimodal Observation Model

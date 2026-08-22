@@ -32,7 +32,9 @@ import {
   History,
   LineChart,
   ShieldAlert,
-  HelpCircle
+  HelpCircle,
+  Send,
+  Code2
 } from 'lucide-react';
 import styles from './page.module.css';
 
@@ -66,6 +68,11 @@ export default function IntelligencePage() {
     memoryAnswers,
     predictiveAnalytics,
     statisticalAnomalies,
+    structuredPlantContext,
+    aiMessages,
+    isAILoading,
+    askPlant,
+    clearChat,
     activeAnomalies,
     activeRecommendations,
     activeScenario,
@@ -76,6 +83,8 @@ export default function IntelligencePage() {
 
   const [captureFeedback, setCaptureFeedback] = useState<string | null>(null);
   const [appliedFeedback, setAppliedFeedback] = useState<string | null>(null);
+  const [chatInput, setChatInput] = useState<string>('');
+  const [showContextJson, setShowContextJson] = useState<boolean>(false);
 
   const handleCapture = () => {
     const obs = captureAndObserve();
@@ -101,6 +110,19 @@ export default function IntelligencePage() {
     a.download = `hydrosmart_multimodal_observations_${Date.now()}.json`;
     a.click();
     URL.revokeObjectURL(url);
+  };
+
+  const handleSendMessage = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!chatInput.trim() || isAILoading) return;
+    const query = chatInput;
+    setChatInput('');
+    askPlant(query);
+  };
+
+  const handlePromptChipClick = (chipPrompt: string) => {
+    if (isAILoading) return;
+    askPlant(chipPrompt);
   };
 
   // Multimodal health state colors
@@ -132,10 +154,10 @@ export default function IntelligencePage() {
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <h1 className="text-3xl font-bold text-primary">Multimodal Plant Intelligence</h1>
-            <span className="badge badge-success" style={{ fontSize: '10px' }}>Phase 7 Predictive Analytics</span>
+            <span className="badge badge-success" style={{ fontSize: '10px' }}>Phase 8 Context-Aware AI Plant</span>
           </div>
           <p className="text-secondary" style={{ marginTop: '4px' }}>
-            Time-series rate of change forecasting, statistical Z-score anomaly modeling, and advisory grower guidance.
+            Real-time computer vision, ESP32 telemetry, time-series forecasting, and context-grounded AI plant companion.
           </p>
         </div>
 
@@ -687,9 +709,172 @@ export default function IntelligencePage() {
 
         </div>
 
-        {/* Right Column: PLANT CONDITION Station & Predictions / Anomalies / Recommendations */}
+        {/* Right Column: PLANT CONDITION Station & Context-Aware AI Companion */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
           
+          {/* PHASE 8: CONTEXT-AWARE AI PLANT COMPANION TERMINAL */}
+          <div className={styles.aiTerminalCard}>
+            <div className={styles.aiHeader}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div className={styles.aiAvatar}>
+                  <Leaf size={22} />
+                </div>
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <h3 className="text-lg font-bold text-primary">AI Plant Companion</h3>
+                    <span className={`badge badge-${multimodalAssessment.overallHealthState === 'optimal' ? 'success' : multimodalAssessment.overallHealthState === 'warning' ? 'warning' : 'danger'}`}>
+                      {multimodalAssessment.overallHealthState === 'optimal' ? '● VIBRANT' : multimodalAssessment.overallHealthState === 'warning' ? '● MILD STRESS' : '● ATTENTION NEEDED'}
+                    </span>
+                  </div>
+                  <p className="text-xs text-secondary">
+                    Monitored {cropIdentity.commonName} · Grounded in live sensors & vision
+                  </p>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <button
+                  className="btn btn-ghost"
+                  style={{ fontSize: '11px', padding: '4px 8px' }}
+                  onClick={() => setShowContextJson(!showContextJson)}
+                  title="Inspect the exact JSON context grounding the AI"
+                >
+                  <Code2 size={13} /> {showContextJson ? 'Hide Context' : 'Inspect Context'}
+                </button>
+                <button
+                  className="btn btn-ghost"
+                  style={{ fontSize: '11px', padding: '4px 8px' }}
+                  onClick={clearChat}
+                  title="Reset chat conversation"
+                >
+                  Reset
+                </button>
+              </div>
+            </div>
+
+            {/* Context JSON Inspector */}
+            {showContextJson && (
+              <div>
+                <span className="text-xs font-bold text-secondary uppercase tracking-wider mb-xs" style={{ display: 'block' }}>
+                  Structured Plant Context (Ground Truth Payload)
+                </span>
+                <pre className={styles.contextJsonBox}>
+                  {JSON.stringify(structuredPlantContext, null, 2)}
+                </pre>
+              </div>
+            )}
+
+            {/* Quick Suggestion Prompt Chips */}
+            <div>
+              <span className="text-xs text-muted mb-xs" style={{ display: 'block' }}>
+                Suggested Inquiries (Click to Ask):
+              </span>
+              <div className={styles.promptChipsRow}>
+                <button 
+                  className={styles.promptChip}
+                  onClick={() => handlePromptChipClick("How are you feeling today?")}
+                >
+                  🌿 How are you feeling today?
+                </button>
+                <button 
+                  className={styles.promptChip}
+                  onClick={() => handlePromptChipClick("Is my nutrient solution sufficient?")}
+                >
+                  🧪 Is my nutrient solution sufficient?
+                </button>
+                <button 
+                  className={styles.promptChip}
+                  onClick={() => handlePromptChipClick("Do you have enough water?")}
+                >
+                  💧 Do you have enough water?
+                </button>
+                <button 
+                  className={styles.promptChip}
+                  onClick={() => handlePromptChipClick("What changes should I watch out for?")}
+                >
+                  📈 What should I watch out for?
+                </button>
+                <button 
+                  className={styles.promptChip}
+                  onClick={() => handlePromptChipClick("How has your growth progressed?")}
+                >
+                  🌱 How has your growth progressed?
+                </button>
+              </div>
+            </div>
+
+            {/* Message Thread */}
+            <div className={styles.chatMessagesThread}>
+              {aiMessages.map((msg) => (
+                <div 
+                  key={msg.id}
+                  className={msg.sender === 'user' ? styles.chatBubbleUser : styles.chatBubblePlant}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                    <span style={{ fontSize: '11px', fontWeight: 700, color: msg.sender === 'user' ? '#00E5FF' : '#B7FF3C' }}>
+                      {msg.sender === 'user' ? 'You' : `${cropIdentity.commonName} (AI Plant)`}
+                    </span>
+                    <span style={{ fontSize: '10px', color: '#5A738E' }}>
+                      {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                  </div>
+
+                  <div>{msg.text}</div>
+
+                  {/* Epistemic Badges */}
+                  {msg.epistemicBadges && msg.epistemicBadges.length > 0 && (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '6px' }}>
+                      {msg.epistemicBadges.map((badge, idx) => (
+                        <span 
+                          key={idx}
+                          className={`${styles.epistemicBadge} ${
+                            badge === 'measured_fact'
+                              ? styles.badgeMeasuredFact
+                              : badge === 'visual_observation'
+                                ? styles.badgeVisualObservation
+                                : badge === 'mathematical_projection'
+                                  ? styles.badgeProjection
+                                  : styles.badgeAdvisory
+                          }`}
+                        >
+                          {badge === 'measured_fact' && '✓ Measured Fact'}
+                          {badge === 'visual_observation' && '👁 Visual Observation'}
+                          {badge === 'mathematical_projection' && '📈 Time-Series Projection'}
+                          {badge === 'grower_advisory' && '💡 Grower Advisory'}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))}
+
+              {isAILoading && (
+                <div className={styles.chatBubblePlant} style={{ fontStyle: 'italic', color: '#8FA3B8' }}>
+                  Analyzing live telemetry & visual context...
+                </div>
+              )}
+            </div>
+
+            {/* Input Bar */}
+            <form onSubmit={handleSendMessage} className={styles.chatInputBar}>
+              <input
+                type="text"
+                className={styles.chatInputField}
+                placeholder={`Ask ${cropIdentity.commonName} anything about its health, nutrients, or growth...`}
+                value={chatInput}
+                onChange={(e) => setChatInput(e.target.value)}
+                disabled={isAILoading}
+              />
+              <button 
+                type="submit" 
+                className="btn btn-primary"
+                disabled={!chatInput.trim() || isAILoading}
+              >
+                <Send size={15} /> Send
+              </button>
+            </form>
+          </div>
+
           {/* UNIFIED PLANT CONDITION STATION */}
           <div className="glass-card" style={{ padding: '24px', borderTop: `4px solid ${overallColor}` }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '18px' }}>
@@ -927,7 +1112,6 @@ export default function IntelligencePage() {
         </div>
 
         <div className={styles.predictionsGrid}>
-          
           {/* pH Prediction */}
           <div className={styles.predictionCard}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -1038,7 +1222,6 @@ export default function IntelligencePage() {
               </div>
             </div>
           </div>
-
         </div>
 
         <div className={styles.limitationsBox} style={{ marginTop: '16px' }}>
@@ -1058,7 +1241,7 @@ export default function IntelligencePage() {
               <h3 className="text-lg font-bold">STATISTICAL ANOMALY DETECTION</h3>
             </div>
             <p className="text-xs text-secondary" style={{ marginTop: '2px' }}>
-              Continuous Z-score ($\mu$, $\sigma$) outlier detection evaluating whether sensor drift exceeds normal biological variation.
+              Continuous Z-score (&mu;, &sigma;) outlier detection evaluating whether sensor drift exceeds normal biological variation.
             </p>
           </div>
           <span className="badge badge-info">Z-Score Outlier Filter (|Z| &ge; 2.0&sigma;)</span>
