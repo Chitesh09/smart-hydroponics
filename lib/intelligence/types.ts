@@ -1,10 +1,11 @@
 // ============================================================
-// HydroSmart Intelligence Foundation — Data Models & Contracts
+// HydroSmart Multimodal Intelligence Engine — Core Types
+// Phase 1, Phase 2, Phase 3, Phase 4, Phase 5
 // ============================================================
 
-export type ServiceStatus = 'not_implemented' | 'ready' | 'processing' | 'error';
+export type ServiceStatus = 'active' | 'ready' | 'standby' | 'simulated' | 'error' | 'not_implemented';
 
-export type CameraStatus = 'idle' | 'requesting' | 'connected' | 'disconnected' | 'error';
+export type CameraStatus = 'idle' | 'requesting' | 'connected' | 'disconnected' | 'error' | 'unsupported';
 
 export interface CameraDevice {
   deviceId: string;
@@ -84,58 +85,67 @@ export interface VisualAnalysisResult {
   message?: string;
 }
 
+export interface PredictionResult {
+  status: ServiceStatus;
+  timestamp: number;
+  message: string;
+  predictedGrowthVelocity?: number;
+  projectedHarvestDate?: string;
+}
+
 export interface EnvironmentalAssessment {
   timestamp: number;
   phScore: number; // 0-100
   tdsScore: number; // 0-100
   waterLevelScore: number; // 0-100
   compositeEnvironmentalScore: number; // 0-100
-  phStatus: 'optimal' | 'warning' | 'critical';
-  tdsStatus: 'optimal' | 'warning' | 'critical';
-  waterLevelStatus: 'optimal' | 'warning' | 'critical';
+  phStatus: 'optimal' | 'low' | 'high' | 'warning' | 'critical';
+  tdsStatus: 'optimal' | 'low' | 'high' | 'warning' | 'critical';
+  waterLevelStatus: 'optimal' | 'low' | 'warning' | 'critical';
+  summary?: string;
+}
+
+export interface AnomalyReport {
+  id: string;
+  type?: 'ph' | 'tds' | 'water_level' | 'visual_stress' | 'system' | string;
+  category?: 'ph' | 'tds' | 'water_level' | 'visual_stress' | 'system' | 'environmental' | string;
+  severity: 'warning' | 'critical';
+  title: string;
+  description: string;
+  suggestedAction?: string;
+  sensorMetric?: string;
+  currentValue?: number;
+  targetRange?: string;
+  timestamp?: number;
+  detectedTimestamp?: number;
+}
+
+export interface RecommendationItem {
+  id: string;
+  category: 'nutrient' | 'ph_balance' | 'ph' | 'water' | 'lighting' | 'inspection' | string;
+  priority: 'low' | 'medium' | 'high' | 'immediate' | 'urgent';
+  title: string;
+  action: string;
+  reasoning: string;
+  status?: 'pending' | 'completed' | 'dismissed' | 'active';
+  timestamp?: number;
 }
 
 export interface PlantHealthReport {
   timestamp: number;
   overallHealthScore: number; // 0-100
-  environmentalScore: number; // 0-100
-  visualScore?: number; // 0-100 (undefined if no visual model run)
   healthState: 'optimal' | 'warning' | 'critical';
+  environmentalScore: number;
+  visualScore?: number;
   summary: string;
 }
 
-export interface AnomalyReport {
-  id: string;
-  timestamp: number;
-  category: 'environmental' | 'visual' | 'sensor_drift' | 'system';
-  title: string;
-  description: string;
-  severity: 'info' | 'warning' | 'critical';
-  sensorMetric?: 'ph' | 'tds' | 'waterLevel' | 'distance' | 'camera';
-  currentValue?: number;
-  targetRange?: string;
-}
-
-export interface RecommendationItem {
-  id: string;
-  timestamp: number;
-  priority: 'low' | 'medium' | 'high' | 'urgent';
-  title: string;
-  action: string;
-  reasoning: string;
-  category: 'nutrient' | 'ph' | 'water' | 'lighting' | 'inspection';
-  status: 'pending' | 'applied' | 'dismissed';
-}
-
-export interface PredictionResult {
-  status: ServiceStatus;
-  timestamp: number;
-  estimatedHarvestTimestamp?: number;
-  predictedGrowthRate?: string;
-  nextInterventionPrediction?: string;
-  confidence?: number;
-  message?: string;
-}
+export type DemoScenario =
+  | 'healthy'
+  | 'ph_drift'
+  | 'tds_decline'
+  | 'water_depletion'
+  | 'sensor_anomaly';
 
 import { PlantDetectionResult } from '@/lib/vision/plantDetector';
 import {
@@ -153,16 +163,66 @@ export type {
   VisualStressIndicator
 };
 
+// ============================================================
+// Phase 5: Multimodal Health Engine Types
+// ============================================================
+
+export type HealthTrend = 'improving' | 'stable' | 'declining' | 'insufficient_data';
+
+export interface CameraHealthInput {
+  isPlantDetected?: boolean;
+  speciesName?: string;
+  speciesConfidence?: number;
+  visualHealthScore?: number;
+  visualHealthState?: VisualHealthState;
+  canopyCoveragePercent?: number;
+  vegetationIndex?: number;
+  chlorosisYellowPercent?: number;
+  necroticBrownPercent?: number;
+  indicators?: VisualStressIndicator[];
+}
+
+export interface ESP32HealthInput {
+  ph?: number;
+  tds?: number;
+  waterLevel?: number;
+  distance?: number;
+  isStale: boolean;
+  mode: 'real' | 'simulation';
+}
+
+export interface HistoricalHealthInput {
+  previousObservations: PlantObservation[];
+  canopyDeltaPercent?: number;
+  phDriftPerHour?: number;
+  tdsDriftPerHour?: number;
+  scoreTrajectory?: HealthTrend;
+}
+
+export interface MultimodalHealthAssessment {
+  timestamp: number;
+  overallScore: number; // 0 - 100
+  visualState: VisualHealthState;
+  environmentalState: 'optimal' | 'warning' | 'critical';
+  overallHealthState: 'optimal' | 'warning' | 'critical';
+  trend: HealthTrend;
+  anomalies: string[];
+  observations: string[];     // Raw sensory facts
+  interpretations: string[];  // Cross-domain evaluated relationships
+  explanations: string[];     // Agronomic reasoning without definitive disease claims
+  confidence: number;         // 0 - 100% based on active sensor modalities
+}
+
 // Unified Multimodal Observation Model
 export interface PlantObservation {
   id: string;
   timestamp: number;
   
   // Multimodal Data Sources
-  imageReference?: string; // Base64 data URL or storage reference
+  imageReference?: string;
   cameraActive: boolean;
   
-  // Real Computer Vision Plant Detection Metrics
+  // Computer Vision Plant Detection Metrics
   isPlantDetected?: boolean;
   plantDetectionConfidence?: number; // 0 - 100%
   canopyCoveragePercent?: number;
@@ -174,7 +234,7 @@ export interface PlantObservation {
   visualScoreBreakdown?: VisualScoreBreakdown;
   visualIndicators?: string[];
 
-  // Sensor Telemetry (from ESP32 or Simulator)
+  // Sensor Telemetry (ESP32 or Simulator)
   ph?: number;
   tds?: number;
   waterLevel?: number;
@@ -190,15 +250,11 @@ export interface PlantObservation {
   environmentalHealthScore?: number;
   overallHealthScore?: number;
   
+  // Multimodal Assessment Summary
+  multimodalAssessment?: MultimodalHealthAssessment;
+
   // Anomaly & Action Summary
   anomalyDetected: boolean;
   activeAnomalies?: string[];
   recommendations?: string[];
 }
-
-export type DemoScenario = 
-  | 'healthy'
-  | 'ph_drift'
-  | 'tds_decline'
-  | 'water_depletion'
-  | 'sensor_anomaly';

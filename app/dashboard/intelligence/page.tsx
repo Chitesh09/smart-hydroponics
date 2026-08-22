@@ -21,7 +21,12 @@ import {
   Check,
   Search,
   HeartPulse,
-  Info
+  Info,
+  TrendingUp,
+  TrendingDown,
+  Minus,
+  Sparkles,
+  Compass
 } from 'lucide-react';
 import styles from './page.module.css';
 
@@ -49,7 +54,7 @@ export default function IntelligencePage() {
     identifyCurrentPlant,
     applyIdentifiedSpecies,
     environmentalAssessment,
-    healthReport,
+    multimodalAssessment,
     activeAnomalies,
     activeRecommendations,
     activeScenario,
@@ -87,12 +92,12 @@ export default function IntelligencePage() {
     URL.revokeObjectURL(url);
   };
 
-  // Health state colors
-  const healthColor = {
+  // Multimodal health state colors
+  const overallColor = {
     optimal: '#B7FF3C',
     warning: '#FFC857',
     critical: '#FF6B4A',
-  }[healthReport.healthState];
+  }[multimodalAssessment.overallHealthState];
 
   const visualStateColor = {
     healthy: '#B7FF3C',
@@ -100,7 +105,13 @@ export default function IntelligencePage() {
     possible_anomaly: '#FFC857',
     significant_anomaly: '#FF6B4A',
     unknown: '#8FA3B8',
-  }[latestVisualHealth?.healthState || 'unknown'];
+  }[multimodalAssessment.visualState];
+
+  const envStateColor = {
+    optimal: '#B7FF3C',
+    warning: '#FFC857',
+    critical: '#FF6B4A',
+  }[multimodalAssessment.environmentalState];
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
@@ -109,11 +120,11 @@ export default function IntelligencePage() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <h1 className="text-3xl font-bold text-primary">Plant Intelligence & Vision</h1>
-            <span className="badge badge-success" style={{ fontSize: '10px' }}>Phase 4 Stress Analysis</span>
+            <h1 className="text-3xl font-bold text-primary">Multimodal Plant Intelligence</h1>
+            <span className="badge badge-success" style={{ fontSize: '10px' }}>Phase 5 Fusion Engine</span>
           </div>
           <p className="text-secondary" style={{ marginTop: '4px' }}>
-            Multimodal optical stress diagnostics, reproducible visual health scoring, and synchronized ESP32 telemetry.
+            Cross-domain relational fusion synthesizing Computer Vision, ESP32 Physical Chemistry, and Historical Trends.
           </p>
         </div>
 
@@ -139,7 +150,7 @@ export default function IntelligencePage() {
       </div>
 
       {/* Multimodal Architecture Status Bar */}
-      <div className="glass-card" style={{ padding: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '14px', borderLeft: `4px solid ${healthColor}` }}>
+      <div className="glass-card" style={{ padding: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '14px', borderLeft: `4px solid ${overallColor}` }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '20px', flexWrap: 'wrap' }}>
           {/* Telemetry Status */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -163,15 +174,13 @@ export default function IntelligencePage() {
             </div>
           </div>
 
-          {/* Visual Health Status */}
+          {/* Multimodal Fusion Status */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <HeartPulse size={17} style={{ color: visualStateColor }} />
+            <HeartPulse size={17} style={{ color: overallColor }} />
             <div>
-              <div className="text-xs text-muted">Visual Health State</div>
-              <div style={{ fontSize: '13px', fontWeight: 700, color: visualStateColor, textTransform: 'capitalize' }}>
-                {latestVisualHealth && latestVisualHealth.healthState !== 'unknown'
-                  ? `${latestVisualHealth.healthState.replace('_', ' ')} (${latestVisualHealth.visualHealthScore}/100)`
-                  : 'Awaiting Camera'}
+              <div className="text-xs text-muted">Condition State</div>
+              <div style={{ fontSize: '13px', fontWeight: 700, color: overallColor, textTransform: 'capitalize' }}>
+                {multimodalAssessment.overallHealthState} ({multimodalAssessment.overallScore}/100)
               </div>
             </div>
           </div>
@@ -194,7 +203,7 @@ export default function IntelligencePage() {
       {/* 2. Main Intelligence Grid */}
       <div className={styles.intelligenceLayout}>
         
-        {/* Left Column: LIVE PLANT VIEW & Visual Health Analysis */}
+        {/* Left Column: LIVE PLANT VIEW & Visual Stress Station */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
           
           {/* Live Plant View Card */}
@@ -385,7 +394,6 @@ export default function IntelligencePage() {
                 </h3>
               </div>
 
-              {/* Visual Health Score Badge */}
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                 <span className={`badge badge-${latestVisualHealth?.healthState === 'healthy' ? 'success' : latestVisualHealth?.healthState === 'mild_stress' ? 'info' : latestVisualHealth?.healthState === 'unknown' ? 'secondary' : 'warning'}`}>
                   {latestVisualHealth?.healthState ? latestVisualHealth.healthState.replace('_', ' ').toUpperCase() : 'UNKNOWN'}
@@ -411,7 +419,6 @@ export default function IntelligencePage() {
                 </h4>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', background: 'rgba(7, 17, 31, 0.5)', padding: '14px', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.05)', marginBottom: '16px' }}>
                   
-                  {/* Factor 1: Color Condition */}
                   <div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', marginBottom: '4px' }}>
                       <span className="text-secondary">1. Color Condition (Weight: 35%)</span>
@@ -424,7 +431,6 @@ export default function IntelligencePage() {
                     </div>
                   </div>
 
-                  {/* Factor 2: Surface Texture & Spotting */}
                   <div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', marginBottom: '4px' }}>
                       <span className="text-secondary">2. Surface Uniformity & Spots (Weight: 25%)</span>
@@ -437,7 +443,6 @@ export default function IntelligencePage() {
                     </div>
                   </div>
 
-                  {/* Factor 3: Canopy Vigor */}
                   <div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', marginBottom: '4px' }}>
                       <span className="text-secondary">3. Canopy Vigor & Stature (Weight: 20%)</span>
@@ -450,7 +455,6 @@ export default function IntelligencePage() {
                     </div>
                   </div>
 
-                  {/* Factor 4: Detected Anomaly Deductions */}
                   <div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', marginBottom: '4px' }}>
                       <span className="text-secondary">4. Anomaly Deductions (Weight: 20%)</span>
@@ -519,7 +523,6 @@ export default function IntelligencePage() {
                 </span>
               </div>
 
-              {/* Primary Candidate Result */}
               {identificationResult.primaryCandidate && identificationResult.status === 'success' ? (
                 <div className={styles.identificationCard}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '10px' }}>
@@ -544,7 +547,6 @@ export default function IntelligencePage() {
                     {identificationResult.primaryCandidate.description}
                   </p>
 
-                  {/* Target envelope for this plant */}
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px', background: 'rgba(0,0,0,0.3)', padding: '10px', borderRadius: '6px', fontSize: '11.5px', fontFamily: 'var(--font-mono)' }}>
                     <div>
                       <span className="text-muted">Target pH:</span><br />
@@ -566,7 +568,6 @@ export default function IntelligencePage() {
                     </div>
                   </div>
 
-                  {/* Action Button: Recalibrate System to this Crop */}
                   <button 
                     className="btn btn-primary"
                     onClick={() => handleApplyProfile(identificationResult.primaryCandidate!)}
@@ -576,7 +577,6 @@ export default function IntelligencePage() {
                   </button>
                 </div>
               ) : (
-                /* Low Confidence / Uncertain Guidance Message */
                 <div style={{ padding: '16px', background: 'rgba(255, 200, 87, 0.08)', border: '1px solid rgba(255, 200, 87, 0.25)', borderRadius: '6px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#FFC857', fontWeight: 700, fontSize: '13px', marginBottom: '4px' }}>
                     <AlertTriangle size={16} /> Identification Uncertain
@@ -587,7 +587,6 @@ export default function IntelligencePage() {
                 </div>
               )}
 
-              {/* Ranked Alternate Candidates List */}
               {identificationResult.rankedCandidates.length > 1 && (
                 <div style={{ marginTop: '16px' }}>
                   <span className="text-xs font-bold text-secondary uppercase tracking-wider mb-sm" style={{ display: 'block' }}>
@@ -664,22 +663,150 @@ export default function IntelligencePage() {
 
         </div>
 
-        {/* Right Column: Synchronized Telemetry, Multimodal Health & Recommendations */}
+        {/* Right Column: PLANT CONDITION Station & Epistemological Separation */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
           
+          {/* UNIFIED PLANT CONDITION STATION */}
+          <div className="glass-card" style={{ padding: '24px', borderTop: `4px solid ${overallColor}` }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '18px' }}>
+              <div>
+                <span className="text-xs font-bold text-secondary uppercase tracking-wider">Unified Multimodal Assessment</span>
+                <h3 className="text-xl font-bold text-primary" style={{ marginTop: '2px' }}>
+                  PLANT CONDITION
+                </h3>
+              </div>
+
+              {/* Overall Health Score Circle */}
+              <div style={{ textAlign: 'center' }}>
+                <div 
+                  className={styles.healthScoreCircle} 
+                  style={{ borderColor: overallColor, color: overallColor }}
+                >
+                  {multimodalAssessment.overallScore}
+                </div>
+                <span className="text-xs text-muted" style={{ fontSize: '10px', marginTop: '2px', display: 'block' }}>
+                  OVERALL / 100
+                </span>
+              </div>
+            </div>
+
+            {/* 4-Item Status Grid */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px', marginBottom: '20px' }}>
+              
+              <div style={{ background: 'rgba(7, 17, 31, 0.6)', padding: '12px', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                <div className="text-xs text-muted">Visual Condition</div>
+                <div style={{ fontSize: '15px', fontWeight: 800, color: visualStateColor, marginTop: '2px', textTransform: 'capitalize' }}>
+                  {multimodalAssessment.visualState.replace('_', ' ')}
+                </div>
+                <div style={{ fontSize: '10.5px', color: '#8FA3B8' }}>
+                  Foliage & Canopy
+                </div>
+              </div>
+
+              <div style={{ background: 'rgba(7, 17, 31, 0.6)', padding: '12px', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                <div className="text-xs text-muted">Environment</div>
+                <div style={{ fontSize: '15px', fontWeight: 800, color: envStateColor, marginTop: '2px', textTransform: 'capitalize' }}>
+                  {multimodalAssessment.environmentalState}
+                </div>
+                <div style={{ fontSize: '10.5px', color: '#8FA3B8' }}>
+                  pH, TDS & Reservoir
+                </div>
+              </div>
+
+              <div style={{ background: 'rgba(7, 17, 31, 0.6)', padding: '12px', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                <div className="text-xs text-muted">Active Anomalies</div>
+                <div style={{ fontSize: '15px', fontWeight: 800, color: multimodalAssessment.anomalies.length > 0 ? '#FFC857' : '#B7FF3C', marginTop: '2px' }}>
+                  {multimodalAssessment.anomalies.length > 0 ? multimodalAssessment.anomalies.length : 'None'}
+                </div>
+                <div style={{ fontSize: '10.5px', color: '#8FA3B8' }}>
+                  Cross-Domain Flags
+                </div>
+              </div>
+
+              <div style={{ background: 'rgba(7, 17, 31, 0.6)', padding: '12px', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                <div className="text-xs text-muted">Longitudinal Trend</div>
+                <div style={{ fontSize: '15px', fontWeight: 800, color: '#00E5FF', marginTop: '2px', display: 'flex', alignItems: 'center', gap: '6px', textTransform: 'capitalize' }}>
+                  {multimodalAssessment.trend === 'improving' ? (
+                    <><TrendingUp size={16} style={{ color: '#B7FF3C' }} /> Improving</>
+                  ) : multimodalAssessment.trend === 'declining' ? (
+                    <><TrendingDown size={16} style={{ color: '#FF6B4A' }} /> Declining</>
+                  ) : multimodalAssessment.trend === 'stable' ? (
+                    <><Minus size={16} style={{ color: '#00E5FF' }} /> Stable</>
+                  ) : (
+                    'Gathering...'
+                  )}
+                </div>
+                <div style={{ fontSize: '10.5px', color: '#8FA3B8' }}>
+                  Trajectory Tracking
+                </div>
+              </div>
+
+            </div>
+
+            {/* EPISTEMOLOGICAL SEPARATION SECTIONS */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              
+              {/* 1. OBSERVATIONS (Raw Facts) */}
+              <div className={styles.epistemicSection}>
+                <div className={styles.epistemicHeader} style={{ color: '#00E5FF' }}>
+                  <Search size={14} /> Observations (Sensory Facts)
+                </div>
+                <div className={styles.epistemicList}>
+                  {multimodalAssessment.observations.map((obs, i) => (
+                    <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '6px' }}>
+                      <span style={{ color: '#00E5FF' }}>•</span>
+                      <span>{obs}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* 2. INTERPRETATIONS (Cross-Domain Relationships) */}
+              <div className={styles.epistemicSection}>
+                <div className={styles.epistemicHeader} style={{ color: '#FFC857' }}>
+                  <Compass size={14} /> Interpretations (Cross-Domain Relationships)
+                </div>
+                <div className={styles.epistemicList}>
+                  {multimodalAssessment.interpretations.map((interp, i) => (
+                    <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '6px' }}>
+                      <span style={{ color: '#FFC857' }}>⚡</span>
+                      <span>{interp}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* 3. EXPLANATIONS (Agronomic Physiological Reasoning) */}
+              <div className={styles.epistemicSection}>
+                <div className={styles.epistemicHeader} style={{ color: '#B7FF3C' }}>
+                  <Sparkles size={14} /> Agronomic Explanations (Reasoning)
+                </div>
+                <div className={styles.epistemicList}>
+                  {multimodalAssessment.explanations.map((exp, i) => (
+                    <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '6px' }}>
+                      <span style={{ color: '#B7FF3C' }}>💡</span>
+                      <span>{exp}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+            </div>
+          </div>
+
           {/* Synchronized Sensor Telemetry Card */}
           <div className="glass-card" style={{ padding: '24px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <Cpu size={18} className="text-accent" />
-                <h3 className="text-md font-bold">Calibrated Telemetry</h3>
+                <h3 className="text-md font-bold">Synchronized Telemetry</h3>
               </div>
               <span className="badge badge-info">{mode === 'real' ? 'HARDWARE' : 'SIMULATION'}</span>
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px' }}>
               <div style={{ background: 'rgba(7, 17, 31, 0.5)', padding: '12px', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.05)' }}>
-                <span className="text-xs text-muted">pH Chemical Level</span>
+                <span className="text-xs text-muted">pH Level</span>
                 <div style={{ fontSize: '20px', fontWeight: 800, color: '#00E5FF', fontFamily: 'var(--font-mono)', marginTop: '2px' }}>
                   {latestReading?.ph ? latestReading.ph.toFixed(2) : '--'}
                 </div>
@@ -704,7 +831,7 @@ export default function IntelligencePage() {
                   {latestReading?.waterLevel ? `${Math.round(latestReading.waterLevel)}%` : '--'}
                 </div>
                 <span style={{ fontSize: '10.5px', color: environmentalAssessment.waterLevelStatus === 'optimal' ? '#B7FF3C' : '#FF6B4A' }}>
-                  Critical: &lt;15%
+                  Critical: &lt;18%
                 </span>
               </div>
 
@@ -716,57 +843,6 @@ export default function IntelligencePage() {
                 <span style={{ fontSize: '10.5px', color: '#8FA3B8' }}>
                   Full: 13cm · Empty: 60cm
                 </span>
-              </div>
-            </div>
-          </div>
-
-          {/* Multimodal Health Fusion Card */}
-          <div className="glass-card" style={{ padding: '24px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
-              <div>
-                <span className="text-xs font-bold text-secondary uppercase tracking-wider">Multimodal Health Fusion</span>
-                <h3 className="text-lg font-bold text-primary" style={{ marginTop: '2px' }}>
-                  {healthReport.healthState === 'optimal' ? 'Optimal Balance' : healthReport.healthState === 'warning' ? 'Moderate Stress' : 'Critical Hazard'}
-                </h3>
-              </div>
-
-              {/* Score circle */}
-              <div 
-                className={styles.healthScoreCircle} 
-                style={{ borderColor: healthColor, color: healthColor }}
-              >
-                {healthReport.overallHealthScore}
-              </div>
-            </div>
-
-            <p className="text-xs text-secondary mb-md">
-              {healthReport.summary}
-            </p>
-
-            {/* Parameter Component Scores */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', background: 'rgba(7, 17, 31, 0.5)', padding: '14px', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.05)' }}>
-              <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', marginBottom: '4px' }}>
-                  <span className="text-secondary">Environmental Sensors (50% Weight)</span>
-                  <span style={{ fontWeight: 700, color: healthReport.environmentalScore > 80 ? '#B7FF3C' : '#FFC857' }}>
-                    {healthReport.environmentalScore}/100
-                  </span>
-                </div>
-                <div className="progress-bar">
-                  <div className="progress-fill" style={{ width: `${healthReport.environmentalScore}%`, background: healthReport.environmentalScore > 80 ? '#B7FF3C' : '#FFC857' }} />
-                </div>
-              </div>
-
-              <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', marginBottom: '4px' }}>
-                  <span className="text-secondary">Visual Health Assessment (50% Weight)</span>
-                  <span style={{ fontWeight: 700, color: latestVisualHealth?.visualHealthScore && latestVisualHealth.visualHealthScore > 80 ? '#B7FF3C' : '#00E5FF' }}>
-                    {latestVisualHealth?.visualHealthScore ?? '--'}/100
-                  </span>
-                </div>
-                <div className="progress-bar">
-                  <div className="progress-fill" style={{ width: `${latestVisualHealth?.visualHealthScore ?? 0}%`, background: latestVisualHealth?.visualHealthScore && latestVisualHealth.visualHealthScore > 80 ? '#B7FF3C' : '#00E5FF' }} />
-                </div>
               </div>
             </div>
           </div>
@@ -861,8 +937,8 @@ export default function IntelligencePage() {
 
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '11px', color: '#8FA3B8' }}>
                   <span>{new Date(obs.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>
-                  <span className={`badge badge-${obs.visualHealthScore && obs.visualHealthScore > 75 ? 'success' : 'warning'}`}>
-                    Visual: {obs.visualHealthScore ?? '--'}/100
+                  <span className={`badge badge-${obs.overallHealthScore && obs.overallHealthScore > 75 ? 'success' : 'warning'}`}>
+                    Overall: {obs.overallHealthScore ?? '--'}/100
                   </span>
                 </div>
 

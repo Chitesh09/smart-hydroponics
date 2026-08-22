@@ -15,7 +15,11 @@ import {
   PlantHealthReport,
   AnomalyReport,
   RecommendationItem,
-  DemoScenario
+  DemoScenario,
+  MultimodalHealthAssessment,
+  CameraHealthInput,
+  ESP32HealthInput,
+  HistoricalHealthInput
 } from './types';
 import {
   DEFAULT_CROP_PROFILE,
@@ -25,6 +29,7 @@ import {
 import { detectEnvironmentalAnomalies } from './anomalyDetection';
 import { generateRecommendations } from './recommendations';
 import { identifyPlant } from './plantIdentification';
+import { multimodalHealthEngine } from './multimodalEngine';
 import {
   getStoredObservations,
   saveObservation,
@@ -48,6 +53,7 @@ interface PlantIntelligenceContextType {
   applyIdentifiedSpecies: (candidate: PlantCandidate, imageRef?: string) => void;
   environmentalAssessment: EnvironmentalAssessment;
   healthReport: PlantHealthReport;
+  multimodalAssessment: MultimodalHealthAssessment;
   activeAnomalies: AnomalyReport[];
   activeRecommendations: RecommendationItem[];
   activeScenario: DemoScenario;
@@ -128,13 +134,60 @@ export function PlantIntelligenceProvider({ children }: { children: React.ReactN
     );
   }, [activeAnomalies, currentPh, currentTds, currentWaterLevel, cropIdentity.targetProfile]);
 
-  // 4. Overall Health Assessment (fusing 50% environmental + 50% reproducible visual health)
+  // 4. Overall Health Assessment
   const healthReport = useMemo(() => {
     const visualScore = latestVisualHealth && latestVisualHealth.healthState !== 'unknown'
       ? latestVisualHealth.visualHealthScore
       : undefined;
     return generateHealthReport(environmentalAssessment, visualScore);
   }, [environmentalAssessment, latestVisualHealth]);
+
+  // 5. Phase 5 Multimodal Health Engine (Cross-domain fusion of Camera + ESP32 + History)
+  const multimodalAssessment = useMemo(() => {
+    const cameraInput: CameraHealthInput = {
+      isPlantDetected: latestDetection?.isPlantDetected,
+      speciesName: cropIdentity.commonName,
+      speciesConfidence: cropIdentity.confidence,
+      visualHealthScore: latestVisualHealth?.visualHealthScore,
+      visualHealthState: latestVisualHealth?.healthState,
+      canopyCoveragePercent: latestDetection?.canopyCoveragePercent,
+      vegetationIndex: latestDetection?.vegetationIndex,
+      chlorosisYellowPercent: latestVisualHealth?.chlorosisYellowPercent,
+      necroticBrownPercent: latestVisualHealth?.necroticBrownPercent,
+      indicators: latestVisualHealth?.indicators,
+    };
+
+    const esp32Input: ESP32HealthInput = {
+      ph: currentPh,
+      tds: currentTds,
+      waterLevel: currentWaterLevel,
+      distance: currentDistance,
+      isStale,
+      mode,
+    };
+
+    const historicalInput: HistoricalHealthInput = {
+      previousObservations: observations,
+    };
+
+    return multimodalHealthEngine(
+      cameraInput,
+      esp32Input,
+      historicalInput,
+      cropIdentity.targetProfile
+    );
+  }, [
+    latestDetection,
+    latestVisualHealth,
+    cropIdentity,
+    currentPh,
+    currentTds,
+    currentWaterLevel,
+    currentDistance,
+    isStale,
+    mode,
+    observations
+  ]);
 
   // Identify plant from current camera frame
   const identifyCurrentPlant = useCallback(async (): Promise<PlantIdentificationResponse | null> => {
@@ -214,7 +267,8 @@ export function PlantIntelligenceProvider({ children }: { children: React.ReactN
       plantSpecies: cropIdentity.commonName,
       speciesConfidence: cropIdentity.confidence,
       environmentalHealthScore: environmentalAssessment.compositeEnvironmentalScore,
-      overallHealthScore: healthReport.overallHealthScore,
+      overallHealthScore: multimodalAssessment.overallScore,
+      multimodalAssessment,
       anomalyDetected: activeAnomalies.length > 0 || isVisualAnomaly,
       activeAnomalies: activeAnomalies.map(a => a.title),
       recommendations: activeRecommendations.map(r => r.title),
@@ -236,7 +290,7 @@ export function PlantIntelligenceProvider({ children }: { children: React.ReactN
     cropIdentity.commonName,
     cropIdentity.confidence,
     environmentalAssessment.compositeEnvironmentalScore,
-    healthReport.overallHealthScore,
+    multimodalAssessment,
     activeAnomalies,
     activeRecommendations
   ]);
@@ -274,6 +328,7 @@ export function PlantIntelligenceProvider({ children }: { children: React.ReactN
         applyIdentifiedSpecies,
         environmentalAssessment,
         healthReport,
+        multimodalAssessment,
         activeAnomalies,
         activeRecommendations,
         activeScenario,
