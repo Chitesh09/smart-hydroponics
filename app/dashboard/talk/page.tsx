@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { usePlantIntelligence } from '@/lib/intelligence/PlantIntelligenceContext';
 import { useESP32Serial } from '@/lib/esp32/ESP32SerialContext';
 import { useCamera } from '@/lib/camera/CameraContext';
+import { PlantVoiceAssistant } from '@/components/voice/PlantVoiceAssistant';
 import {
   Camera,
   CameraOff,
@@ -13,7 +14,9 @@ import {
   Leaf,
   Send,
   TrendingUp,
-  RotateCcw
+  RotateCcw,
+  Mic,
+  MessageSquare
 } from 'lucide-react';
 import styles from './page.module.css';
 
@@ -39,6 +42,7 @@ export default function TalkToPlantPage() {
     clearChat
   } = usePlantIntelligence();
 
+  const [activeTab, setActiveTab] = useState<'voice' | 'text'>('voice');
   const [chatInput, setChatInput] = useState<string>('');
 
   const handleSendMessage = (e?: React.FormEvent) => {
@@ -69,10 +73,10 @@ export default function TalkToPlantPage() {
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <h1 className="text-3xl font-bold text-primary">🌱 Talk to Your Plant</h1>
-            <span className="badge badge-success" style={{ fontSize: '10px' }}>Interactive AI Companion</span>
+            <span className="badge badge-success" style={{ fontSize: '10px' }}>Voice-to-Voice Farmer Assistant</span>
           </div>
           <p className="text-secondary" style={{ marginTop: '4px' }}>
-            Speak directly with your monitored plant. All responses are 100% grounded in real-time camera vision and ESP32 telemetry.
+            Speak directly with your monitored plant in Kannada (ಕನ್ನಡ) or English. All responses are 100% grounded in real-time camera vision and ESP32 telemetry.
           </p>
         </div>
 
@@ -82,6 +86,24 @@ export default function TalkToPlantPage() {
             <span>Active Plant: <strong>{cropIdentity.commonName}</strong></span>
           </span>
         </div>
+      </div>
+
+      {/* Mode Switcher Tabs (Voice-to-Voice vs Text Terminal) */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <button
+          className={`btn btn-${activeTab === 'voice' ? 'primary' : 'ghost'}`}
+          style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px' }}
+          onClick={() => setActiveTab('voice')}
+        >
+          <Mic size={15} /> 🎙️ Voice Assistant (ಧ್ವನಿ ಸಹಾಯಕ)
+        </button>
+        <button
+          className={`btn btn-${activeTab === 'text' ? 'primary' : 'ghost'}`}
+          style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px' }}
+          onClick={() => setActiveTab('text')}
+        >
+          <MessageSquare size={15} /> 💬 Text Terminal
+        </button>
       </div>
 
       {/* 2. Main Talk Stage Layout */}
@@ -166,7 +188,7 @@ export default function TalkToPlantPage() {
                   <div>
                     <div style={{ fontWeight: 700, color: '#F4F7FB', fontSize: '14px' }}>Plant Camera Inactive</div>
                     <div style={{ fontSize: '11.5px', color: '#8FA3B8', marginTop: '2px' }}>
-                      Activate webcam to allow your plant to see and evaluate its leaves during chat.
+                      Activate webcam to allow your plant to see and evaluate its leaves during voice chat.
                     </div>
                   </div>
                 </div>
@@ -274,166 +296,170 @@ export default function TalkToPlantPage() {
 
         </div>
 
-        {/* Right Column: CONVERSATIONAL PLANT CHAT TERMINAL */}
+        {/* Right Column: VOICE ASSISTANT or TEXT TERMINAL */}
         <div>
-          <div className={styles.chatCard}>
-            
-            {/* Header with Plant Avatar & Reset */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <div className={styles.chatAvatar}>
-                  <Leaf size={24} />
-                </div>
-                <div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <h3 className="text-lg font-bold text-primary">{cropIdentity.commonName}</h3>
-                    <span className={`badge badge-${multimodalAssessment.overallHealthState === 'optimal' ? 'success' : multimodalAssessment.overallHealthState === 'warning' ? 'warning' : 'danger'}`}>
-                      {multimodalAssessment.overallHealthState === 'optimal' ? '● VIBRANT' : multimodalAssessment.overallHealthState === 'warning' ? '● MILD STRESS' : '● ATTENTION NEEDED'}
-                    </span>
+          {activeTab === 'voice' ? (
+            <PlantVoiceAssistant />
+          ) : (
+            <div className={styles.chatCard}>
+              
+              {/* Header with Plant Avatar & Reset */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <div className={styles.chatAvatar}>
+                    <Leaf size={24} />
                   </div>
-                  <p className="text-xs text-secondary">
-                    Grounded in live sensors, computer vision, and historical observations
-                  </p>
-                </div>
-              </div>
-
-              <button
-                className="btn btn-ghost"
-                style={{ fontSize: '11px', padding: '6px 10px' }}
-                onClick={clearChat}
-                title="Reset conversation"
-              >
-                <RotateCcw size={13} /> Reset
-              </button>
-            </div>
-
-            {/* Quick Prompt Suggestion Chips */}
-            <div>
-              <span className="text-xs text-muted mb-xs" style={{ display: 'block' }}>
-                Sample Questions (Click to Ask):
-              </span>
-              <div className={styles.promptChipsRow}>
-                <button 
-                  className={styles.promptChip}
-                  onClick={() => handlePromptChipClick("How are you?")}
-                >
-                  🌿 How are you?
-                </button>
-                <button 
-                  className={styles.promptChip}
-                  onClick={() => handlePromptChipClick("Do you need water?")}
-                >
-                  💧 Do you need water?
-                </button>
-                <button 
-                  className={styles.promptChip}
-                  onClick={() => handlePromptChipClick("How is your health?")}
-                >
-                  💚 How is your health?
-                </button>
-                <button 
-                  className={styles.promptChip}
-                  onClick={() => handlePromptChipClick("What changed today?")}
-                >
-                  ⚡ What changed today?
-                </button>
-                <button 
-                  className={styles.promptChip}
-                  onClick={() => handlePromptChipClick("Have you grown?")}
-                >
-                  🌱 Have you grown?
-                </button>
-                <button 
-                  className={styles.promptChip}
-                  onClick={() => handlePromptChipClick("Why do your leaves look different?")}
-                >
-                  🔍 Why do your leaves look different?
-                </button>
-                <button 
-                  className={styles.promptChip}
-                  onClick={() => handlePromptChipClick("How are you compared with last week?")}
-                >
-                  📈 How are you compared with last week?
-                </button>
-              </div>
-            </div>
-
-            {/* Message Thread */}
-            <div className={styles.chatMessagesThread}>
-              {aiMessages.map((msg) => (
-                <div 
-                  key={msg.id}
-                  className={msg.sender === 'user' ? styles.chatBubbleUser : styles.chatBubblePlant}
-                >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                    <span style={{ fontSize: '11px', fontWeight: 700, color: msg.sender === 'user' ? '#00E5FF' : '#B7FF3C' }}>
-                      {msg.sender === 'user' ? 'You' : `${cropIdentity.commonName} (AI Plant)`}
-                    </span>
-                    <span style={{ fontSize: '10px', color: '#5A738E' }}>
-                      {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                    </span>
-                  </div>
-
-                  <div>{msg.text}</div>
-
-                  {/* Epistemic Badges */}
-                  {msg.epistemicBadges && msg.epistemicBadges.length > 0 && (
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '6px' }}>
-                      {msg.epistemicBadges.map((badge, idx) => (
-                        <span 
-                          key={idx}
-                          className={`${styles.epistemicBadge} ${
-                            badge === 'measured_fact'
-                              ? styles.badgeMeasuredFact
-                              : badge === 'visual_observation'
-                                ? styles.badgeVisualObservation
-                                : badge === 'mathematical_projection'
-                                  ? styles.badgeProjection
-                                  : styles.badgeAdvisory
-                          }`}
-                        >
-                          {badge === 'measured_fact' && '✓ Measured Fact'}
-                          {badge === 'visual_observation' && '👁 Visual Observation'}
-                          {badge === 'mathematical_projection' && '📈 Time-Series Projection'}
-                          {badge === 'grower_advisory' && '💡 Grower Advisory'}
-                        </span>
-                      ))}
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <h3 className="text-lg font-bold text-primary">{cropIdentity.commonName}</h3>
+                      <span className={`badge badge-${multimodalAssessment.overallHealthState === 'optimal' ? 'success' : multimodalAssessment.overallHealthState === 'warning' ? 'warning' : 'danger'}`}>
+                        {multimodalAssessment.overallHealthState === 'optimal' ? '● VIBRANT' : multimodalAssessment.overallHealthState === 'warning' ? '● MILD STRESS' : '● ATTENTION NEEDED'}
+                      </span>
                     </div>
-                  )}
+                    <p className="text-xs text-secondary">
+                      Grounded in live sensors, computer vision, and historical observations
+                    </p>
+                  </div>
                 </div>
-              ))}
 
-              {isAILoading && (
-                <div className={styles.chatBubblePlant} style={{ fontStyle: 'italic', color: '#8FA3B8' }}>
-                  Analyzing camera vision & real-time telemetry context...
+                <button
+                  className="btn btn-ghost"
+                  style={{ fontSize: '11px', padding: '6px 10px' }}
+                  onClick={clearChat}
+                  title="Reset conversation"
+                >
+                  <RotateCcw size={13} /> Reset
+                </button>
+              </div>
+
+              {/* Quick Prompt Suggestion Chips */}
+              <div>
+                <span className="text-xs text-muted mb-xs" style={{ display: 'block' }}>
+                  Sample Questions (Click to Ask):
+                </span>
+                <div className={styles.promptChipsRow}>
+                  <button 
+                    className={styles.promptChip}
+                    onClick={() => handlePromptChipClick("How are you?")}
+                  >
+                    🌿 How are you?
+                  </button>
+                  <button 
+                    className={styles.promptChip}
+                    onClick={() => handlePromptChipClick("Do you need water?")}
+                  >
+                    💧 Do you need water?
+                  </button>
+                  <button 
+                    className={styles.promptChip}
+                    onClick={() => handlePromptChipClick("How is your health?")}
+                  >
+                    💚 How is your health?
+                  </button>
+                  <button 
+                    className={styles.promptChip}
+                    onClick={() => handlePromptChipClick("What changed today?")}
+                  >
+                    ⚡ What changed today?
+                  </button>
+                  <button 
+                    className={styles.promptChip}
+                    onClick={() => handlePromptChipClick("Have you grown?")}
+                  >
+                    🌱 Have you grown?
+                  </button>
+                  <button 
+                    className={styles.promptChip}
+                    onClick={() => handlePromptChipClick("Why do your leaves look different?")}
+                  >
+                    🔍 Why do your leaves look different?
+                  </button>
+                  <button 
+                    className={styles.promptChip}
+                    onClick={() => handlePromptChipClick("How are you compared with last week?")}
+                  >
+                    📈 How are you compared with last week?
+                  </button>
                 </div>
-              )}
+              </div>
+
+              {/* Message Thread */}
+              <div className={styles.chatMessagesThread}>
+                {aiMessages.map((msg) => (
+                  <div 
+                    key={msg.id}
+                    className={msg.sender === 'user' ? styles.chatBubbleUser : styles.chatBubblePlant}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                      <span style={{ fontSize: '11px', fontWeight: 700, color: msg.sender === 'user' ? '#00E5FF' : '#B7FF3C' }}>
+                        {msg.sender === 'user' ? 'You' : `${cropIdentity.commonName} (AI Plant)`}
+                      </span>
+                      <span style={{ fontSize: '10px', color: '#5A738E' }}>
+                        {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                    </div>
+
+                    <div>{msg.text}</div>
+
+                    {/* Epistemic Badges */}
+                    {msg.epistemicBadges && msg.epistemicBadges.length > 0 && (
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '6px' }}>
+                        {msg.epistemicBadges.map((badge, idx) => (
+                          <span 
+                            key={idx}
+                            className={`${styles.epistemicBadge} ${
+                              badge === 'measured_fact'
+                                ? styles.badgeMeasuredFact
+                                : badge === 'visual_observation'
+                                  ? styles.badgeVisualObservation
+                                  : badge === 'mathematical_projection'
+                                    ? styles.badgeProjection
+                                    : styles.badgeAdvisory
+                            }`}
+                          >
+                            {badge === 'measured_fact' && '✓ Measured Fact'}
+                            {badge === 'visual_observation' && '👁 Visual Observation'}
+                            {badge === 'mathematical_projection' && '📈 Time-Series Projection'}
+                            {badge === 'grower_advisory' && '💡 Grower Advisory'}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ))}
+
+                {isAILoading && (
+                  <div className={styles.chatBubblePlant} style={{ fontStyle: 'italic', color: '#8FA3B8' }}>
+                    Analyzing camera vision & real-time telemetry context...
+                  </div>
+                )}
+              </div>
+
+              {/* Input Form Bar */}
+              <form onSubmit={handleSendMessage} className={styles.chatInputBar}>
+                <input
+                  type="text"
+                  className={styles.chatInputField}
+                  placeholder="Ask your plant a question..."
+                  value={chatInput}
+                  onChange={(e) => setChatInput(e.target.value)}
+                  disabled={isAILoading}
+                />
+                <button 
+                  type="submit" 
+                  className="btn btn-primary"
+                  disabled={!chatInput.trim() || isAILoading}
+                >
+                  <Send size={15} /> Send
+                </button>
+              </form>
+
+              <div style={{ fontSize: '11px', color: '#5A738E', textAlign: 'center', lineHeight: 1.4 }}>
+                <em>System Representation Note:</em> The plant persona is a conversational representation of system telemetry. Responses are strictly grounded in measured data and visual diagnostics.
+              </div>
+
             </div>
-
-            {/* Input Form Bar */}
-            <form onSubmit={handleSendMessage} className={styles.chatInputBar}>
-              <input
-                type="text"
-                className={styles.chatInputField}
-                placeholder="Ask your plant a question..."
-                value={chatInput}
-                onChange={(e) => setChatInput(e.target.value)}
-                disabled={isAILoading}
-              />
-              <button 
-                type="submit" 
-                className="btn btn-primary"
-                disabled={!chatInput.trim() || isAILoading}
-              >
-                <Send size={15} /> Send
-              </button>
-            </form>
-
-            <div style={{ fontSize: '11px', color: '#5A738E', textAlign: 'center', lineHeight: 1.4 }}>
-              <em>System Representation Note:</em> The plant persona is a conversational representation of system telemetry. Responses are strictly grounded in measured data and visual diagnostics.
-            </div>
-
-          </div>
+          )}
         </div>
 
       </div>
