@@ -7,6 +7,7 @@ import {
   BarChart3,
   Sparkles,
   MessageSquare,
+  Trophy,
   Cpu,
   Settings,
   Leaf,
@@ -17,6 +18,7 @@ import styles from './Sidebar.module.css';
 
 const overviewItems = [
   { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard', description: 'Live monitoring' },
+  { href: '/dashboard/expo', icon: Trophy, label: 'Expo Showcase', description: '🏆 Exhibition mode' },
   { href: '/dashboard/talk', icon: MessageSquare, label: 'Talk to Plant', description: '🌱 Interactive companion' },
   { href: '/dashboard/intelligence', icon: Sparkles, label: 'Intelligence', description: 'Multimodal hub' },
   { href: '/dashboard/analytics', icon: BarChart3, label: 'Analytics', description: 'Historical data' },
