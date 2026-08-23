@@ -1,12 +1,12 @@
 // ============================================================
-// HydroSmart — Replaceable Plant Species Identification Engine
-// Multi-Feature Morphological & Chromatic Botanical Classifier
+// HydroSmart — Botanical Species Identification Engine
+// Normalized Multi-Feature Euclidean Botanical Classifier
 // ============================================================
 
 import { PlantCandidate, PlantIdentificationResponse } from './types';
 import { BOTANICAL_DATABASE, BotanicalTaxon } from './botanicalDatabase';
 
-interface ExtractedFeatures {
+export interface ExtractedFeatures {
   canopyCoverage: number;
   aspectRatio: number;
   meanHue: number;
@@ -16,7 +16,7 @@ interface ExtractedFeatures {
 }
 
 /**
- * Convert RGB to HSV
+ * Convert RGB to HSV Color Space
  */
 function rgbToHsv(r: number, g: number, b: number): [number, number, number] {
   const rNorm = r / 255;
@@ -48,7 +48,7 @@ function rgbToHsv(r: number, g: number, b: number): [number, number, number] {
 /**
  * Extract optical, chromatic, and morphological features from an image
  */
-function extractBotanicalFeatures(
+export function extractBotanicalFeatures(
   source: HTMLImageElement | HTMLCanvasElement | HTMLVideoElement
 ): ExtractedFeatures {
   const width = 320;
@@ -80,7 +80,7 @@ function extractBotanicalFeatures(
   let maxX = 0;
   let maxY = 0;
 
-  // Simple Sobel horizontal/vertical edge accumulator for texture
+  // Simple Sobel edge accumulator for leaf margin complexity
   let edgeEnergy = 0;
 
   for (let y = 1; y < height - 1; y++) {
@@ -111,7 +111,6 @@ function extractBotanicalFeatures(
         if (y < minY) minY = y;
         if (y > maxY) maxY = y;
 
-        // Texture gradient (Sobel on green channel)
         const leftG = data[(y * width + (x - 1)) * 4 + 1];
         const rightG = data[(y * width + (x + 1)) * 4 + 1];
         const topG = data[((y - 1) * width + x) * 4 + 1];
@@ -133,7 +132,6 @@ function extractBotanicalFeatures(
   const boundingArea = boxW * boxH;
   const canopyRoundness = boundingArea > 0 ? parseFloat((foliagePixels / boundingArea).toFixed(2)) : 0;
 
-  // Normalized edge texture complexity
   const rawComplexity = foliagePixels > 0 ? edgeEnergy / (foliagePixels * 50) : 0;
   const edgeComplexity = parseFloat(Math.min(1.0, Math.max(0.05, rawComplexity)).toFixed(2));
 
@@ -148,39 +146,36 @@ function extractBotanicalFeatures(
 }
 
 /**
- * Compare extracted optical features with taxonomic reference profiles
+ * Calibrated Normalized Euclidean Distance Matching
  */
-function scoreTaxonMatch(features: ExtractedFeatures, taxon: BotanicalTaxon): number {
+export function scoreTaxonMatch(features: ExtractedFeatures, taxon: BotanicalTaxon): number {
   const m = taxon.morphology;
-
-  // 1. Aspect ratio distance (normalized)
-  const aspectDist = Math.abs(features.aspectRatio - m.typicalAspectRatio) / 1.5;
-  const aspectScore = Math.max(0, 1.0 - aspectDist);
-
-  // 2. Hue centroid distance
   const targetHueMid = (m.targetHueMin + m.targetHueMax) / 2;
   const hueTolerance = (m.targetHueMax - m.targetHueMin) / 2;
-  const hueDist = Math.abs(features.meanHue - targetHueMid) / (hueTolerance * 1.5);
-  const hueScore = Math.max(0, 1.0 - hueDist);
 
-  // 3. Chlorophyll ExG distance
-  const exgDist = Math.abs(features.meanExG - m.expectedExG) / 0.35;
-  const exgScore = Math.max(0, 1.0 - exgDist);
+  // Normalized distance across dimensions
+  const dHue = Math.abs(features.meanHue - targetHueMid) / Math.max(12, hueTolerance);
+  const dAspect = Math.abs(features.aspectRatio - m.typicalAspectRatio) / 0.35;
+  const dExg = Math.abs(features.meanExG - m.expectedExG) / 0.12;
+  const dEdge = Math.abs(features.edgeComplexity - m.edgeComplexity) / 0.18;
+  const dRound = Math.abs(features.canopyRoundness - m.canopyRoundness) / 0.20;
 
-  // 4. Edge complexity / leaf texture distance
-  const edgeDist = Math.abs(features.edgeComplexity - m.edgeComplexity) / 0.6;
-  const edgeScore = Math.max(0, 1.0 - edgeDist);
+  // Weighted Euclidean norm
+  const distance = Math.sqrt(
+    0.25 * (dHue * dHue) +
+    0.20 * (dAspect * dAspect) +
+    0.20 * (dExg * dExg) +
+    0.20 * (dEdge * dEdge) +
+    0.15 * (dRound * dRound)
+  );
 
-  // Weighted taxonomic similarity score
-  const compositeScore = aspectScore * 0.25 + hueScore * 0.30 + exgScore * 0.25 + edgeScore * 0.20;
-
-  // Scale to 0 - 100% confidence
-  return Math.min(96, Math.max(10, Math.round(compositeScore * 96)));
+  // Exponential decay similarity scaled to 0 - 100%
+  const similarity = Math.max(0, Math.min(1.0, Math.exp(-distance / 1.1)));
+  return Math.round(similarity * 100);
 }
 
 /**
  * Primary Modular Plant Identification Service
- * Can be swapped with an external API (PlantNet/Plant.id/Cloud Vision) without UI rewrites.
  */
 export async function identifyPlant(
   imageBase64: string
@@ -193,7 +188,7 @@ export async function identifyPlant(
       rankedCandidates: [],
       overallConfidence: 0,
       confidenceLevel: 'uncertain',
-      guidanceMessage: 'Invalid image data or non-browser execution environment.',
+      guidanceMessage: 'No image snapshot available for identification.',
       timestamp,
     };
   }
@@ -212,7 +207,7 @@ export async function identifyPlant(
           rankedCandidates: [],
           overallConfidence: 0,
           confidenceLevel: 'uncertain',
-          guidanceMessage: 'No plant detected in the camera frame. Please place a plant in view of the webcam.',
+          guidanceMessage: 'No plant detected in the camera frame. Position a plant within the optical view.',
           timestamp,
           imageReference: imageBase64,
           extractedFeatures: {
@@ -226,7 +221,7 @@ export async function identifyPlant(
         return;
       }
 
-      // Condition 2: Score all taxa in botanical database
+      // Condition 2: Score all botanical taxa
       const candidates: PlantCandidate[] = BOTANICAL_DATABASE.map((taxon) => {
         const confidence = scoreTaxonMatch(features, taxon);
         return {
@@ -243,18 +238,25 @@ export async function identifyPlant(
       // Sort by confidence descending
       candidates.sort((a, b) => b.confidence - a.confidence);
 
-      const primary = candidates[0];
-      const overallConfidence = primary ? primary.confidence : 0;
+      const top1 = candidates[0];
+      const top2 = candidates[1];
+      const overallConfidence = top1 ? top1.confidence : 0;
+      const confidenceMargin = top1 && top2 ? top1.confidence - top2.confidence : 0;
 
-      // Condition 3: Low Confidence / Blurry / Ambiguous image
-      if (overallConfidence < 48 || features.edgeComplexity < 0.12) {
+      // Condition 3: Ambiguous or Low Confidence -> Reject Forced Classification
+      const isLowConfidence = overallConfidence < 60;
+      const isAmbiguous = confidenceMargin < 6 && overallConfidence < 75;
+
+      if (isLowConfidence || isAmbiguous) {
         resolve({
           status: 'low_confidence',
-          primaryCandidate: primary,
+          primaryCandidate: undefined, // Do NOT force a winner
           rankedCandidates: candidates.slice(0, 3),
           overallConfidence,
           confidenceLevel: 'uncertain',
-          guidanceMessage: 'Identification uncertain. Try a clearer image showing distinct leaf shape and good lighting.',
+          guidanceMessage: isAmbiguous
+            ? `Optical features are ambiguous between ${top1.commonName} and ${top2.commonName}. Operating in Generic Hydroponic Mode.`
+            : `Plant resemblance to registered species is uncertain (Score: ${overallConfidence}%). Position leaf margins clearly under balanced lighting.`,
           timestamp,
           imageReference: imageBase64,
           extractedFeatures: {
@@ -268,15 +270,15 @@ export async function identifyPlant(
         return;
       }
 
-      // Condition 4: Successful Identification
-      const confidenceLevel = overallConfidence >= 75 ? 'high' : 'moderate';
+      // Condition 4: High Confidence Identification
+      const confidenceLevel = overallConfidence >= 80 ? 'high' : 'moderate';
       const guidanceMessage = confidenceLevel === 'high'
-        ? `High confidence identification as ${primary.commonName}.`
-        : `Moderate confidence. Review ranked candidates below.`;
+        ? `High confidence optical match as ${top1.commonName} (${top1.scientificName}).`
+        : `Moderate confidence match as ${top1.commonName}. Review candidate profile.`;
 
       resolve({
         status: 'success',
-        primaryCandidate: primary,
+        primaryCandidate: top1,
         rankedCandidates: candidates.slice(0, 3),
         overallConfidence,
         confidenceLevel,

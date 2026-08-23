@@ -20,42 +20,32 @@ export interface BotanicalFeatures {
 }
 
 /**
- * Score Taxon Match against botanical database profiles
+ * Score Taxon Match using Normalized Euclidean Distance
  */
-function scoreTaxonMatch(features: BotanicalFeatures, taxon: BotanicalTaxon): number {
+export function scoreTaxonMatch(features: BotanicalFeatures, taxon: BotanicalTaxon): number {
   const m = taxon.morphology;
   const targetHueMid = (m.targetHueMin + m.targetHueMax) / 2;
   const hueTolerance = (m.targetHueMax - m.targetHueMin) / 2;
 
-  // 1. Hue Score (Weight: 25%)
-  const hueDiff = Math.abs(features.meanHue - targetHueMid);
-  const hueScore = Math.max(0, 100 - (hueDiff / Math.max(10, hueTolerance)) * 100);
+  // Normalized distance across dimensions
+  const dHue = Math.abs(features.meanHue - targetHueMid) / Math.max(12, hueTolerance);
+  const dAspect = Math.abs(features.aspectRatio - m.typicalAspectRatio) / 0.35;
+  const dExg = Math.abs(features.meanExG - m.expectedExG) / 0.12;
+  const dEdge = Math.abs(features.edgeComplexity - m.edgeComplexity) / 0.18;
+  const dRound = Math.abs(features.canopyRoundness - m.canopyRoundness) / 0.20;
 
-  // 2. Aspect Ratio Score (Weight: 20%)
-  const arDiff = Math.abs(features.aspectRatio - m.typicalAspectRatio);
-  const arScore = Math.max(0, 100 - (arDiff / 0.8) * 100);
-
-  // 3. Edge Complexity / Leaf Margin Score (Weight: 25%)
-  const edgeDiff = Math.abs(features.edgeComplexity - m.edgeComplexity);
-  const edgeScore = Math.max(0, 100 - (edgeDiff / 0.3) * 100);
-
-  // 4. Excess Green / Pigment Score (Weight: 15%)
-  const exgDiff = Math.abs(features.meanExG - m.expectedExG);
-  const exgScore = Math.max(0, 100 - (exgDiff / 0.25) * 100);
-
-  // 5. Canopy Roundness Score (Weight: 15%)
-  const roundDiff = Math.abs(features.canopyRoundness - m.canopyRoundness);
-  const roundScore = Math.max(0, 100 - (roundDiff / 0.4) * 100);
-
-  const rawScore = (
-    hueScore * 0.25 +
-    arScore * 0.20 +
-    edgeScore * 0.25 +
-    exgScore * 0.15 +
-    roundScore * 0.15
+  // Weighted Euclidean norm
+  const distance = Math.sqrt(
+    0.25 * (dHue * dHue) +
+    0.20 * (dAspect * dAspect) +
+    0.20 * (dExg * dExg) +
+    0.20 * (dEdge * dEdge) +
+    0.15 * (dRound * dRound)
   );
 
-  return parseFloat(Math.min(100, Math.max(0, rawScore)).toFixed(1));
+  // Exponential decay similarity scaled to 0 - 100%
+  const similarity = Math.max(0, Math.min(1.0, Math.exp(-distance / 1.1)));
+  return Math.round(similarity * 100);
 }
 
 /**
@@ -120,8 +110,8 @@ export function identifyPlantSpecies(
   const top2 = scoredCandidates[1];
 
   // Condition 2: Ambiguous or Low Match -> Reject forced classification
-  const isAmbiguous = top1 && top2 && (top1.similarityScore - top2.similarityScore) < 0.05 && top1.similarityScore < 0.70;
-  const isInsufficient = !top1 || top1.similarityScore < 0.40 || !isAcceptableImage;
+  const isAmbiguous = top1 && top2 && (top1.similarityScore - top2.similarityScore) < 0.06 && top1.similarityScore < 0.75;
+  const isInsufficient = !top1 || top1.similarityScore < 0.55 || !isAcceptableImage;
 
   if (isInsufficient || isAmbiguous) {
     return {
@@ -131,7 +121,7 @@ export function identifyPlantSpecies(
       confidenceLevel: 'insufficient',
       rankedCandidates: scoredCandidates.slice(0, 3),
       guidanceMessage: isAmbiguous
-        ? 'Morphological features are ambiguous between multiple species. Plant classified as Unknown.'
+        ? `Optical features are ambiguous between multiple species. Classified as Unknown Crop.`
         : 'Botanical features do not match registered hydroponic profiles with sufficient confidence.',
       extractedFeatures: {
         canopyCoverage: features.canopyCoverage,
@@ -144,7 +134,7 @@ export function identifyPlantSpecies(
   }
 
   // Condition 3: Low Confidence identification
-  if (top1.similarityScore < 0.60) {
+  if (top1.similarityScore < 0.65) {
     return {
       status: 'LOW_CONFIDENCE',
       primarySpecies: top1.commonName,
@@ -152,7 +142,7 @@ export function identifyPlantSpecies(
       confidenceScore: top1.similarityScore,
       confidenceLevel: 'low',
       rankedCandidates: scoredCandidates.slice(0, 3),
-      guidanceMessage: `Possible resemblance to ${top1.commonName}, but confidence is low. Verify manually.`,
+      guidanceMessage: `Moderate resemblance to ${top1.commonName} (${(top1.similarityScore * 100).toFixed(0)}%), but confidence is low. Verify manually.`,
       extractedFeatures: {
         canopyCoverage: features.canopyCoverage,
         aspectRatio: features.aspectRatio,
