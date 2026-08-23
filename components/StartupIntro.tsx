@@ -2,21 +2,19 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
+import { useAuth } from '@/lib/auth/AuthContext';
 import styles from './StartupIntro.module.css';
 
 export function StartupIntro() {
   const router = useRouter();
   const pathname = usePathname();
+  const { isAuthenticated, loading } = useAuth();
   const [visible, setVisible] = useState(true);
   const [fadeOut, setFadeOut] = useState(false);
 
   useEffect(() => {
     // If the intro has already completed, do not run the startup redirect logic again
     if (!visible) return;
-
-    // Check if session exists in browser storage
-    const email = typeof window !== 'undefined' ? localStorage.getItem('hydro_user_email') : null;
-    const isAuthenticated = !!email;
 
     // Trigger visual fade-out sequence at 2.3 seconds
     const fadeTimer = setTimeout(() => {
@@ -27,15 +25,17 @@ export function StartupIntro() {
     const unmountTimer = setTimeout(() => {
       setVisible(false);
 
-      if (isAuthenticated) {
-        // Authenticated user landing on sign-in or splash is routed to the dashboard
-        if (pathname === '/' || pathname === '/login' || pathname === '/signup') {
-          router.replace('/dashboard');
-        }
-      } else {
-        // Unauthenticated user attempting to access dashboard is routed to entry
-        if (pathname.startsWith('/dashboard')) {
-          router.replace('/');
+      if (!loading) {
+        if (isAuthenticated) {
+          // Authenticated user landing on sign-in or splash is routed to the dashboard
+          if (pathname === '/' || pathname === '/login' || pathname === '/signup') {
+            router.replace('/dashboard');
+          }
+        } else {
+          // Unauthenticated user attempting to access dashboard is routed to entry
+          if (pathname.startsWith('/dashboard')) {
+            router.replace('/');
+          }
         }
       }
     }, 2700);
@@ -44,7 +44,7 @@ export function StartupIntro() {
       clearTimeout(fadeTimer);
       clearTimeout(unmountTimer);
     };
-  }, [pathname, router, visible]);
+  }, [pathname, router, visible, isAuthenticated, loading]);
 
   if (!visible) return null;
 

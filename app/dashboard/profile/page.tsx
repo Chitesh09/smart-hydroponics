@@ -1,43 +1,72 @@
 'use client';
 
+// ============================================================
+// HydroSmart — Operator Profile & Authentication Settings
+// ============================================================
+
 import { useState, useEffect } from 'react';
-import { User, Mail, Shield, Bell, LogOut, CheckCircle } from 'lucide-react';
+import { User, Mail, Shield, Bell, LogOut, CheckCircle, Fingerprint } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { toast, Toaster } from 'react-hot-toast';
+import { useAuth } from '@/lib/auth/AuthContext';
+import { updateProfile } from 'firebase/auth';
+import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { firestore } from '@/lib/firebase';
 import styles from './page.module.css';
 
 export default function ProfilePage() {
   const router = useRouter();
+  const { currentUser, userProfile, signOut } = useAuth();
   const [loading, setLoading] = useState(false);
-  const [userName, setUserName] = useState('Admin');
-  const [userEmail, setUserEmail] = useState('admin@hydrosmart.app');
+  const [saving, setSaving] = useState(false);
+  const [userName, setUserName] = useState('Operator');
+  const [userEmail, setUserEmail] = useState('');
 
-  // Load user data on mount asynchronously to prevent hydration warnings
+  // Synchronize state with authenticated Firebase User
   useEffect(() => {
-    const name = localStorage.getItem('hydro_user_name');
-    const email = localStorage.getItem('hydro_user_email');
-    const timer = setTimeout(() => {
-      if (name) setUserName(name);
-      if (email) setUserEmail(email);
-    }, 0);
-    return () => clearTimeout(timer);
-  }, []);
+    if (currentUser) {
+      setUserName(currentUser.displayName || userProfile?.displayName || 'Operator');
+      setUserEmail(currentUser.email || userProfile?.email || '');
+    }
+  }, [currentUser, userProfile]);
 
-  const handleSave = (e: React.FormEvent) => {
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    toast.success('Profile settings updated successfully!');
+    if (!currentUser) return;
+
+    setSaving(true);
+    try {
+      if (userName.trim() && userName !== currentUser.displayName) {
+        await updateProfile(currentUser, { displayName: userName.trim() });
+        if (firestore) {
+          const userDocRef = doc(firestore, 'users', currentUser.uid);
+          await setDoc(userDocRef, {
+            displayName: userName.trim(),
+            updatedAt: serverTimestamp(),
+          }, { merge: true });
+        }
+      }
+      toast.success('Profile settings updated successfully!');
+    } catch (err) {
+      console.error('Failed to update profile:', err);
+      toast.error('Failed to update profile settings.');
+    } finally {
+      setSaving(false);
+    }
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     setLoading(true);
-    // Clear user session details from storage
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem('hydro_user_email');
-      localStorage.removeItem('hydro_user_name');
-    }
-    setTimeout(() => {
+    try {
+      await signOut();
+      toast.success('Signed out successfully');
       router.push('/');
-    }, 1000);
+    } catch (err) {
+      console.error('Error during sign out:', err);
+      router.push('/');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -45,7 +74,7 @@ export default function ProfilePage() {
       <Toaster position="top-right" />
       <div>
         <h1 className="text-3xl font-bold text-primary mb-sm">User Profile</h1>
-        <p className="text-secondary">Manage your account settings, preferences, and security.</p>
+        <p className="text-secondary">Manage your operator credentials, system access, and security.</p>
       </div>
 
       <div className={styles.profileGrid}>
@@ -57,8 +86,8 @@ export default function ProfilePage() {
               <User size={36} />
             </div>
             <h2 className="text-lg font-bold">{userName}</h2>
-            <p className="text-sm text-secondary mb-md">Farm Manager</p>
-            <span className="badge badge-success" style={{ marginBottom: '16px' }}><CheckCircle size={12}/> Account Active</span>
+            <p className="text-sm text-secondary mb-md">Farm Station Operator</p>
+            <span className="badge badge-success" style={{ marginBottom: '16px' }}><CheckCircle size={12}/> Firebase Authenticated</span>
             
             <button className="btn btn-ghost" style={{ width: '100%', justifyContent: 'center', color: 'var(--color-danger)', borderColor: 'rgba(239, 68, 68, 0.3)' }} onClick={handleLogout} disabled={loading}>
               <LogOut size={16} /> {loading ? 'Logging out...' : 'Sign Out'}
@@ -67,10 +96,28 @@ export default function ProfilePage() {
 
           <div className="glass-card" style={{ padding: '24px' }}>
             <h3 className="text-md font-bold mb-md" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Fingerprint size={18} className="text-primary"/> Operator Identity
+            </h3>
+            <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '8px' }}>Firebase UID:</div>
+            <div style={{
+              background: 'rgba(0,0,0,0.3)',
+              padding: '8px 10px',
+              borderRadius: '6px',
+              fontFamily: 'var(--font-mono)',
+              fontSize: '11px',
+              wordBreak: 'break-all',
+              color: '#00E5FF'
+            }}>
+              {currentUser?.uid || 'Not authenticated'}
+            </div>
+          </div>
+
+          <div className="glass-card" style={{ padding: '24px' }}>
+            <h3 className="text-md font-bold mb-md" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <Shield size={18} className="text-primary"/> Security
             </h3>
-            <button className="btn btn-ghost" style={{ width: '100%', marginBottom: '12px' }}>Change Password</button>
-            <button className="btn btn-ghost" style={{ width: '100%' }}>Enable 2FA</button>
+            <button className="btn btn-ghost" style={{ width: '100%', marginBottom: '12px' }} onClick={() => toast('Password reset emails can be triggered from Firebase Console')}>Change Password</button>
+            <button className="btn btn-ghost" style={{ width: '100%' }} onClick={() => toast('2FA configuration')}>Security Logs</button>
           </div>
         </div>
 
@@ -80,17 +127,11 @@ export default function ProfilePage() {
           
           <form onSubmit={handleSave} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
             
-            <div className="grid-2">
-              <div>
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '8px' }}>First Name</label>
-                <div style={{ position: 'relative' }}>
-                   <User size={18} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
-                   <input type="text" className="input" value={userName} onChange={(e) => setUserName(e.target.value)} style={{ paddingLeft: '44px' }} />
-                </div>
-              </div>
-              <div>
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '8px' }}>Last Name</label>
-                <input type="text" className="input" defaultValue="User" />
+            <div>
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '8px' }}>Display Name</label>
+              <div style={{ position: 'relative' }}>
+                 <User size={18} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+                 <input type="text" className="input" value={userName} onChange={(e) => setUserName(e.target.value)} style={{ paddingLeft: '44px' }} placeholder="Operator Display Name" />
               </div>
             </div>
 
@@ -98,9 +139,9 @@ export default function ProfilePage() {
               <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '8px' }}>Email Address</label>
               <div style={{ position: 'relative' }}>
                  <Mail size={18} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
-                 <input type="email" className="input" value={userEmail} onChange={(e) => setUserEmail(e.target.value)} style={{ paddingLeft: '44px' }} readOnly />
+                 <input type="email" className="input" value={userEmail} style={{ paddingLeft: '44px', opacity: 0.8 }} readOnly />
               </div>
-              <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>Email cannot be changed directly. Contact support.</p>
+              <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>Primary identifier linked to Firebase Authentication.</p>
             </div>
 
             <div style={{ marginTop: '12px', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '20px' }}>
@@ -111,7 +152,7 @@ export default function ProfilePage() {
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
                 <div>
                   <div style={{ fontSize: '14px', fontWeight: 600 }}>System Alerts</div>
-                  <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Push notifications for fault detected in pumps.</div>
+                  <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Push notifications for telemetry faults & critical thresholds.</div>
                 </div>
                 <label className="toggle">
                   <input type="checkbox" defaultChecked />
@@ -121,8 +162,8 @@ export default function ProfilePage() {
 
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
                 <div>
-                  <div style={{ fontSize: '14px', fontWeight: 600 }}>Daily Reports</div>
-                  <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Email summary of nutrient consumption.</div>
+                  <div style={{ fontSize: '14px', fontWeight: 600 }}>Daily Agronomic Reports</div>
+                  <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Summary of nutrient consumption and canopy expansion.</div>
                 </div>
                 <label className="toggle">
                   <input type="checkbox" defaultChecked />
@@ -132,8 +173,9 @@ export default function ProfilePage() {
             </div>
 
             <div style={{ marginTop: '12px', display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
-              <button type="button" className="btn btn-ghost">Cancel</button>
-              <button type="submit" className="btn btn-primary">Save Changes</button>
+              <button type="submit" className="btn btn-primary" disabled={saving}>
+                {saving ? 'Saving...' : 'Save Changes'}
+              </button>
             </div>
 
           </form>

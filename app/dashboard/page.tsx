@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
+import { useAuth } from '@/lib/auth/AuthContext';
 import { useESP32Serial } from '@/lib/esp32/ESP32SerialContext';
 import ESP32Connection from '@/components/esp32/ESP32Connection';
 import { SENSOR_THRESHOLDS } from '@/lib/sensorConfig';
@@ -12,15 +13,15 @@ import styles from './page.module.css';
 const DEFAULT_READING = { ph: 6.0, tds: 1000, waterLevel: 85, distance: 23.5, timestamp: 0 };
 
 export default function Dashboard() {
+  const { currentUser, userProfile } = useAuth();
   const { mode, isStale, latestReading, history } = useESP32Serial();
-  const [greeting, setGreeting] = useState('Welcome back 👋');
   const [selectedMetric, setSelectedMetric] = useState<'ph' | 'tds' | 'waterLevel' | 'distance'>('ph');
 
   const reading = latestReading || DEFAULT_READING;
 
-  // Personalize dashboard greeting based on local time and session variables
-  useEffect(() => {
-    const name = localStorage.getItem('hydro_user_name');
+  // Personalize dashboard greeting based on local time and authenticated user identity
+  const greeting = useMemo(() => {
+    const resolvedName = currentUser?.displayName || userProfile?.displayName;
     const now = new Date();
     const hour = now.getHours();
     
@@ -33,15 +34,11 @@ export default function Dashboard() {
       timeGreeting = 'Good evening';
     }
 
-    const timer = setTimeout(() => {
-      if (name && name !== 'null' && name !== 'undefined') {
-        setGreeting(`${timeGreeting}, ${name} 👋`);
-      } else {
-        setGreeting('Welcome back 👋');
-      }
-    }, 0);
-    return () => clearTimeout(timer);
-  }, []);
+    if (resolvedName && resolvedName !== 'null' && resolvedName !== 'undefined') {
+      return `${timeGreeting}, ${resolvedName} 👋`;
+    }
+    return `${timeGreeting} 👋`;
+  }, [currentUser?.displayName, userProfile?.displayName]);
 
   // Format historical chart timestamps
   const chartLabels = useMemo(() => {

@@ -1,8 +1,6 @@
-// Firebase configuration and helpers
-// For production: set these in .env.local
-// For demo: works with mock data if Firebase not configured
-
 import { initializeApp, getApps, type FirebaseApp } from 'firebase/app';
+import { getAuth, type Auth } from 'firebase/auth';
+import { getFirestore, type Firestore } from 'firebase/firestore';
 import { getDatabase, ref, push, onValue, query, limitToLast, type Database } from 'firebase/database';
 
 const firebaseConfig = {
@@ -16,6 +14,8 @@ const firebaseConfig = {
 };
 
 let app: FirebaseApp | null = null;
+let auth: Auth | null = null;
+let firestore: Firestore | null = null;
 let db: Database | null = null;
 let firebaseAvailable = false;
 
@@ -25,15 +25,21 @@ try {
   } else {
     app = getApps()[0];
   }
-  if (firebaseConfig.databaseURL) {
+  
+  if (app) {
+    auth = getAuth(app);
+    firestore = getFirestore(app);
+  }
+
+  if (firebaseConfig.databaseURL && app) {
     db = getDatabase(app);
     firebaseAvailable = true;
   }
 } catch (_e) {
-  console.warn('Firebase not configured — using local state only');
+  console.warn('Firebase initialized with local demo configuration');
 }
 
-export { firebaseAvailable };
+export { app, auth, firestore, db, firebaseAvailable };
 
 export async function pushSensorReading(data: object) {
   if (!db) return;

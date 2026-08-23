@@ -14,6 +14,7 @@ const geistMono = Geist_Mono({
 
 import { BackgroundEffects } from '@/components/BackgroundEffects';
 import { StartupIntro } from '@/components/StartupIntro';
+import { AuthProvider } from '@/lib/auth/AuthContext';
 
 export const metadata: Metadata = {
   title: "HydroSmart — Intelligent Hydroponic Control System",
@@ -36,9 +37,11 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark">
       <body className={`${geistSans.variable} ${geistMono.variable}`}>
-        <BackgroundEffects />
-        <StartupIntro />
-        {children}
+        <AuthProvider>
+          <BackgroundEffects />
+          <StartupIntro />
+          {children}
+        </AuthProvider>
       </body>
     </html>
   );

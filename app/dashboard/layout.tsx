@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { Sidebar } from '@/components/Sidebar';
+import { useAuth } from '@/lib/auth/AuthContext';
 import { ESP32SerialProvider, useESP32Serial } from '@/lib/esp32/ESP32SerialContext';
 import { CameraProvider } from '@/lib/camera/CameraContext';
 import { PlantIntelligenceProvider } from '@/lib/intelligence/PlantIntelligenceContext';
@@ -30,26 +31,20 @@ function DashboardLayoutContent({
 }: {
   children: React.ReactNode;
 }) {
+  const { isAuthenticated, loading: authLoading } = useAuth();
   const { mode, latestReading, isStale } = useESP32Serial();
   const [simSystemStatus, setSimSystemStatus] = useState<'stable' | 'correcting' | 'fault'>('stable');
   const [alertCount, setAlertCount] = useState(0);
-  const [authorized, setAuthorized] = useState(false);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
 
-  // Route security gate: check for user session to prevent flashes of protected content
+  // Route security gate: Enforce Firebase authenticated session
   useEffect(() => {
-    const email = typeof window !== 'undefined' ? localStorage.getItem('hydro_user_email') : null;
-    if (!email) {
+    if (!authLoading && !isAuthenticated) {
       router.replace('/');
-    } else {
-      const timer = setTimeout(() => {
-        setAuthorized(true);
-      }, 0);
-      return () => clearTimeout(timer);
     }
-  }, [router]);
+  }, [authLoading, isAuthenticated, router]);
 
   // Automatically collapse mobile drawer upon route navigation
   useEffect(() => {
@@ -88,8 +83,40 @@ function DashboardLayoutContent({
     return () => clearInterval(interval);
   }, [mode]);
 
-  // Do not render any shell markup if not authorized
-  if (!authorized) {
+  // While determining Firebase authentication state, render loading shell
+  if (authLoading) {
+    return (
+      <div style={{
+        minHeight: '100vh',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: '#07111F',
+        color: '#F4F7FB'
+      }}>
+        <div style={{
+          width: '56px',
+          height: '56px',
+          borderRadius: '50%',
+          background: 'rgba(0, 229, 255, 0.08)',
+          border: '1px solid rgba(0, 229, 255, 0.2)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          marginBottom: '16px',
+          color: '#00E5FF'
+        }}>
+          <Leaf size={28} />
+        </div>
+        <h3 style={{ fontSize: '16px', fontWeight: 700, marginBottom: '6px' }}>HydroSmart Console</h3>
+        <p style={{ fontSize: '12.5px', color: '#8FA3B8' }}>Verifying session credentials...</p>
+      </div>
+    );
+  }
+
+  // Do not render any dashboard markup if not authenticated
+  if (!isAuthenticated) {
     return null;
   }
 
