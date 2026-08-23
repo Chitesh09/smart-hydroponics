@@ -9,6 +9,7 @@ import {
   MessageSquare,
   Trophy,
   Cpu,
+  Radio,
   Settings,
   Leaf,
   Activity,
@@ -25,7 +26,8 @@ const overviewItems = [
 ];
 
 const systemItems = [
-  { href: '/dashboard/hardware', icon: Cpu, label: 'Hardware', description: 'System Overview' },
+  { href: '/dashboard/devices', icon: Radio, label: 'Devices', description: 'IoT Hub & Calibration' },
+  { href: '/dashboard/hardware', icon: Cpu, label: 'Hardware', description: 'System Schematic' },
   { href: '/dashboard/profile', icon: Settings, label: 'Settings', description: 'Station config' },
 ];
 

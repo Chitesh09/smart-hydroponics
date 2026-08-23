@@ -1,0 +1,342 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  max-width: 1300px;
+  margin: 0 auto;
+  padding-bottom: 40px;
+}
+
+.headerRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.headerTitle {
+  font-size: 26px;
+  font-weight: 800;
+  color: #F4F7FB;
+  letter-spacing: -0.02em;
+  margin-bottom: 6px;
+}
+
+.headerSub {
+  font-size: 13.5px;
+  color: #8FA3B8;
+  max-width: 600px;
+}
+
+.actionRow {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.metricsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 16px;
+}
+
+.metricCard {
+  background: rgba(13, 27, 42, 0.65);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(16px);
+  border-radius: 14px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 14px;
+  position: relative;
+  overflow: hidden;
+}
+
+.metricCard::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--card-accent, #00E5FF), transparent);
+}
+
+.metricHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.metricLabel {
+  font-size: 12px;
+  font-weight: 600;
+  color: #8FA3B8;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.metricValue {
+  font-size: 28px;
+  font-weight: 800;
+  font-family: var(--font-mono);
+  color: #F4F7FB;
+}
+
+.metricSub {
+  font-size: 12px;
+  color: #8FA3B8;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.deviceDetailsCard {
+  background: rgba(13, 27, 42, 0.65);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(16px);
+  border-radius: 14px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.sectionHeading {
+  font-size: 17px;
+  font-weight: 700;
+  color: #F4F7FB;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.deviceInfoGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  background: rgba(16, 37, 58, 0.4);
+  padding: 18px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.infoBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.infoKey {
+  font-size: 11px;
+  color: #8FA3B8;
+  text-transform: uppercase;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+.infoVal {
+  font-size: 14px;
+  font-weight: 700;
+  color: #F4F7FB;
+  font-family: var(--font-mono);
+}
+
+.sensorGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+.sensorCard {
+  background: rgba(13, 27, 42, 0.65);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(16px);
+  border-radius: 14px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.sensorTop {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.sensorName {
+  font-size: 15px;
+  font-weight: 700;
+  color: #F4F7FB;
+}
+
+.sensorBadge {
+  padding: 3px 9px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.sensorBadgeWorking {
+  background: rgba(183, 255, 60, 0.15);
+  color: #B7FF3C;
+  border: 1px solid rgba(183, 255, 60, 0.3);
+}
+
+.sensorBadgeFault {
+  background: rgba(255, 107, 107, 0.15);
+  color: #FF6B6B;
+  border: 1px solid rgba(255, 107, 107, 0.3);
+}
+
+.sensorBadgeDisconnected {
+  background: rgba(143, 163, 184, 0.15);
+  color: #8FA3B8;
+  border: 1px solid rgba(143, 163, 184, 0.3);
+}
+
+.sensorValueBig {
+  font-size: 24px;
+  font-weight: 800;
+  font-family: var(--font-mono);
+  color: #00E5FF;
+}
+
+.sensorDetails {
+  font-size: 12px;
+  color: #8FA3B8;
+  line-height: 1.4;
+}
+
+.calibrationSection {
+  background: rgba(13, 27, 42, 0.65);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(16px);
+  border-radius: 14px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.formGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+}
+
+.fieldGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.fieldLabel {
+  font-size: 12px;
+  font-weight: 600;
+  color: #F4F7FB;
+}
+
+.fieldInput {
+  background: rgba(16, 37, 58, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 10px 14px;
+  color: #F4F7FB;
+  font-size: 13.5px;
+  font-family: var(--font-mono);
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.fieldInput:focus {
+  border-color: #00E5FF;
+}
+
+.logsContainer {
+  background: rgba(13, 27, 42, 0.65);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(16px);
+  border-radius: 14px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.logTableWrapper {
+  overflow-x: auto;
+  max-height: 320px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.logTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  text-align: left;
+}
+
+.logTable th {
+  background: rgba(16, 37, 58, 0.9);
+  color: #8FA3B8;
+  font-weight: 600;
+  padding: 10px 14px;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.logTable td {
+  padding: 10px 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  color: #F4F7FB;
+}
+
+.logBadge {
+  display: inline-block;
+  padding: 2px 7px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.logBadgeSuccess {
+  background: rgba(183, 255, 60, 0.15);
+  color: #B7FF3C;
+}
+
+.logBadgeInfo {
+  background: rgba(0, 229, 255, 0.15);
+  color: #00E5FF;
+}
+
+.logBadgeWarning {
+  background: rgba(255, 200, 87, 0.15);
+  color: #FFC857;
+}
+
+.logBadgeError {
+  background: rgba(255, 107, 107, 0.15);
+  color: #FF6B6B;
+}
+
+@media (max-width: 768px) {
+  .headerRow {
+    flex-direction: column;
+  }
+  .metricsGrid {
+    grid-template-columns: 1fr;
+  }
+  .sensorGrid {
+    grid-template-columns: 1fr;
+  }
+}
