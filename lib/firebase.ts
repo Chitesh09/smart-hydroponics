@@ -3,8 +3,11 @@ import { getAuth, type Auth } from 'firebase/auth';
 import { getFirestore, type Firestore } from 'firebase/firestore';
 import { getDatabase, ref, push, onValue, query, limitToLast, type Database } from 'firebase/database';
 
+const rawApiKey = process.env.NEXT_PUBLIC_FIREBASE_API_KEY;
+export const isFirebaseConfigured = !!rawApiKey && rawApiKey !== 'demo-key' && rawApiKey.length > 10;
+
 const firebaseConfig = {
-  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || 'demo-key',
+  apiKey: rawApiKey || 'demo-key-placeholder',
   authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || 'demo.firebaseapp.com',
   databaseURL: process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL || '',
   projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || 'demo-project',
@@ -26,17 +29,17 @@ try {
     app = getApps()[0];
   }
   
-  if (app) {
+  if (app && isFirebaseConfigured) {
     auth = getAuth(app);
     firestore = getFirestore(app);
   }
 
-  if (firebaseConfig.databaseURL && app) {
+  if (firebaseConfig.databaseURL && app && isFirebaseConfigured) {
     db = getDatabase(app);
     firebaseAvailable = true;
   }
 } catch (_e) {
-  console.warn('Firebase initialized with local demo configuration');
+  console.warn('Firebase initialized in fallback demo mode');
 }
 
 export { app, auth, firestore, db, firebaseAvailable };

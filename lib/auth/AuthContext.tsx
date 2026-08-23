@@ -1,8 +1,8 @@
 'use client';
 
 // ============================================================
-// HydroSmart — Centralized Firebase Authentication Context
-// Secure User Identity & Production Authentication Foundation
+// HydroSmart — Centralized Authentication Context
+// Production Firebase Authentication & Development Fallback
 // ============================================================
 
 import React, { createContext, useContext, useEffect, useState, useCallback, useMemo } from 'react';
@@ -15,7 +15,9 @@ import {
   updateProfile
 } from 'firebase/auth';
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
-import { auth, firestore } from '@/lib/firebase';
+import { auth, firestore, isFirebaseConfigured } from '@/lib/firebase';
+
+const DEMO_SESSION_KEY = 'hydrosmart_demo_session_v1';
 
 export interface UserProfile {
   uid: string;
@@ -49,7 +51,7 @@ function getFriendlyAuthErrorMessage(errorCode: string): string {
     case 'auth/user-not-found':
       return 'Incorrect email or password.';
     case 'auth/email-already-in-use':
-      return 'An account with this email already exists.';
+      return 'An account with this email already exists. Please Sign In.';
     case 'auth/invalid-email':
       return 'Please enter a valid email address.';
     case 'auth/weak-password':
@@ -62,17 +64,52 @@ function getFriendlyAuthErrorMessage(errorCode: string): string {
       return 'This account has been disabled by an administrator.';
     case 'auth/operation-not-allowed':
       return 'Email/Password sign-in is not enabled in Firebase Console.';
+    case 'auth/api-key-not-valid':
+    case 'auth/invalid-api-key':
+    case 'auth/configuration-not-found':
+      return 'Firebase API configuration pending. Operating in local mode.';
     default:
       return 'Authentication failed. Please verify your credentials and try again.';
   }
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
-  const [loading, setLoading] = useState<boolean>(() => {
-    return !!auth;
+  const [currentUser, setCurrentUser] = useState<User | null>(() => {
+    if (!isFirebaseConfigured && typeof window !== 'undefined') {
+      try {
+        const raw = sessionStorage.getItem(DEMO_SESSION_KEY);
+        if (raw) {
+          const saved = JSON.parse(raw);
+          return {
+            uid: saved.uid,
+            email: saved.email,
+            displayName: saved.displayName,
+            emailVerified: true,
+          } as unknown as User;
+        }
+      } catch {
+        return null;
+      }
+    }
+    return null;
   });
+
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(() => {
+    if (!isFirebaseConfigured && typeof window !== 'undefined') {
+      try {
+        const raw = sessionStorage.getItem(DEMO_SESSION_KEY);
+        if (raw) return JSON.parse(raw);
+      } catch {
+        return null;
+      }
+    }
+    return null;
+  });
+
+  const [loading, setLoading] = useState<boolean>(() => {
+    return isFirebaseConfigured && !!auth;
+  });
+
   const [authError, setAuthError] = useState<string | null>(null);
 
   const clearAuthError = useCallback(() => {
@@ -87,7 +124,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       email: user.email || '',
     };
 
-    if (!firestore) {
+    if (!firestore || !isFirebaseConfigured) {
       setUserProfile(defaultProfile);
       return defaultProfile;
     }
@@ -108,7 +145,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUserProfile(resolved);
         return resolved;
       } else {
-        // Create initial document in Firestore
         const newProfile: UserProfile = {
           uid: user.uid,
           displayName: user.displayName || fallbackName || 'Operator',
@@ -123,93 +159,161 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return newProfile;
       }
     } catch (err) {
-      console.warn('[AuthContext] Firestore profile sync error (using auth state fallback):', err);
+      console.warn('[AuthContext] Profile sync fallback:', err);
       setUserProfile(defaultProfile);
       return defaultProfile;
     }
   }, []);
 
-  // Subscribe to Firebase Authentication state
+  // Subscribe to Authentication State
   useEffect(() => {
-    if (!auth) {
-      return;
+    if (isFirebaseConfigured && auth) {
+      const unsubscribe = onAuthStateChanged(auth, async (user) => {
+        if (user) {
+          setCurrentUser(user);
+          await syncUserProfile(user);
+        } else {
+          setCurrentUser(null);
+          setUserProfile(null);
+        }
+        setLoading(false);
+      });
+      return () => unsubscribe();
     }
-
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      if (user) {
-        setCurrentUser(user);
-        await syncUserProfile(user);
-      } else {
-        setCurrentUser(null);
-        setUserProfile(null);
-      }
-      setLoading(false);
-    });
-
-    return () => unsubscribe();
   }, [syncUserProfile]);
 
   // Sign In with email & password
   const signIn = useCallback(async (email: string, pass: string): Promise<User> => {
     setAuthError(null);
-    if (!auth) {
-      throw new Error('Firebase Authentication is not initialized.');
+    const trimmedEmail = email.trim();
+
+    if (!trimmedEmail || !pass.trim()) {
+      const msg = 'Please enter both email and password.';
+      setAuthError(msg);
+      throw new Error(msg);
     }
 
-    try {
-      const userCredential = await signInWithEmailAndPassword(auth, email.trim(), pass);
-      const user = userCredential.user;
-      setCurrentUser(user);
-      await syncUserProfile(user);
-      return user;
-    } catch (err: unknown) {
-      const code = (err as { code?: string })?.code || '';
-      const friendlyMsg = getFriendlyAuthErrorMessage(code);
-      setAuthError(friendlyMsg);
-      throw new Error(friendlyMsg);
+    if (isFirebaseConfigured && auth) {
+      try {
+        const userCredential = await signInWithEmailAndPassword(auth, trimmedEmail, pass);
+        const user = userCredential.user;
+        setCurrentUser(user);
+        await syncUserProfile(user);
+        return user;
+      } catch (err: unknown) {
+        const code = (err as { code?: string })?.code || '';
+        const friendlyMsg = getFriendlyAuthErrorMessage(code);
+        setAuthError(friendlyMsg);
+        throw new Error(friendlyMsg);
+      }
+    } else {
+      // Local Development Sign-in Fallback
+      const displayName = trimmedEmail.split('@')[0]
+        ? trimmedEmail.split('@')[0].charAt(0).toUpperCase() + trimmedEmail.split('@')[0].slice(1)
+        : 'Operator';
+      const uid = `usr_${Math.abs(trimmedEmail.split('').reduce((a, b) => ((a << 5) - a) + b.charCodeAt(0), 0))}`;
+      
+      const mockUser = {
+        uid,
+        email: trimmedEmail,
+        displayName,
+        emailVerified: true,
+      } as unknown as User;
+
+      const profile: UserProfile = {
+        uid,
+        email: trimmedEmail,
+        displayName,
+        createdAt: Date.now(),
+      };
+
+      if (typeof window !== 'undefined') {
+        sessionStorage.setItem(DEMO_SESSION_KEY, JSON.stringify(profile));
+      }
+
+      setCurrentUser(mockUser);
+      setUserProfile(profile);
+      return mockUser;
     }
   }, [syncUserProfile]);
 
   // Sign Up with email, password & display name
   const signUp = useCallback(async (email: string, pass: string, name: string): Promise<User> => {
     setAuthError(null);
-    if (!auth) {
-      throw new Error('Firebase Authentication is not initialized.');
+    const trimmedEmail = email.trim();
+    const trimmedName = name.trim() || 'Operator';
+
+    if (!trimmedEmail || !pass.trim()) {
+      const msg = 'Please enter both email and password.';
+      setAuthError(msg);
+      throw new Error(msg);
     }
 
-    try {
-      const trimmedName = name.trim() || 'Operator';
-      const userCredential = await createUserWithEmailAndPassword(auth, email.trim(), pass);
-      const user = userCredential.user;
+    if (pass.length < 6) {
+      const msg = 'Please choose a stronger password (at least 6 characters).';
+      setAuthError(msg);
+      throw new Error(msg);
+    }
 
-      // Update Firebase Auth profile
+    if (isFirebaseConfigured && auth) {
       try {
-        await updateProfile(user, { displayName: trimmedName });
-      } catch (profileErr) {
-        console.warn('[AuthContext] Profile display name update error:', profileErr);
+        const userCredential = await createUserWithEmailAndPassword(auth, trimmedEmail, pass);
+        const user = userCredential.user;
+
+        try {
+          await updateProfile(user, { displayName: trimmedName });
+        } catch (profileErr) {
+          console.warn('[AuthContext] Profile display name error:', profileErr);
+        }
+
+        await syncUserProfile(user, trimmedName);
+        setCurrentUser(user);
+        return user;
+      } catch (err: unknown) {
+        const code = (err as { code?: string })?.code || '';
+        const friendlyMsg = getFriendlyAuthErrorMessage(code);
+        setAuthError(friendlyMsg);
+        throw new Error(friendlyMsg);
+      }
+    } else {
+      // Local Development Sign-up Fallback
+      const uid = `usr_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`;
+      const mockUser = {
+        uid,
+        email: trimmedEmail,
+        displayName: trimmedName,
+        emailVerified: true,
+      } as unknown as User;
+
+      const profile: UserProfile = {
+        uid,
+        email: trimmedEmail,
+        displayName: trimmedName,
+        createdAt: Date.now(),
+      };
+
+      if (typeof window !== 'undefined') {
+        sessionStorage.setItem(DEMO_SESSION_KEY, JSON.stringify(profile));
       }
 
-      // Create profile record in Firestore
-      await syncUserProfile(user, trimmedName);
-      setCurrentUser(user);
-      return user;
-    } catch (err: unknown) {
-      const code = (err as { code?: string })?.code || '';
-      const friendlyMsg = getFriendlyAuthErrorMessage(code);
-      setAuthError(friendlyMsg);
-      throw new Error(friendlyMsg);
+      setCurrentUser(mockUser);
+      setUserProfile(profile);
+      return mockUser;
     }
   }, [syncUserProfile]);
 
   // Sign Out
   const signOut = useCallback(async (): Promise<void> => {
     setAuthError(null);
-    if (auth) {
+    if (isFirebaseConfigured && auth) {
       try {
         await firebaseSignOut(auth);
       } catch (err) {
         console.error('[AuthContext] Sign out error:', err);
       }
+    }
+    if (typeof window !== 'undefined') {
+      sessionStorage.removeItem(DEMO_SESSION_KEY);
     }
     setCurrentUser(null);
     setUserProfile(null);
