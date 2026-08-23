@@ -175,7 +175,7 @@ export default function TalkToPlantPage() {
                       }}
                     >
                       <span className={styles.boundingBoxTag}>
-                        {cropIdentity.commonName} · {latestDetection.confidence}%
+                        🌱 FOLIAGE DETECTED ({latestDetection.confidence}%)
                       </span>
                     </div>
                   )}

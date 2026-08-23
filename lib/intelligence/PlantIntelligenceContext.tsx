@@ -115,12 +115,12 @@ export function PlantIntelligenceProvider({ children }: { children: React.ReactN
   const [plantId, setPlantId] = useState<string>('plant_crop_1');
   const [syncStatus, setSyncStatus] = useState<CloudSyncStatus>('offline');
 
-  // Crop Identity State (Initial defaults to Butterhead Lettuce)
+  // Crop Identity State (Initial neutral baseline profile)
   const [cropIdentity, setCropIdentity] = useState<PlantIdentity>(() => ({
-    cropKey: 'butterhead_lettuce',
-    commonName: 'Butterhead Lettuce',
-    scientificName: 'Lactuca sativa var. capitata',
-    family: 'Asteraceae',
+    cropKey: 'general_crop',
+    commonName: 'General Hydroponic Crop',
+    scientificName: 'Plantae (Hydroponic)',
+    family: 'General Hydroponics',
     plantedTimestamp: undefined,
     growthStage: 'vegetative',
     targetProfile: DEFAULT_CROP_PROFILE,
@@ -139,7 +139,7 @@ export function PlantIntelligenceProvider({ children }: { children: React.ReactN
     {
       id: 'msg_welcome',
       sender: 'plant',
-      text: 'Hello grower! I am your monitored Butterhead Lettuce. Ask me how I am feeling, about my nutrient solution, water level, or future trend forecasts!',
+      text: 'Hello grower! I am your monitored hydroponic plant assistant. Ask me how I am feeling, about my nutrient solution, water level, or future trend forecasts!',
       timestamp: Date.now(),
       epistemicBadges: ['measured_fact', 'visual_observation'],
     },

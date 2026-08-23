@@ -305,7 +305,9 @@ export default function IntelligencePage() {
                       }}
                     >
                       <span className={styles.boundingBoxTag}>
-                        {cropIdentity.commonName} · {latestDetection.confidence}%
+                        {identificationResult && identificationResult.status === 'success' && identificationResult.primaryCandidate
+                          ? `🌱 ${identificationResult.primaryCandidate.commonName} (${identificationResult.overallConfidence}%)`
+                          : `🌱 FOLIAGE DETECTED (${latestDetection.confidence}%)`}
                       </span>
                     </div>
                   )}
@@ -484,12 +486,41 @@ export default function IntelligencePage() {
                 </div>
               ) : (
                 <div style={{ padding: '16px', background: 'rgba(255, 200, 87, 0.08)', border: '1px solid rgba(255, 200, 87, 0.25)', borderRadius: '6px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#FFC857', fontWeight: 700, fontSize: '13px', marginBottom: '4px' }}>
-                    <AlertTriangle size={16} /> Identification Uncertain
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#FFC857', fontWeight: 700, fontSize: '13px', marginBottom: '6px' }}>
+                    <AlertTriangle size={16} /> Species Identification Uncertain (Generic Hydroponic Mode)
                   </div>
-                  <p style={{ fontSize: '12px', color: '#F4F7FB', lineHeight: 1.4 }}>
+                  <p style={{ fontSize: '12px', color: '#F4F7FB', lineHeight: 1.4, marginBottom: '12px' }}>
                     {identificationResult.guidanceMessage}
                   </p>
+
+                  {identificationResult.rankedCandidates && identificationResult.rankedCandidates.length > 0 && (
+                    <div>
+                      <div style={{ fontSize: '11px', color: '#8FA3B8', fontWeight: 700, textTransform: 'uppercase', marginBottom: '6px', letterSpacing: '0.5px' }}>
+                        Top Resemblance Matches (Heuristic Similarity):
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                        {identificationResult.rankedCandidates.map((c, idx) => (
+                          <div 
+                            key={c.id || idx}
+                            style={{
+                              display: 'flex',
+                              justifyContent: 'space-between',
+                              alignItems: 'center',
+                              background: 'rgba(0,0,0,0.25)',
+                              padding: '6px 10px',
+                              borderRadius: '4px',
+                              fontSize: '11.5px',
+                            }}
+                          >
+                            <span style={{ color: '#F4F7FB', fontWeight: 600 }}>{c.commonName}</span>
+                            <span style={{ color: '#FFC857', fontFamily: 'var(--font-mono)', fontWeight: 700 }}>
+                              {c.confidence}% similarity
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>

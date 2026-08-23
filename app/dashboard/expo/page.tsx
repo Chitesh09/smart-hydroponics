@@ -184,7 +184,7 @@ export default function ExpoShowcasePage() {
                 <>
                   <div className={styles.boundingBoxOverlay} style={{ inset: '15%' }}>
                     <span className={styles.boundingBoxTag}>
-                      {cropIdentity.commonName} · {latestDetection?.confidence ?? 94}%
+                      {latestDetection?.isPlantDetected ? `🌱 FOLIAGE DETECTED (${latestDetection.confidence}%)` : `🌱 STANDBY`}
                     </span>
                   </div>
                   <button 
@@ -249,12 +249,12 @@ export default function ExpoShowcasePage() {
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px', marginBottom: '14px' }}>
               <div style={{ background: 'rgba(7, 17, 31, 0.5)', padding: '14px', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.05)' }}>
-                <div className="text-xs text-muted">Species Identification</div>
+                <div className="text-xs text-muted">Species Profile</div>
                 <div style={{ fontSize: '16px', fontWeight: 800, color: '#F4F7FB', marginTop: '2px' }}>
                   {cropIdentity.commonName}
                 </div>
                 <div style={{ fontSize: '11px', color: '#00E5FF', fontStyle: 'italic' }}>
-                  {cropIdentity.scientificName ?? 'Lactuca sativa'} ({cropIdentity.confidence ?? 94}%)
+                  {cropIdentity.scientificName ?? 'Plantae (Hydroponic)'} {cropIdentity.confidence ? `(${cropIdentity.confidence}%)` : ''}
                 </div>
               </div>
 

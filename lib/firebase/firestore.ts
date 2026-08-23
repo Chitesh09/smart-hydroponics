@@ -293,7 +293,7 @@ export interface ActiveHierarchy {
 
 export async function ensureDefaultHierarchy(
   uid: string,
-  initialSpeciesName = 'Butterhead Lettuce'
+  initialSpeciesName = 'General Hydroponic Crop'
 ): Promise<ActiveHierarchy> {
   if (!firestore) throw new Error('Firestore is not initialized');
 
