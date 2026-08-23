@@ -1,13 +1,27 @@
 // ============================================================
-// HydroSmart — Centralized Plant Observation Store & Memory
+// HydroSmart — Cloud-First Observation Store & Memory Manager
+// Primary persistence: Firestore users/{uid}/.../observations
 // ============================================================
 
 import { PlantObservation } from './types';
+import { FirestoreObservation } from '@/lib/firebase/types';
+import {
+  createObservation,
+  getObservations as getFirestoreObservations,
+  validateObservation
+} from '@/lib/firebase/firestore';
 
-const STORAGE_KEY = 'hydrosmart_plant_observations_v1';
-const MAX_OBSERVATIONS = 100;
+const MIGRATION_FLAG_KEY = 'hydrosmart_firestore_migration_v1';
+const LEGACY_STORAGE_KEY = 'hydrosmart_plant_observations_v1';
+const MAX_OBSERVATIONS_CACHE = 100;
 
-function createDefaultSeedObservations(): PlantObservation[] {
+// In-memory runtime cache for seamless offline fallback
+let memoryObservationCache: PlantObservation[] = [];
+
+/**
+ * Seed baseline observation records for new cultivation journeys
+ */
+export function createDefaultSeedObservations(): PlantObservation[] {
   const now = Date.now();
   const dayMs = 86400000;
 
@@ -100,56 +114,205 @@ function createDefaultSeedObservations(): PlantObservation[] {
   ];
 }
 
-export function getStoredObservations(): PlantObservation[] {
-  if (typeof window === 'undefined') return [];
+/**
+ * Convert a Firestore observation document into standard PlantObservation
+ */
+function mapFirestoreToPlantObservation(fObs: FirestoreObservation): PlantObservation {
+  return {
+    id: fObs.id,
+    timestamp: fObs.timestamp,
+    cameraActive: fObs.cameraActive ?? (fObs.plantDetected || false),
+    isPlantDetected: fObs.plantDetected,
+    plantDetectionConfidence: fObs.plantDetectionConfidence,
+    canopyCoveragePercent: fObs.canopyCoveragePercent ?? fObs.canopyCoverage,
+    vegetationIndex: fObs.vegetationIndex,
+    visualHealthScore: fObs.visualHealthScore,
+    visualHealthState: (fObs.visualHealthState as PlantObservation['visualHealthState']) || (fObs.healthState as PlantObservation['visualHealthState']),
+    visualScoreBreakdown: fObs.visualScoreBreakdown as PlantObservation['visualScoreBreakdown'],
+    visualIndicators: fObs.visualIndicators,
+    ph: fObs.ph,
+    tds: fObs.tds,
+    waterLevel: fObs.waterLevel,
+    distance: fObs.distance,
+    telemetryMode: fObs.telemetryMode || (fObs.source === 'simulation' ? 'simulation' : 'real'),
+    isTelemetryStale: fObs.isTelemetryStale ?? false,
+    plantSpecies: fObs.plantSpecies,
+    speciesConfidence: fObs.speciesConfidence,
+    environmentalHealthScore: fObs.environmentalHealthScore,
+    overallHealthScore: fObs.overallHealthScore,
+    multimodalAssessment: fObs.multimodalAssessment as PlantObservation['multimodalAssessment'],
+    anomalyDetected: fObs.anomalyDetected ?? (fObs.activeAnomalies && fObs.activeAnomalies.length > 0) ?? false,
+    activeAnomalies: fObs.activeAnomalies,
+    recommendations: fObs.recommendations,
+    imageReference: fObs.imageReference,
+  };
+}
+
+/**
+ * Convert standard PlantObservation into Firestore document payload
+ */
+function mapPlantObservationToFirestore(
+  obs: PlantObservation,
+  sourceOverride?: 'esp32' | 'simulation' | 'manual'
+): FirestoreObservation {
+  return {
+    id: obs.id,
+    timestamp: obs.timestamp,
+    ph: obs.ph,
+    tds: obs.tds,
+    waterLevel: obs.waterLevel,
+    distance: obs.distance,
+    telemetryMode: obs.telemetryMode,
+    isTelemetryStale: obs.isTelemetryStale,
+    cameraActive: obs.cameraActive,
+    plantDetected: obs.isPlantDetected ?? false,
+    plantDetectionConfidence: obs.plantDetectionConfidence,
+    canopyCoveragePercent: obs.canopyCoveragePercent,
+    vegetationIndex: obs.vegetationIndex,
+    visualHealthScore: obs.visualHealthScore,
+    visualHealthState: obs.visualHealthState,
+    visualScoreBreakdown: obs.visualScoreBreakdown,
+    visualIndicators: obs.visualIndicators,
+    plantSpecies: obs.plantSpecies,
+    speciesConfidence: obs.speciesConfidence,
+    overallHealthScore: obs.overallHealthScore,
+    environmentalHealthScore: obs.environmentalHealthScore,
+    anomalyDetected: obs.anomalyDetected,
+    activeAnomalies: obs.activeAnomalies,
+    recommendations: obs.recommendations,
+    multimodalAssessment: obs.multimodalAssessment,
+    imageReference: obs.imageReference,
+    source: sourceOverride || (obs.telemetryMode === 'simulation' ? 'simulation' : 'esp32'),
+  };
+}
+
+/**
+ * Fetch observations from cloud Firestore with memory cache fallback
+ */
+export async function fetchObservationsFromCloud(
+  uid: string,
+  farmId: string,
+  stationId: string,
+  plantId: string,
+  limitCount = 50
+): Promise<PlantObservation[]> {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) {
-      const seed = createDefaultSeedObservations();
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(seed));
-      return seed;
+    const cloudDocs = await getFirestoreObservations(uid, farmId, stationId, plantId, limitCount);
+    if (cloudDocs && cloudDocs.length > 0) {
+      const mapped = cloudDocs.map(mapFirestoreToPlantObservation);
+      memoryObservationCache = mapped;
+      return mapped;
     }
-    const parsed = JSON.parse(raw);
-    if (Array.isArray(parsed) && parsed.length > 0) {
-      return parsed;
-    }
-    const seed = createDefaultSeedObservations();
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(seed));
-    return seed;
   } catch (err) {
-    console.warn('[ObservationStore] Failed to read stored observations:', err);
-    return [];
+    console.warn('[ObservationStore] Cloud fetch error (using cache fallback):', err);
   }
+
+  // Fallback to cache or initial seed
+  if (memoryObservationCache.length > 0) {
+    return memoryObservationCache;
+  }
+
+  const seed = createDefaultSeedObservations();
+  memoryObservationCache = seed;
+  return seed;
+}
+
+/**
+ * Persist an observation to cloud Firestore
+ */
+export async function persistObservationToCloud(
+  uid: string,
+  farmId: string,
+  stationId: string,
+  plantId: string,
+  observation: PlantObservation,
+  source?: 'esp32' | 'simulation' | 'manual'
+): Promise<PlantObservation[]> {
+  // Update memory cache immediately
+  memoryObservationCache = [observation, ...memoryObservationCache].slice(0, MAX_OBSERVATIONS_CACHE);
+
+  try {
+    const firestorePayload = mapPlantObservationToFirestore(observation, source);
+    if (validateObservation(firestorePayload)) {
+      await createObservation(uid, farmId, stationId, plantId, firestorePayload);
+    }
+  } catch (err) {
+    console.warn('[ObservationStore] Cloud persist error (observation retained in local cache):', err);
+  }
+
+  return memoryObservationCache;
+}
+
+/**
+ * Safe One-Time Migration: Migrate legacy localStorage observations to Firestore
+ */
+export async function migrateLegacyLocalStorageObservations(
+  uid: string,
+  farmId: string,
+  stationId: string,
+  plantId: string
+): Promise<{ migratedCount: number; status: 'migrated' | 'already_migrated' | 'none' | 'error' }> {
+  if (typeof window === 'undefined' || !uid) {
+    return { migratedCount: 0, status: 'none' };
+  }
+
+  try {
+    const isMigrated = localStorage.getItem(MIGRATION_FLAG_KEY);
+    if (isMigrated === 'done') {
+      return { migratedCount: 0, status: 'already_migrated' };
+    }
+
+    const raw = localStorage.getItem(LEGACY_STORAGE_KEY);
+    if (!raw) {
+      localStorage.setItem(MIGRATION_FLAG_KEY, 'done');
+      return { migratedCount: 0, status: 'none' };
+    }
+
+    const legacyList = JSON.parse(raw);
+    if (!Array.isArray(legacyList) || legacyList.length === 0) {
+      localStorage.setItem(MIGRATION_FLAG_KEY, 'done');
+      return { migratedCount: 0, status: 'none' };
+    }
+
+    let count = 0;
+    for (const item of legacyList) {
+      const payload = mapPlantObservationToFirestore(item);
+      if (validateObservation(payload)) {
+        try {
+          await createObservation(uid, farmId, stationId, plantId, payload);
+          count++;
+        } catch (uploadErr) {
+          console.warn('[ObservationStore] Skipping invalid migration item:', uploadErr);
+        }
+      }
+    }
+
+    localStorage.setItem(MIGRATION_FLAG_KEY, 'done');
+    console.log(`[ObservationStore] Successfully migrated ${count} observations to Firestore.`);
+    return { migratedCount: count, status: 'migrated' };
+  } catch (err) {
+    console.error('[ObservationStore] Migration error:', err);
+    return { migratedCount: 0, status: 'error' };
+  }
+}
+
+/**
+ * Synchronous local memory/cache reader for initial SSR/client mounts
+ */
+export function getStoredObservations(): PlantObservation[] {
+  if (memoryObservationCache.length > 0) {
+    return memoryObservationCache;
+  }
+  const seed = createDefaultSeedObservations();
+  memoryObservationCache = seed;
+  return seed;
 }
 
 export function saveObservation(observation: PlantObservation): PlantObservation[] {
-  if (typeof window === 'undefined') return [observation];
-  try {
-    const current = getStoredObservations();
-    const updated = [observation, ...current].slice(0, MAX_OBSERVATIONS);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
-    return updated;
-  } catch (err) {
-    console.error('[ObservationStore] Failed to save observation:', err);
-    return [observation];
-  }
-}
-
-export function getLatestObservation(): PlantObservation | null {
-  const observations = getStoredObservations();
-  return observations.length > 0 ? observations[0] : null;
+  memoryObservationCache = [observation, ...memoryObservationCache].slice(0, MAX_OBSERVATIONS_CACHE);
+  return memoryObservationCache;
 }
 
 export function clearStoredObservations(): void {
-  if (typeof window === 'undefined') return;
-  try {
-    localStorage.removeItem(STORAGE_KEY);
-  } catch (err) {
-    console.error('[ObservationStore] Failed to clear observations:', err);
-  }
-}
-
-export function exportObservationsJSON(): string {
-  const observations = getStoredObservations();
-  return JSON.stringify(observations, null, 2);
+  memoryObservationCache = [];
 }

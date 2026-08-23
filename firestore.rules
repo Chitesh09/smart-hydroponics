@@ -1,0 +1,41 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Scoped User Root & Subcollections
+    match /users/{userId} {
+      // Allow user to read and update only their own profile
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+
+      // Scoped Farms subcollection
+      match /farms/{farmId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+
+        // Scoped Stations subcollection
+        match /stations/{stationId} {
+          allow read, write: if request.auth != null && request.auth.uid == userId;
+
+          // Scoped Plants subcollection
+          match /plants/{plantId} {
+            allow read, write: if request.auth != null && request.auth.uid == userId;
+
+            // Scoped Observations subcollection
+            match /observations/{obsId} {
+              allow read, write: if request.auth != null && request.auth.uid == userId;
+            }
+          }
+        }
+      }
+      
+      // Recursive safety rule for any other nested subcollections
+      match /{allSubcollections=**} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+    }
+
+    // Default: Deny all unauthenticated or unscoped access
+    match /{document=**} {
+      allow read, write: false;
+    }
+  }
+}

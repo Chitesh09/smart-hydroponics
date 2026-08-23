@@ -1,6 +1,12 @@
 'use client';
 
+// ============================================================
+// HydroSmart — Plant Intelligence Context & State Provider
+// Integrated with Cloud Firestore Persistence & Scoped User Identity
+// ============================================================
+
 import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
+import { useAuth } from '@/lib/auth/AuthContext';
 import { useESP32Serial } from '@/lib/esp32/ESP32SerialContext';
 import { useCamera } from '@/lib/camera/CameraContext';
 import { usePlantMonitor } from '@/lib/camera/usePlantMonitor';
@@ -28,6 +34,7 @@ import {
   StructuredPlantContext,
   AIPlantMessage
 } from './types';
+import { CloudSyncStatus } from '@/lib/firebase/types';
 import {
   DEFAULT_CROP_PROFILE,
   evaluateEnvironmentalHealth,
@@ -47,8 +54,12 @@ import { askAIPlant } from './aiPlantEngine';
 import {
   getStoredObservations,
   saveObservation,
-  clearStoredObservations
+  clearStoredObservations,
+  fetchObservationsFromCloud,
+  persistObservationToCloud,
+  migrateLegacyLocalStorageObservations
 } from './observationStore';
+import { ensureDefaultHierarchy } from '@/lib/firebase/firestore';
 import { DEMO_SCENARIOS } from './demoScenarios';
 
 interface PlantIntelligenceContextType {
@@ -84,14 +95,25 @@ interface PlantIntelligenceContextType {
   setActiveScenario: (scenario: DemoScenario) => void;
   captureAndObserve: () => PlantObservation | null;
   clearHistory: () => void;
+  syncStatus: CloudSyncStatus;
+  farmId: string;
+  stationId: string;
+  plantId: string;
 }
 
 const PlantIntelligenceContext = createContext<PlantIntelligenceContextType | undefined>(undefined);
 
 export function PlantIntelligenceProvider({ children }: { children: React.ReactNode }) {
+  const { currentUser } = useAuth();
   const { mode, isStale, latestReading } = useESP32Serial();
   const { status: cameraStatus, captureFrame } = useCamera();
   const { latestDetection, latestVisualHealth, isScanning, setIsScanning, analyzeNow } = usePlantMonitor();
+
+  // Cloud Station Hierarchy
+  const [farmId, setFarmId] = useState<string>('farm_main');
+  const [stationId, setStationId] = useState<string>('station_esp32_1');
+  const [plantId, setPlantId] = useState<string>('plant_crop_1');
+  const [syncStatus, setSyncStatus] = useState<CloudSyncStatus>('offline');
 
   // Crop Identity State (Initial defaults to Butterhead Lettuce)
   const [cropIdentity, setCropIdentity] = useState<PlantIdentity>(() => ({
@@ -108,8 +130,8 @@ export function PlantIntelligenceProvider({ children }: { children: React.ReactN
   const [identificationResult, setIdentificationResult] = useState<PlantIdentificationResponse | null>(null);
   const [isIdentifying, setIsIdentifying] = useState<boolean>(false);
 
-  // Multimodal Observation History (loaded asynchronously on client mount)
-  const [observations, setObservations] = useState<PlantObservation[]>([]);
+  // Multimodal Observation History (loaded from Firestore or local fallback)
+  const [observations, setObservations] = useState<PlantObservation[]>(() => getStoredObservations());
   const [activeScenario, setActiveScenarioState] = useState<DemoScenario>('healthy');
 
   // AI Plant Conversation Thread
@@ -124,13 +146,60 @@ export function PlantIntelligenceProvider({ children }: { children: React.ReactN
   ]);
   const [isAILoading, setIsAILoading] = useState<boolean>(false);
 
+  // Synchronize Cloud Firestore Observations & Execute Safe One-Time Migration
   useEffect(() => {
-    const stored = getStoredObservations();
-    const timer = setTimeout(() => {
-      setObservations(stored);
-    }, 0);
-    return () => clearTimeout(timer);
-  }, []);
+    let isCancelled = false;
+
+    async function syncCloudData() {
+      if (!currentUser?.uid) {
+        setSyncStatus('offline');
+        return;
+      }
+
+      setSyncStatus('syncing');
+      try {
+        // 1. Ensure user's Farm -> Station -> Plant documents exist
+        const hierarchy = await ensureDefaultHierarchy(currentUser.uid, cropIdentity.commonName);
+        if (isCancelled) return;
+
+        setFarmId(hierarchy.farmId);
+        setStationId(hierarchy.stationId);
+        setPlantId(hierarchy.plantId);
+
+        // 2. Perform safe one-time migration of any legacy localStorage observations
+        await migrateLegacyLocalStorageObservations(
+          currentUser.uid,
+          hierarchy.farmId,
+          hierarchy.stationId,
+          hierarchy.plantId
+        );
+
+        // 3. Fetch authenticated observation history from Firestore
+        const cloudObservations = await fetchObservationsFromCloud(
+          currentUser.uid,
+          hierarchy.farmId,
+          hierarchy.stationId,
+          hierarchy.plantId
+        );
+
+        if (!isCancelled) {
+          setObservations(cloudObservations);
+          setSyncStatus('synced');
+        }
+      } catch (err) {
+        console.warn('[PlantIntelligence] Firestore synchronization notice (using memory cache):', err);
+        if (!isCancelled) {
+          setSyncStatus('offline');
+        }
+      }
+    }
+
+    syncCloudData();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [currentUser?.uid, cropIdentity.commonName]);
 
   // Active reading values
   const currentPh = latestReading?.ph;
@@ -159,7 +228,7 @@ export function PlantIntelligenceProvider({ children }: { children: React.ReactN
     );
   }, [currentPh, currentTds, currentWaterLevel, currentDistance, cropIdentity.targetProfile]);
 
-  // 3. Phase 7: Predictive Analytics & Statistical Anomaly Engine
+  // 3. Predictive Analytics & Statistical Anomaly Engine
   const predictiveAnalytics = useMemo(() => {
     return runPredictiveAnalytics(
       currentPh,
@@ -181,7 +250,7 @@ export function PlantIntelligenceProvider({ children }: { children: React.ReactN
     return generateHealthReport(environmentalAssessment, visualScore);
   }, [environmentalAssessment, latestVisualHealth]);
 
-  // 5. Phase 5 Multimodal Health Engine
+  // 5. Multimodal Health Engine
   const multimodalAssessment = useMemo(() => {
     const cameraInput: CameraHealthInput = {
       isPlantDetected: latestDetection?.isPlantDetected,
@@ -228,7 +297,7 @@ export function PlantIntelligenceProvider({ children }: { children: React.ReactN
     observations
   ]);
 
-  // 6. Phase 6 Plant Growth & Memory Calculations
+  // 6. Plant Growth & Memory Calculations
   const growthMetrics = useMemo(() => {
     return computeGrowthEstimates(observations);
   }, [observations]);
@@ -241,7 +310,7 @@ export function PlantIntelligenceProvider({ children }: { children: React.ReactN
     return answerPlantMemoryQueries(observations, cropIdentity.commonName);
   }, [observations, cropIdentity.commonName]);
 
-  // 7. Phase 8: Structured Plant Context Object
+  // 7. Structured Plant Context Object
   const structuredPlantContext = useMemo(() => {
     return buildStructuredPlantContext(
       cropIdentity,
@@ -382,6 +451,8 @@ export function PlantIntelligenceProvider({ children }: { children: React.ReactN
       ? visualHealth.healthState === 'possible_anomaly' || visualHealth.healthState === 'significant_anomaly'
       : false;
 
+    const source: 'esp32' | 'simulation' = mode === 'real' ? 'esp32' : 'simulation';
+
     const newObservation: PlantObservation = {
       id: `obs_${now}_${Math.random().toString(36).substring(2, 7)}`,
       timestamp: now,
@@ -411,8 +482,25 @@ export function PlantIntelligenceProvider({ children }: { children: React.ReactN
       recommendations: activeRecommendations.map(r => r.title),
     };
 
-    const updatedList = saveObservation(newObservation);
-    setObservations(updatedList);
+    if (currentUser?.uid) {
+      persistObservationToCloud(
+        currentUser.uid,
+        farmId,
+        stationId,
+        plantId,
+        newObservation,
+        source
+      ).then(updated => {
+        setObservations(updated);
+      }).catch(_err => {
+        const fallbackList = saveObservation(newObservation);
+        setObservations(fallbackList);
+      });
+    } else {
+      const fallbackList = saveObservation(newObservation);
+      setObservations(fallbackList);
+    }
+
     return newObservation;
   }, [
     captureFrame,
@@ -430,7 +518,11 @@ export function PlantIntelligenceProvider({ children }: { children: React.ReactN
     multimodalAssessment,
     activeAnomalies,
     statisticalAnomalies,
-    activeRecommendations
+    activeRecommendations,
+    currentUser?.uid,
+    farmId,
+    stationId,
+    plantId
   ]);
 
   const clearHistory = useCallback(() => {
@@ -482,7 +574,11 @@ export function PlantIntelligenceProvider({ children }: { children: React.ReactN
         activeScenario,
         setActiveScenario,
         captureAndObserve,
-        clearHistory
+        clearHistory,
+        syncStatus,
+        farmId,
+        stationId,
+        plantId
       }}
     >
       {children}
