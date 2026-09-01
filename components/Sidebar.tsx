@@ -7,7 +7,6 @@ import {
   BarChart3,
   Sparkles,
   MessageSquare,
-  Trophy,
   Cpu,
   Radio,
   Settings,
@@ -19,8 +18,7 @@ import styles from './Sidebar.module.css';
 
 const overviewItems = [
   { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard', description: 'Live monitoring' },
-  { href: '/dashboard/expo', icon: Trophy, label: 'Expo Showcase', description: '🏆 Exhibition mode' },
-  { href: '/dashboard/talk', icon: MessageSquare, label: 'Talk to Plant', description: '🌱 Interactive companion' },
+  { href: '/dashboard/talk', icon: MessageSquare, label: 'Talk to Plant', description: '🌱 Interactive assistant' },
   { href: '/dashboard/intelligence', icon: Sparkles, label: 'Intelligence', description: 'Multimodal hub' },
   { href: '/dashboard/analytics', icon: BarChart3, label: 'Analytics', description: 'Historical data' },
 ];
@@ -93,7 +91,7 @@ export function Sidebar({
         </div>
         <div>
           <div className={styles.logoName}>HydroSmart</div>
-          <div className={styles.logoSub}>v1.2 — Expo Ready</div>
+          <div className={styles.logoSub}>v1.2 — Production</div>
         </div>
       </div>
 
