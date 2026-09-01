@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '@/lib/auth/AuthContext';
+import { BrandLogo } from '@/components/ui/BrandLogo';
 import styles from './StartupIntro.module.css';
 
 export function StartupIntro() {
@@ -16,12 +17,12 @@ export function StartupIntro() {
     // If the intro has already completed, do not run the startup redirect logic again
     if (!visible) return;
 
-    // Trigger visual fade-out sequence at 2.3 seconds
+    // Trigger visual fade-out sequence at 2.1 seconds
     const fadeTimer = setTimeout(() => {
       setFadeOut(true);
-    }, 2300);
+    }, 2100);
 
-    // Unmount and coordinate routes at 2.7 seconds
+    // Unmount and coordinate routes at 2.5 seconds
     const unmountTimer = setTimeout(() => {
       setVisible(false);
 
@@ -38,7 +39,7 @@ export function StartupIntro() {
           }
         }
       }
-    }, 2700);
+    }, 2500);
 
     return () => {
       clearTimeout(fadeTimer);
@@ -53,21 +54,14 @@ export function StartupIntro() {
       <div className={styles.gridOverlay} />
       <div className={styles.ambientGlow} />
       <div className={styles.content}>
-        <svg className={styles.svgTrace} viewBox="0 0 100 100">
-          {/* Water Waves */}
-          <path className={styles.drawWater} d="M 15,80 Q 32.5,73 50,80 T 85,80" />
-          
-          {/* Sensor probe */}
-          <line className={styles.drawSensor} x1="50" y1="45" x2="50" y2="76" />
-          <circle className={styles.drawSensor} cx="50" cy="45" r="3" />
-          <line className={styles.drawSensor} x1="45" y1="65" x2="55" y2="65" />
-          <line className={styles.drawSensor} x1="47" y1="70" x2="53" y2="70" />
-          
-          {/* Plant structure growing upwards */}
-          <path className={styles.drawPlant} d="M 50,42 L 50,15 M 50,30 Q 62,22 65,22 M 50,22 Q 38,15 35,15" />
-        </svg>
-        <h1 className={styles.brandName}>Smart Hydroponics</h1>
-        <p className={styles.brandSubtitle}>Precision Cultivation & Telemetry Platform</p>
+        <div className={styles.logoAura}>
+          <BrandLogo size={88} priority />
+        </div>
+        <h1 className={styles.brandName}>HydroSmart</h1>
+        <p className={styles.brandSubtitle}>Living Intelligence for Plants</p>
+        <div className={styles.loadingLine}>
+          <div className={styles.loadingProgress} />
+        </div>
       </div>
     </div>
   );

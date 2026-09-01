@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/lib/auth/AuthContext';
+import { BrandLogo } from '@/components/ui/BrandLogo';
 import {
   LayoutDashboard,
   BarChart3,
@@ -10,7 +11,6 @@ import {
   MessageSquare,
   Radio,
   Settings,
-  Leaf,
   ChevronRight,
   User,
   LogOut
@@ -77,15 +77,9 @@ export function Sidebar({
 
   return (
     <aside className={`${styles.sidebar} ${isOpen ? styles.sidebarOpen : ''}`}>
-      {/* Brand Header */}
+      {/* Brand Header with Official Logo */}
       <div className={styles.brand}>
-        <div className={styles.brandIcon}>
-          <Leaf size={18} />
-        </div>
-        <div>
-          <div className={styles.brandName}>HydroSmart</div>
-          <div className={styles.brandTag}>Living Intelligence</div>
-        </div>
+        <BrandLogo size={32} showText subtitle="Living Intelligence" priority />
       </div>
 
       {/* Hardware Node Status */}

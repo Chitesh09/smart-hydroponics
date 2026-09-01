@@ -8,7 +8,8 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth/AuthContext';
-import { Leaf, Mail, Lock, User, ArrowRight, CheckCircle2, AlertCircle } from 'lucide-react';
+import { BrandLogo } from '@/components/ui/BrandLogo';
+import { Mail, Lock, User, ArrowRight, CheckCircle2, AlertCircle } from 'lucide-react';
 import styles from './page.module.css';
 
 export default function EntryPage() {
@@ -76,11 +77,13 @@ export default function EntryPage() {
         <div className={styles.gridOverlay} />
         <div className={styles.ambientGlow} />
         <div className={styles.transitionContainer}>
-          <div className={styles.logoIcon}>
-            <Leaf size={24} />
-          </div>
-          <h2 className={styles.transitionTitle}>HydroSmart Agri-Tech</h2>
-          <p className={styles.transitionSubtitle}>Verifying authenticated session credentials...</p>
+          <BrandLogo size={80} priority />
+          <h2 style={{ fontSize: '20px', fontWeight: 800, color: 'var(--text-primary)', marginTop: '8px' }}>
+            HydroSmart
+          </h2>
+          <p style={{ fontSize: '12.5px', color: 'var(--text-secondary)' }}>
+            Verifying authenticated session credentials...
+          </p>
           <div className={styles.spinner} />
         </div>
       </div>
@@ -94,9 +97,13 @@ export default function EntryPage() {
         <div className={styles.gridOverlay} />
         <div className={styles.ambientGlow} />
         <div className={styles.transitionContainer}>
-          <CheckCircle2 size={40} style={{ marginBottom: '16px', color: 'var(--color-teal)' }} />
-          <h2 className={styles.transitionTitle}>Session Active</h2>
-          <p className={styles.transitionSubtitle}>Redirecting to operational dashboard...</p>
+          <BrandLogo size={80} priority />
+          <h2 style={{ fontSize: '20px', fontWeight: 800, color: 'var(--text-primary)', marginTop: '8px' }}>
+            Session Active
+          </h2>
+          <p style={{ fontSize: '12.5px', color: 'var(--text-secondary)' }}>
+            Redirecting to operational dashboard...
+          </p>
           <div className={styles.spinner} />
         </div>
       </div>
@@ -110,126 +117,134 @@ export default function EntryPage() {
       <div className={styles.gridOverlay} />
       <div className={styles.ambientGlow} />
 
-      {/* 1. Authentication Form Card */}
-      {flowState === 'auth' && (
-        <div className={styles.card}>
-          <div className={styles.cardHeader}>
-            <div className={styles.logoIcon}>
-              <Leaf size={24} />
-            </div>
-            <h2 className={styles.title}>HydroSmart Platform</h2>
-            <p className={styles.subtitle}>
-              {authMode === 'signin' ? 'Sign in to access precision cultivation telemetry' : 'Configure operator credentials'}
-            </p>
+      <div className={styles.authWrapper}>
+        
+        {/* Brand Hero Display */}
+        <div className={styles.brandHero}>
+          <div className={styles.brandLogoWrapper}>
+            <BrandLogo size={96} priority />
           </div>
+          <h1 className={styles.brandTitle}>HydroSmart</h1>
+          <span className={styles.brandSubtitle}>Living Intelligence for Plants</span>
+        </div>
 
-          {/* Switch Tabs */}
-          <div className={styles.tabGroup}>
-            <button 
-              type="button" 
-              className={`${styles.tab} ${authMode === 'signin' ? styles.tabActive : ''}`}
-              onClick={() => handleTabSwitch('signin')}
-            >
-              Sign In
-            </button>
-            <button 
-              type="button" 
-              className={`${styles.tab} ${authMode === 'signup' ? styles.tabActive : ''}`}
-              onClick={() => handleTabSwitch('signup')}
-            >
-              Create Account
-            </button>
-          </div>
-
-          {/* Error Alert Display */}
-          {activeError && (
-            <div className={styles.errorBanner}>
-              <AlertCircle size={15} style={{ flexShrink: 0 }} />
-              <span>{activeError}</span>
+        {/* 1. Authentication Form Card */}
+        {flowState === 'auth' && (
+          <div className={styles.card}>
+            
+            {/* Switch Tabs */}
+            <div className={styles.tabGroup}>
+              <button 
+                type="button" 
+                className={`${styles.tab} ${authMode === 'signin' ? styles.tabActive : ''}`}
+                onClick={() => handleTabSwitch('signin')}
+              >
+                Sign In
+              </button>
+              <button 
+                type="button" 
+                className={`${styles.tab} ${authMode === 'signup' ? styles.tabActive : ''}`}
+                onClick={() => handleTabSwitch('signup')}
+              >
+                Create Account
+              </button>
             </div>
-          )}
 
-          <form onSubmit={handleSubmit} className={styles.form}>
-            {authMode === 'signup' && (
-              <div className={styles.formGroup}>
-                <label className={styles.label}>Operator Name</label>
+            {/* Error Alert Display */}
+            {activeError && (
+              <div className={styles.errorBox}>
+                <AlertCircle size={15} style={{ flexShrink: 0 }} />
+                <span>{activeError}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleSubmit} className={styles.form}>
+              {authMode === 'signup' && (
+                <div className={styles.inputGroup}>
+                  <label className={styles.label}>Operator Name</label>
+                  <div className={styles.inputWrapper}>
+                    <User size={15} className={styles.inputIcon} />
+                    <input 
+                      type="text" 
+                      required 
+                      className={styles.input} 
+                      placeholder="e.g. Chitesh" 
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      disabled={submitting}
+                    />
+                  </div>
+                </div>
+              )}
+
+              <div className={styles.inputGroup}>
+                <label className={styles.label}>Email Address</label>
                 <div className={styles.inputWrapper}>
-                  <User size={16} className={styles.inputIcon} />
+                  <Mail size={15} className={styles.inputIcon} />
                   <input 
-                    type="text" 
+                    type="email" 
                     required 
                     className={styles.input} 
-                    placeholder="e.g. Chitesh" 
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
+                    placeholder="operator@hydrosmart.app" 
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
                     disabled={submitting}
                   />
                 </div>
               </div>
-            )}
 
-            <div className={styles.formGroup}>
-              <label className={styles.label}>Email Address</label>
-              <div className={styles.inputWrapper}>
-                <Mail size={16} className={styles.inputIcon} />
-                <input 
-                  type="email" 
-                  required 
-                  className={styles.input} 
-                  placeholder="operator@hydrosmart.app" 
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  disabled={submitting}
-                />
+              <div className={styles.inputGroup}>
+                <label className={styles.label}>Password</label>
+                <div className={styles.inputWrapper}>
+                  <Lock size={15} className={styles.inputIcon} />
+                  <input 
+                    type="password" 
+                    required 
+                    className={styles.input} 
+                    placeholder="••••••••" 
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    disabled={submitting}
+                  />
+                </div>
               </div>
+
+              <button type="submit" className={styles.submitBtn} disabled={submitting}>
+                {submitting ? (
+                  <>
+                    <span className={styles.spinner} style={{ width: '16px', height: '16px', borderWidth: '2px' }} />
+                    <span>Verifying credentials...</span>
+                  </>
+                ) : (
+                  <>
+                    <span>{authMode === 'signin' ? 'Access Command Center' : 'Register Station'}</span>
+                    <ArrowRight size={14} />
+                  </>
+                )}
+              </button>
+            </form>
+
+            <div style={{ textAlign: 'center', fontSize: '11px', color: 'var(--text-muted)', paddingTop: '4px' }}>
+              Precision IoT cultivation telemetry & scientific observation platform
             </div>
-
-            <div className={styles.formGroup}>
-              <label className={styles.label}>Password</label>
-              <div className={styles.inputWrapper}>
-                <Lock size={16} className={styles.inputIcon} />
-                <input 
-                  type="password" 
-                  required 
-                  className={styles.input} 
-                  placeholder="••••••••" 
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  disabled={submitting}
-                />
-              </div>
-            </div>
-
-            <button type="submit" className={styles.submitBtn} disabled={submitting}>
-              {submitting ? (
-                <>
-                  <span className={styles.spinner} />
-                  <span>Verifying credentials...</span>
-                </>
-              ) : (
-                <>
-                  <span>{authMode === 'signin' ? 'Access Console' : 'Register Station'}</span>
-                  <ArrowRight size={14} />
-                </>
-              )}
-            </button>
-          </form>
-
-          <div className={styles.footer}>
-            Protected with Firebase Security Rules & AES Encrypted Tokens
           </div>
-        </div>
-      )}
+        )}
 
-      {/* 2. Connecting Screen */}
-      {flowState === 'connecting' && (
-        <div className={styles.transitionContainer}>
-          <CheckCircle2 size={40} style={{ marginBottom: '16px', color: 'var(--color-teal)' }} />
-          <h2 className={styles.transitionTitle}>Authorization Granted</h2>
-          <p className={styles.transitionSubtitle}>Synchronizing telemetry stream with station...</p>
-          <div className={styles.spinner} />
-        </div>
-      )}
+        {/* 2. Connecting Screen */}
+        {flowState === 'connecting' && (
+          <div className={styles.transitionContainer}>
+            <CheckCircle2 size={36} style={{ color: 'var(--color-green)' }} />
+            <h2 style={{ fontSize: '18px', fontWeight: 800, color: 'var(--text-primary)' }}>
+              Authorization Granted
+            </h2>
+            <p style={{ fontSize: '12.5px', color: 'var(--text-secondary)' }}>
+              Synchronizing telemetry stream with station...
+            </p>
+            <div className={styles.spinner} />
+          </div>
+        )}
+
+      </div>
     </div>
   );
 }

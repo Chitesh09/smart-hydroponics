@@ -7,7 +7,8 @@ import { useAuth } from '@/lib/auth/AuthContext';
 import { ESP32SerialProvider, useESP32Serial } from '@/lib/esp32/ESP32SerialContext';
 import { CameraProvider } from '@/lib/camera/CameraContext';
 import { PlantIntelligenceProvider } from '@/lib/intelligence/PlantIntelligenceContext';
-import { Menu, Leaf } from 'lucide-react';
+import { BrandLogo } from '@/components/ui/BrandLogo';
+import { Menu } from 'lucide-react';
 import styles from './layout.module.css';
 
 export default function DashboardLayout({
@@ -95,22 +96,13 @@ function DashboardLayoutContent({
         backgroundColor: '#071A17',
         color: '#F1F7F4'
       }}>
-        <div style={{
-          width: '52px',
-          height: '52px',
-          borderRadius: '50%',
-          background: 'rgba(32, 184, 176, 0.12)',
-          border: '1px solid rgba(32, 184, 176, 0.3)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          marginBottom: '16px',
-          color: '#20B8B0'
-        }}>
-          <Leaf size={26} />
-        </div>
-        <h3 style={{ fontSize: '16px', fontWeight: 700, marginBottom: '6px' }}>HydroSmart Agri-Tech</h3>
-        <p style={{ fontSize: '12.5px', color: '#9DB4AE' }}>Verifying authenticated session...</p>
+        <BrandLogo size={56} priority />
+        <h3 style={{ fontSize: '18px', fontWeight: 800, color: 'var(--text-primary)', marginTop: '12px', marginBottom: '4px' }}>
+          HydroSmart
+        </h3>
+        <p style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
+          Verifying authenticated session...
+        </p>
       </div>
     );
   }
@@ -132,8 +124,7 @@ function DashboardLayoutContent({
           <Menu size={22} />
         </button>
         <div className={styles.mobileLogo}>
-          <Leaf size={18} style={{ color: '#20B8B0', marginRight: '6px' }} />
-          <span style={{ fontWeight: 800, fontSize: '15px', color: '#F1F7F4', letterSpacing: '-0.02em' }}>HydroSmart</span>
+          <BrandLogo size={22} showText />
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', fontFamily: 'var(--font-mono)' }}>
           <span style={{ 

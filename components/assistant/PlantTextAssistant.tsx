@@ -12,7 +12,8 @@ import {
   ASSISTANT_MODE_STORAGE_KEY
 } from '@/lib/assistant/assistantConfig';
 import { generatePlantTextResponse } from '@/lib/assistant/multilingualAssistantEngine';
-import { Leaf, Send, RotateCcw, Sparkles } from 'lucide-react';
+import { BrandLogo } from '@/components/ui/BrandLogo';
+import { Send, RotateCcw, Sparkles } from 'lucide-react';
 import styles from './PlantTextAssistant.module.css';
 
 export interface ChatMessage {
@@ -146,7 +147,7 @@ export function PlantTextAssistant() {
       <div className={styles.assistantHeader}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <div className={styles.plantAvatar}>
-            <Leaf size={22} />
+            <BrandLogo size={28} />
           </div>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>

@@ -4,10 +4,10 @@ import { useCamera } from '@/lib/camera/CameraContext';
 import { usePlantIntelligence } from '@/lib/intelligence/PlantIntelligenceContext';
 import { PlantTextAssistant } from '@/components/assistant/PlantTextAssistant';
 import { StatusBadge } from '@/components/ui/StatusBadge';
+import { BrandLogo } from '@/components/ui/BrandLogo';
 import {
   Camera,
-  CameraOff,
-  Leaf
+  CameraOff
 } from 'lucide-react';
 import styles from './page.module.css';
 
@@ -48,7 +48,7 @@ export default function TalkToPlantPage() {
         <div className={styles.plantCompanionPanel}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Leaf size={16} style={{ color: 'var(--color-green)' }} />
+              <BrandLogo size={18} />
               <span className="section-label">Live Plant View</span>
             </div>
             
