@@ -118,10 +118,10 @@ export function PlantIntelligenceProvider({ children }: { children: React.ReactN
 
   // Crop Identity State (Initial neutral baseline profile)
   const [cropIdentity, setCropIdentity] = useState<PlantIdentity>(() => ({
-    cropKey: 'general_crop',
-    commonName: 'General Hydroponic Crop',
-    scientificName: 'Plantae (Hydroponic)',
-    family: 'General Hydroponics',
+    cropKey: 'unknown_plant',
+    commonName: 'Unknown Plant',
+    scientificName: 'Identification pending',
+    family: 'Unclassified',
     plantedTimestamp: undefined,
     growthStage: 'vegetative',
     targetProfile: DEFAULT_CROP_PROFILE,

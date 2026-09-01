@@ -1,22 +1,19 @@
 'use client';
 
 import { usePlantIntelligence } from '@/lib/intelligence/PlantIntelligenceContext';
-import { useESP32Serial } from '@/lib/esp32/ESP32SerialContext';
 import { useCamera } from '@/lib/camera/CameraContext';
 import { PlantTextAssistant } from '@/components/assistant/PlantTextAssistant';
 import {
   Camera,
   CameraOff,
-  Activity,
-  Scan,
   Leaf,
-  TrendingUp,
-  MessageSquare
+  MessageSquare,
+  Sparkles,
+  Info
 } from 'lucide-react';
 import styles from './page.module.css';
 
 export default function TalkToPlantPage() {
-  const { latestReading } = useESP32Serial();
   const {
     status: cameraStatus,
     videoRef,
@@ -29,60 +26,64 @@ export default function TalkToPlantPage() {
   const {
     cropIdentity,
     latestDetection,
-    growthMetrics
+    multimodalAssessment
   } = usePlantIntelligence();
 
+  const isPlantIdentified = cropIdentity.cropKey !== 'unknown_plant' && cropIdentity.commonName !== 'Unknown Plant';
+  const plantDisplayName = isPlantIdentified ? cropIdentity.commonName : 'Unknown Plant';
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+    <div className={styles.talkContainer}>
       
-      {/* 1. Page Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
+      {/* 1. Conversational Page Header */}
+      <div className={styles.talkHeader}>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <h1 className="text-3xl font-bold text-primary">🌱 Talk to Your Plant</h1>
             <span className="badge badge-success" style={{ fontSize: '10px' }}>
               <MessageSquare size={12} style={{ display: 'inline', marginRight: '4px' }} />
-              Grounded Text Assistant (English & ಕನ್ನಡ)
+              Grounded AI Companion
             </span>
           </div>
           <p className="text-secondary" style={{ marginTop: '4px' }}>
-            Interact with your monitored plant in English or Kannada (ಕನ್ನಡ). Responses are 100% grounded in real-time camera vision and ESP32 telemetry.
+            Ask about your plant&apos;s condition, water, nutrients, or what you should do next.
           </p>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span className="badge badge-info" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <Leaf size={13} />
-            <span>Monitored Crop: <strong>{cropIdentity.commonName}</strong></span>
+        <div className={styles.plantStatusBadge}>
+          <Leaf size={16} className="text-primary" />
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            <span style={{ fontSize: '13px', fontWeight: 800, color: '#F4F7FB' }}>
+              {plantDisplayName}
+            </span>
+            <span style={{ fontSize: '10.5px', color: isPlantIdentified ? '#00E5FF' : '#FFC857' }}>
+              {isPlantIdentified ? 'Monitored Plant' : 'Identification pending in Intelligence'}
+            </span>
+          </div>
+          <span className={`badge badge-${multimodalAssessment.overallHealthState === 'optimal' ? 'success' : multimodalAssessment.overallHealthState === 'warning' ? 'warning' : 'danger'}`} style={{ fontSize: '9px', marginLeft: '6px' }}>
+            {multimodalAssessment.overallHealthState === 'optimal' ? '● HEALTHY' : multimodalAssessment.overallHealthState === 'warning' ? '● MILD STRESS' : '● ATTENTION'}
           </span>
         </div>
       </div>
 
-      {/* 2. Main Talk Stage Layout */}
+      {/* 2. Conversational 2-Column Stage */}
       <div className={styles.talkLayout}>
         
-        {/* Left Column: LIVE PLANT VIEW + STATUS + ENVIRONMENT */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+        {/* Left Column: LIVE PLANT VIEW (Conversational Companion Camera) */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           
-          {/* Live Camera Viewport */}
-          <div className="glass-card" style={{ padding: '20px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+          <div className={styles.livePlantCard}>
+            <div className={styles.cameraCardHeader}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <Camera size={18} className="text-primary" />
-                <h3 className="text-sm font-bold uppercase tracking-wider">LIVE PLANT CAMERA</h3>
+                <Camera size={16} className="text-primary" />
+                <h3 className="text-xs font-bold uppercase tracking-wider">LIVE PLANT VIEW</h3>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                {cameraStatus === 'connected' && (
-                  <span className={`badge badge-${latestDetection?.isPlantDetected ? 'success' : 'warning'}`}>
-                    {latestDetection?.isPlantDetected ? `● PLANT DETECTED (${latestDetection.confidence}%)` : '○ STANDBY'}
-                  </span>
-                )}
-                <span className={`badge badge-${cameraStatus === 'connected' ? 'success' : 'info'}`}>
-                  ● {cameraStatus.toUpperCase()}
-                </span>
-              </div>
+              <span className={`badge badge-${cameraStatus === 'connected' ? 'success' : 'info'}`} style={{ fontSize: '9.5px' }}>
+                ● {cameraStatus === 'connected' ? 'ACTIVE' : 'STANDBY'}
+              </span>
             </div>
 
+            {/* Video Viewport */}
             <div className={styles.videoViewport}>
               <video 
                 ref={videoRef} 
@@ -93,69 +94,38 @@ export default function TalkToPlantPage() {
                 style={{ display: cameraStatus === 'connected' ? 'block' : 'none' }}
               />
 
-              {cameraStatus === 'connected' && (
+              {cameraStatus === 'connected' ? (
                 <>
                   <div className={styles.videoOverlayGrid} />
-
-                  <div className={styles.cameraHudBar}>
-                    <div className={styles.hudPill} style={{ color: '#00E5FF' }}>
-                      <Activity size={12} />
-                      <span>FPS: 60 (Live)</span>
-                    </div>
-
-                    <div 
-                      className={styles.hudPill} 
-                      style={{ color: latestDetection?.isPlantDetected ? '#B7FF3C' : '#FFC857' }}
-                    >
-                      <Scan size={12} />
-                      <span>
-                        {latestDetection?.isPlantDetected 
-                          ? `Canopy: ${latestDetection.canopyCoveragePercent}%` 
-                          : 'Searching for foliage...'}
-                      </span>
-                    </div>
+                  <div className={styles.cameraPresencePill}>
+                    <Sparkles size={12} />
+                    <span>
+                      {latestDetection?.isPlantDetected
+                        ? `Looking at ${plantDisplayName}`
+                        : 'Searching for plant canopy...'}
+                    </span>
                   </div>
-
-                  {latestDetection?.isPlantDetected && latestDetection.boundingBox && (
-                    <div 
-                      className={styles.boundingBoxOverlay}
-                      style={{
-                        left: `${latestDetection.boundingBox.x * 100}%`,
-                        top: `${latestDetection.boundingBox.y * 100}%`,
-                        width: `${latestDetection.boundingBox.width * 100}%`,
-                        height: `${latestDetection.boundingBox.height * 100}%`,
-                      }}
-                    >
-                      <span className={styles.boundingBoxTag}>
-                        🌱 PLANT CANOPY ({latestDetection.plantPresenceScore || latestDetection.confidence}%)
-                      </span>
-                    </div>
-                  )}
                 </>
-              )}
-
-              {cameraStatus !== 'connected' && (
+              ) : (
                 <div className={styles.videoPlaceholder}>
-                  <CameraOff size={38} style={{ color: '#5A738E' }} />
-                  <div>
-                    <div style={{ fontWeight: 700, color: '#F4F7FB', fontSize: '14px' }}>Plant Camera Inactive</div>
-                    <div style={{ fontSize: '11.5px', color: '#8FA3B8', marginTop: '2px' }}>
-                      Activate webcam to allow your plant to evaluate its leaves and canopy during conversation.
-                    </div>
+                  <CameraOff size={32} />
+                  <div style={{ fontSize: '13px', fontWeight: 700, color: '#F4F7FB' }}>Camera Inactive</div>
+                  <div style={{ fontSize: '11px', color: '#8FA3B8', maxWidth: '200px' }}>
+                    Activate webcam so your plant can evaluate its leaves while chatting.
                   </div>
                 </div>
               )}
             </div>
 
-            {/* Camera Switcher Controls */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '12px' }}>
+            {/* Camera Switcher / Toggle Controls */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               {cameraStatus === 'connected' ? (
-                <button className="btn btn-ghost" style={{ fontSize: '11.5px', color: '#FF6B4A' }} onClick={stopCamera}>
-                  <CameraOff size={14} /> Deactivate Camera
+                <button className="btn btn-ghost" style={{ fontSize: '11.5px', color: '#FF6B4A', width: '100%' }} onClick={stopCamera}>
+                  <CameraOff size={14} /> Turn Off Camera
                 </button>
               ) : (
-                <button className="btn btn-primary" style={{ fontSize: '11.5px' }} onClick={() => startCamera()}>
-                  <Camera size={14} /> Start Live Camera
+                <button className="btn btn-primary" style={{ fontSize: '11.5px', width: '100%' }} onClick={() => startCamera()}>
+                  <Camera size={14} /> Turn On Camera
                 </button>
               )}
 
@@ -174,58 +144,19 @@ export default function TalkToPlantPage() {
             </div>
           </div>
 
-          {/* Environmental Telemetry Synchronized Chips */}
-          <div className="glass-card" style={{ padding: '18px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-              <h3 className="text-xs font-bold uppercase tracking-wider text-muted">LIVE TELEMETRY CONTEXT</h3>
-              <span className="badge badge-success">ESP32 Online</span>
+          {/* Plant Companion Bio Card */}
+          <div className={styles.plantCompanionCard}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#00E5FF', fontSize: '12px', fontWeight: 700 }}>
+              <Info size={14} />
+              <span>Grounded Companion</span>
             </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px' }}>
-              <div className={styles.telemetryMiniCard}>
-                <span className="text-xs text-muted">pH</span>
-                <div style={{ fontSize: '16px', fontWeight: 800, color: '#00E5FF', fontFamily: 'var(--font-mono)' }}>
-                  {latestReading?.ph ? latestReading.ph.toFixed(2) : '--'}
-                </div>
-              </div>
-
-              <div className={styles.telemetryMiniCard}>
-                <span className="text-xs text-muted">TDS</span>
-                <div style={{ fontSize: '16px', fontWeight: 800, color: '#B7FF3C', fontFamily: 'var(--font-mono)' }}>
-                  {latestReading?.tds ? Math.round(latestReading.tds) : '--'} <span style={{ fontSize: '9px', fontWeight: 400 }}>PPM</span>
-                </div>
-              </div>
-
-              <div className={styles.telemetryMiniCard}>
-                <span className="text-xs text-muted">Water</span>
-                <div style={{ fontSize: '16px', fontWeight: 800, color: '#00E5FF', fontFamily: 'var(--font-mono)' }}>
-                  {latestReading?.waterLevel ? `${Math.round(latestReading.waterLevel)}%` : '--'}
-                </div>
-              </div>
-
-              <div className={styles.telemetryMiniCard}>
-                <span className="text-xs text-muted">Distance</span>
-                <div style={{ fontSize: '16px', fontWeight: 800, color: '#F4F7FB', fontFamily: 'var(--font-mono)' }}>
-                  {latestReading?.distance ? `${latestReading.distance.toFixed(1)}` : '--'} <span style={{ fontSize: '9px', fontWeight: 400 }}>cm</span>
-                </div>
-              </div>
-            </div>
+            <p style={{ fontSize: '11.5px', color: '#8FA3B8', lineHeight: 1.5 }}>
+              Your plant answers in first-person using live ESP32 chemical sensors, ultrasonic water levels, and optical leaf diagnostics.
+            </p>
           </div>
-
-          {/* Growth Summary Pill */}
-          <div className="glass-card" style={{ padding: '14px 18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <TrendingUp size={16} className="text-primary" />
-              <span style={{ fontSize: '12px', fontWeight: 700, color: '#F4F7FB' }}>
-                Image-Derived Growth: {growthMetrics.cumulativeGrowthDelta >= 0 ? `+${growthMetrics.cumulativeGrowthDelta}%` : `${growthMetrics.cumulativeGrowthDelta}%`} Canopy
-              </span>
-            </div>
-            <span className="text-xs text-muted">{growthMetrics.daysMonitored} Days Monitored</span>
-          </div>
-
         </div>
 
-        {/* Right Column: GROUNDED TEXT ASSISTANT */}
+        {/* Right Column: Hero PlantTextAssistant Chat Interface */}
         <div>
           <PlantTextAssistant />
         </div>
