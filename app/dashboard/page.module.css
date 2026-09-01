@@ -1,220 +1,57 @@
-/* HydroSmart Operational Dashboard Styles */
+/* HydroSmart Plant Command Center Styles */
 
-.dashboardContainer {
+.container {
   display: flex;
   flex-direction: column;
   gap: 24px;
+  max-width: 1240px;
+  margin: 0 auto;
 }
 
-/* Header & Status Bar */
-.dashboardHeader {
+/* Header & Telemetry Provenance */
+.headerRow {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
+  align-items: flex-end;
   flex-wrap: wrap;
-  gap: 16px;
+  gap: 12px;
+  padding-bottom: 8px;
 }
 
-.statusPill {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  background: var(--bg-surface);
-  border: 1px solid var(--border-default);
-  border-radius: var(--radius-full);
-  padding: 6px 14px;
-  font-size: 12px;
-}
-
-/* Plant Status Hero Banner */
-.plantStatusHero {
-  display: grid;
-  grid-template-columns: 1.4fr 1fr 1fr 1fr;
-  gap: 16px;
-  background: var(--bg-surface);
-  border: 1px solid var(--border-default);
-  border-radius: var(--radius-lg);
-  padding: 20px 24px;
-  align-items: center;
-}
-
-@media (max-width: 1024px) {
-  .plantStatusHero {
-    grid-template-columns: 1fr 1fr;
-  }
-}
-
-@media (max-width: 640px) {
-  .plantStatusHero {
-    grid-template-columns: 1fr;
-  }
-}
-
-.heroItem {
+.greetingBlock {
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 2px;
 }
 
-.heroLabel {
-  font-size: 11px;
-  font-weight: 700;
-  text-transform: uppercase;
-  color: var(--text-muted);
-  letter-spacing: 0.06em;
-}
-
-.heroValue {
-  font-size: 17px;
-  font-weight: 800;
-  color: var(--text-primary);
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.heroSub {
-  font-size: 11.5px;
-  color: var(--text-secondary);
-}
-
-/* Section Container */
-.sectionCard {
-  background: var(--bg-card);
+/* ============================================================ */
+/* HERO PLANT EXPERIENCE                                        */
+/* ============================================================ */
+.plantHeroStage {
+  display: grid;
+  grid-template-columns: 1.25fr 0.75fr;
+  gap: 20px;
+  background: var(--bg-canvas);
   border: 1px solid var(--border-default);
   border-radius: var(--radius-lg);
-  padding: 22px 24px;
+  padding: 24px;
+  position: relative;
+  overflow: hidden;
 }
 
-.sectionHeader {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 16px;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-/* Environmental Conditions Grid */
-.conditionsGrid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 16px;
-}
-
-@media (max-width: 1024px) {
-  .conditionsGrid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
-
-@media (max-width: 640px) {
-  .conditionsGrid {
+@media (max-width: 960px) {
+  .plantHeroStage {
     grid-template-columns: 1fr;
   }
 }
 
-.metricTile {
-  background: var(--bg-surface);
-  border: 1px solid var(--border-default);
-  border-radius: var(--radius-md);
-  padding: 16px 18px;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  gap: 10px;
-  transition: var(--transition-fast);
-}
-
-.metricTile:hover {
-  background: var(--bg-card-hover);
-  border-color: var(--border-strong);
-}
-
-.metricTileHeader {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.metricValueRow {
-  display: flex;
-  align-items: baseline;
-  gap: 6px;
-  margin: 4px 0;
-}
-
-.metricValue {
-  font-size: 26px;
-  font-weight: 800;
-  color: var(--text-primary);
-  font-family: var(--font-mono);
-}
-
-.metricUnit {
-  font-size: 12.5px;
-  color: var(--text-secondary);
-}
-
-.metricTileFooter {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding-top: 8px;
-  border-top: 1px solid var(--border-subtle);
-  font-size: 11px;
-}
-
-/* 2-Column Dashboard Stage */
-.stageGrid {
-  display: grid;
-  grid-template-columns: 1.15fr 0.85fr;
-  gap: 24px;
-  align-items: start;
-}
-
-@media (max-width: 1024px) {
-  .stageGrid {
-    grid-template-columns: 1fr;
-  }
-}
-
-/* Live Chart Tabs */
-.tabsContainer {
-  display: flex;
-  gap: 6px;
-  background: var(--bg-base);
-  border: 1px solid var(--border-default);
-  border-radius: var(--radius-md);
-  padding: 3px;
-}
-
-.tabBtn {
-  padding: 5px 12px;
-  font-size: 11.5px;
-  font-weight: 700;
-  border-radius: 4px;
-  color: var(--text-secondary);
-  transition: var(--transition-fast);
-}
-
-.tabBtn:hover {
-  color: var(--text-primary);
-}
-
-.tabBtnActive {
-  background: var(--bg-surface-elevated);
-  color: var(--color-teal);
-  border: 1px solid var(--border-strong);
-}
-
-/* Camera Preview Box in Dashboard */
-.compactCamBox {
+/* Optical Plant Viewport */
+.opticalViewport {
   position: relative;
   width: 100%;
-  aspect-ratio: 16 / 9;
-  background: var(--bg-base);
-  border: 1px solid var(--border-default);
+  aspect-ratio: 16 / 10;
+  background: #020907;
+  border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
   overflow: hidden;
   display: flex;
@@ -222,19 +59,277 @@
   justify-content: center;
 }
 
-.compactCamVideo {
+.opticalVideo {
   width: 100%;
   height: 100%;
   object-fit: cover;
 }
 
-.camOverlay {
+.opticalReticle {
+  position: absolute;
+  inset: 12px;
+  border: 1px dashed rgba(46, 184, 114, 0.25);
+  border-radius: var(--radius-sm);
+  pointer-events: none;
+}
+
+.reticleCornerTL {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  width: 12px;
+  height: 12px;
+  border-top: 2px solid var(--color-green);
+  border-left: 2px solid var(--color-green);
+  pointer-events: none;
+}
+
+.reticleCornerBR {
   position: absolute;
   bottom: 8px;
-  left: 8px;
   right: 8px;
+  width: 12px;
+  height: 12px;
+  border-bottom: 2px solid var(--color-green);
+  border-right: 2px solid var(--color-green);
+  pointer-events: none;
+}
+
+.opticalStatusOverlay {
+  position: absolute;
+  bottom: 12px;
+  left: 12px;
+  right: 12px;
   display: flex;
   justify-content: space-between;
   align-items: center;
   pointer-events: none;
+}
+
+.cameraOfflinePlaceholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  color: var(--text-muted);
+  text-align: center;
+  padding: 24px;
+}
+
+/* Botanical Identity & State Details */
+.botanicalStateBlock {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.speciesBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.commonName {
+  font-size: 32px;
+  font-weight: 900;
+  letter-spacing: -0.03em;
+  color: var(--text-primary);
+  line-height: 1.1;
+  text-transform: uppercase;
+}
+
+.scientificName {
+  font-size: 13.5px;
+  font-style: italic;
+  color: var(--text-secondary);
+  font-family: Georgia, 'Times New Roman', serif;
+}
+
+.stateRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 6px;
+}
+
+.conditionScoreDisplay {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+}
+
+.scoreNumber {
+  font-size: 36px;
+  font-weight: 900;
+  font-family: var(--font-mono);
+  color: var(--text-primary);
+}
+
+.scoreOutOf {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+/* Plant Digital Twin Pillars */
+.twinPillars {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  padding: 12px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+}
+
+.pillarItem {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.pillarLabel {
+  font-size: 9.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  letter-spacing: 0.08em;
+}
+
+.pillarValue {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+/* ============================================================ */
+/* ATTENTION BANNER                                             */
+/* ============================================================ */
+.attentionBanner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 20px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-canvas);
+  border: 1px solid var(--border-default);
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.attentionWarning {
+  background: var(--bg-tint-amber);
+  border-color: rgba(229, 169, 60, 0.35);
+}
+
+.attentionStable {
+  background: var(--bg-canvas);
+  border-color: var(--border-default);
+}
+
+/* ============================================================ */
+/* ENVIRONMENTAL INFORMATION (Open Strip Layout)                */
+/* ============================================================ */
+.environmentalStrip {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1px;
+  background: var(--border-default);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+@media (max-width: 960px) {
+  .environmentalStrip {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 560px) {
+  .environmentalStrip {
+    grid-template-columns: 1fr;
+  }
+}
+
+.envNode {
+  background: var(--bg-canvas);
+  padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  transition: background 0.15s ease;
+}
+
+.envNode:hover {
+  background: var(--bg-surface);
+}
+
+.envNodeHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.envValueRow {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+}
+
+.envValue {
+  font-size: 24px;
+  font-weight: 800;
+  font-family: var(--font-mono);
+  color: var(--text-primary);
+}
+
+.envUnit {
+  font-size: 11.5px;
+  color: var(--text-secondary);
+}
+
+.envFooter {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+/* Live Telemetry Chart Section */
+.instrumentationSection {
+  background: var(--bg-canvas);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  padding: 20px 24px;
+}
+
+.tabsRow {
+  display: flex;
+  gap: 4px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  padding: 2px;
+}
+
+.tabButton {
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 4px;
+  color: var(--text-secondary);
+  transition: all 0.12s ease;
+}
+
+.tabButton:hover {
+  color: var(--text-primary);
+}
+
+.tabButtonActive {
+  background: var(--bg-surface-elevated);
+  color: var(--color-green);
+  border: 1px solid var(--border-accent-green);
 }

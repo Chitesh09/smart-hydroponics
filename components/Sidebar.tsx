@@ -25,20 +25,20 @@ interface NavItemDef {
 
 const navSections: { title: string; items: NavItemDef[] }[] = [
   {
-    title: 'Overview',
+    title: 'Observation',
     items: [
-      { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
+      { href: '/dashboard', icon: LayoutDashboard, label: 'Plant Command' },
     ],
   },
   {
     title: 'Intelligence',
     items: [
-      { href: '/dashboard/intelligence', icon: Sparkles, label: 'Intelligence' },
-      { href: '/dashboard/analytics', icon: BarChart3, label: 'Analytics' },
+      { href: '/dashboard/intelligence', icon: Sparkles, label: 'Reasoning Lab' },
+      { href: '/dashboard/analytics', icon: BarChart3, label: 'Plant Journey' },
     ],
   },
   {
-    title: 'Plant',
+    title: 'Interaction',
     items: [
       { href: '/dashboard/talk', icon: MessageSquare, label: 'Talk to Plant' },
     ],
@@ -46,7 +46,7 @@ const navSections: { title: string; items: NavItemDef[] }[] = [
   {
     title: 'System',
     items: [
-      { href: '/dashboard/devices', icon: Radio, label: 'Devices' },
+      { href: '/dashboard/devices', icon: Radio, label: 'IoT Station' },
       { href: '/dashboard/profile', icon: Settings, label: 'Settings' },
     ],
   },
@@ -61,7 +61,6 @@ interface SidebarProps {
 
 export function Sidebar({
   systemStatus = 'stable',
-  alertCount = 0,
   isOpen = false,
   onClose,
 }: SidebarProps) {
@@ -69,40 +68,42 @@ export function Sidebar({
   const { currentUser, userProfile, signOut } = useAuth();
 
   const statusConfig = {
-    stable: { color: 'var(--color-green)', label: 'System Stable' },
-    correcting: { color: 'var(--color-warning)', label: 'Stabilizing' },
-    fault: { color: 'var(--color-danger)', label: 'Attention Required' },
+    stable: { color: 'var(--color-green)', label: 'Biological Node Stable' },
+    correcting: { color: 'var(--color-amber)', label: 'Calibrating Telemetry' },
+    fault: { color: 'var(--color-red)', label: 'Action Required' },
   }[systemStatus];
 
   const displayName = currentUser?.displayName || userProfile?.displayName || 'Grower';
 
   return (
     <aside className={`${styles.sidebar} ${isOpen ? styles.sidebarOpen : ''}`}>
-      {/* Brand Logo */}
-      <div className={styles.logo}>
-        <div className={styles.logoIcon}>
-          <Leaf size={20} />
+      {/* Brand Header */}
+      <div className={styles.brand}>
+        <div className={styles.brandIcon}>
+          <Leaf size={18} />
         </div>
         <div>
-          <div className={styles.logoName}>HydroSmart</div>
-          <div className={styles.logoSub}>Agri-Tech Platform</div>
+          <div className={styles.brandName}>HydroSmart</div>
+          <div className={styles.brandTag}>Living Intelligence</div>
         </div>
       </div>
 
-      {/* System Health Overview Pill */}
-      <div className={styles.healthCard}>
+      {/* Hardware Node Status */}
+      <div className={styles.nodeStatus}>
         <div
-          className={styles.healthDot}
+          className={styles.statusDot}
           style={{ '--status-color': statusConfig.color } as React.CSSProperties}
         />
-        <div>
-          <div className={styles.healthLabel}>{statusConfig.label}</div>
-          <div className={styles.healthSub}>Automated Monitoring</div>
+        <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.2 }}>
+          <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-primary)' }}>
+            {statusConfig.label}
+          </span>
+          <span style={{ fontSize: '9.5px', color: 'var(--text-muted)' }}>Station HS-ESP32</span>
         </div>
       </div>
 
-      {/* Navigation Groups */}
-      <nav style={{ display: 'flex', flexDirection: 'column', gap: '12px', flex: 1 }}>
+      {/* Navigation Sections */}
+      <nav style={{ display: 'flex', flexDirection: 'column', gap: '14px', flex: 1 }}>
         {navSections.map((section) => (
           <div key={section.title} className={styles.navSection}>
             <div className={styles.sectionHeading}>{section.title}</div>
@@ -116,15 +117,10 @@ export function Sidebar({
                   onClick={onClose}
                 >
                   <div className={styles.navIcon}>
-                    <Icon size={17} />
+                    <Icon size={16} />
                   </div>
-                  <div className={styles.navText}>
-                    <span className={styles.navLabel}>{label}</span>
-                  </div>
-                  {href === '/dashboard/alerts' && alertCount > 0 && (
-                    <span className={styles.navBadge}>{alertCount}</span>
-                  )}
-                  {isActive && <ChevronRight size={14} style={{ color: 'var(--text-muted)' }} />}
+                  <span style={{ flex: 1 }}>{label}</span>
+                  {isActive && <ChevronRight size={13} style={{ color: 'var(--text-dim)' }} />}
                 </Link>
               );
             })}
@@ -132,29 +128,29 @@ export function Sidebar({
         ))}
       </nav>
 
-      {/* User Identity & Sign Out Footer */}
+      {/* Operator Session Footer */}
       <div className={styles.userFooter}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <div
             style={{
-              width: '28px',
-              height: '28px',
-              borderRadius: '50%',
-              background: 'var(--bg-card-hover)',
+              width: '26px',
+              height: '26px',
+              borderRadius: 'var(--radius-xs)',
+              background: 'var(--bg-surface)',
               border: '1px solid var(--border-default)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              color: 'var(--color-teal)',
+              color: 'var(--color-green)',
             }}
           >
-            <User size={14} />
+            <User size={13} />
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.2 }}>
-            <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-primary)' }}>
+            <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-primary)' }}>
               {displayName}
             </span>
-            <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>Online</span>
+            <span style={{ fontSize: '9.5px', color: 'var(--text-muted)' }}>Operator</span>
           </div>
         </div>
 
@@ -165,7 +161,7 @@ export function Sidebar({
           title="Sign out"
           aria-label="Sign out of account"
         >
-          <LogOut size={16} />
+          <LogOut size={15} />
         </button>
       </div>
     </aside>

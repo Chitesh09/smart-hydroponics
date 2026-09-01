@@ -1,7 +1,7 @@
 .sidebar {
-  width: 250px;
+  width: 240px;
   min-height: 100vh;
-  background: var(--bg-surface);
+  background: var(--bg-canvas);
   border-right: 1px solid var(--border-default);
   display: flex;
   flex-direction: column;
@@ -10,123 +10,113 @@
   top: 0; 
   bottom: 0;
   z-index: 100;
-  padding: 20px 14px;
-  gap: 16px;
-  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  padding: 24px 16px;
+  gap: 20px;
+  transition: transform 0.25s var(--ease-spring);
 }
 
-.logo {
+.brand {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 6px 10px 16px;
-  border-bottom: 1px solid var(--border-subtle);
+  gap: 12px;
+  padding: 4px 6px 18px;
+  border-bottom: 1px solid var(--border-hairline);
 }
 
-.logoIcon {
-  width: 36px;
-  height: 36px;
-  background: var(--color-teal-dim);
-  border: 1px solid var(--color-teal-border);
-  border-radius: var(--radius-md);
+.brandIcon {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-xs);
+  background: var(--bg-tint-green);
+  border: 1px solid var(--border-accent-green);
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--color-teal);
+  color: var(--color-green);
   flex-shrink: 0;
 }
 
-.logoName {
-  font-size: 16px;
+.brandName {
+  font-size: 15px;
   font-weight: 800;
-  color: var(--text-primary);
   letter-spacing: -0.02em;
+  color: var(--text-primary);
 }
 
-.logoSub {
-  font-size: 10px;
+.brandTag {
+  font-size: 9.5px;
   color: var(--text-muted);
   font-weight: 600;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
 }
 
-.healthCard {
+.nodeStatus {
   display: flex;
   align-items: center;
-  gap: 10px;
-  background: var(--bg-card);
-  border: 1px solid var(--border-default);
-  border-radius: var(--radius-md);
-  padding: 10px 12px;
+  gap: 8px;
+  padding: 8px 12px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
 }
 
-.healthDot {
-  width: 8px;
-  height: 8px;
+.statusDot {
+  width: 6px;
+  height: 6px;
   border-radius: 50%;
   background: var(--status-color, var(--color-green));
-}
-
-.healthLabel {
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--text-primary);
-}
-
-.healthSub {
-  font-size: 10px;
-  color: var(--text-secondary);
 }
 
 .navSection {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 2px;
 }
 
 .sectionHeading {
-  font-size: 10px;
-  font-weight: 800;
+  font-size: 9.5px;
+  font-weight: 700;
   text-transform: uppercase;
-  color: var(--text-muted);
-  letter-spacing: 0.08em;
-  padding: 8px 10px 4px;
+  color: var(--text-dim);
+  letter-spacing: 0.14em;
+  padding: 8px 8px 4px;
 }
 
 .navItem {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 9px 12px;
-  border-radius: var(--radius-md);
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
   color: var(--text-secondary);
   font-size: 13px;
-  font-weight: 600;
-  transition: var(--transition-fast);
+  font-weight: 500;
+  transition: all 0.12s ease;
   position: relative;
 }
 
 .navItem:hover {
-  background: var(--bg-card-hover);
+  background: var(--bg-surface);
   color: var(--text-primary);
 }
 
 .navItemActive {
-  background: var(--bg-card);
+  background: var(--bg-surface);
   color: var(--text-primary);
+  font-weight: 600;
   border: 1px solid var(--border-default);
 }
 
 .navItemActive::before {
   content: '';
   position: absolute;
-  left: 0;
-  top: 6px;
-  bottom: 6px;
+  left: -2px;
+  top: 8px;
+  bottom: 8px;
   width: 3px;
-  background: var(--color-teal);
-  border-radius: 0 2px 2px 0;
+  background: var(--color-green);
+  border-radius: 2px;
 }
 
 .navIcon {
@@ -134,51 +124,26 @@
   align-items: center;
   justify-content: center;
   color: var(--text-muted);
-  transition: var(--transition-fast);
+  transition: color 0.12s ease;
 }
 
 .navItemActive .navIcon {
-  color: var(--color-teal);
-}
-
-.navItem:hover .navIcon {
-  color: var(--text-primary);
-}
-
-.navText {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  line-height: 1.2;
-}
-
-.navLabel {
-  font-size: 13px;
-}
-
-.navBadge {
-  font-size: 10px;
-  font-weight: 800;
-  padding: 1px 6px;
-  border-radius: 10px;
-  background: var(--color-danger);
-  color: #fff;
+  color: var(--color-green);
 }
 
 .userFooter {
   margin-top: auto;
-  padding-top: 12px;
-  border-top: 1px solid var(--border-subtle);
+  padding-top: 14px;
+  border-top: 1px solid var(--border-hairline);
   display: flex;
   align-items: center;
   justify-content: space-between;
 }
 
-/* Mobile responsive drawer */
 @media (max-width: 1024px) {
   .sidebar {
     transform: translateX(-100%);
-    box-shadow: var(--shadow-lg);
+    box-shadow: var(--shadow-elevated);
   }
 
   .sidebarOpen {

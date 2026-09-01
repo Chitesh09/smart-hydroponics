@@ -1,51 +1,60 @@
-/* HydroSmart Intelligence Center Styles */
+/* HydroSmart Plant Reasoning Lab Styles */
 
 .container {
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 28px;
+  max-width: 1240px;
+  margin: 0 auto;
 }
 
-/* Diagnostic Overview Header Card */
-.overviewBanner {
+.headerRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding-bottom: 8px;
+}
+
+.titleBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+/* Diagnostic Overview Banner (Open Strip) */
+.diagnosticBanner {
   display: grid;
-  grid-template-columns: 1.5fr 1fr 1fr 1fr;
+  grid-template-columns: 1.4fr 1fr 1fr 1fr;
   gap: 16px;
-  background: var(--bg-surface);
+  background: var(--bg-canvas);
   border: 1px solid var(--border-default);
   border-radius: var(--radius-lg);
-  padding: 20px 24px;
+  padding: 18px 24px;
   align-items: center;
 }
 
-@media (max-width: 1024px) {
-  .overviewBanner {
+@media (max-width: 960px) {
+  .diagnosticBanner {
     grid-template-columns: 1fr 1fr;
   }
 }
 
-@media (max-width: 640px) {
-  .overviewBanner {
+@media (max-width: 560px) {
+  .diagnosticBanner {
     grid-template-columns: 1fr;
   }
 }
 
-.overviewItem {
+.bannerItem {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 3px;
 }
 
-.overviewLabel {
-  font-size: 11px;
-  font-weight: 700;
-  text-transform: uppercase;
-  color: var(--text-muted);
-  letter-spacing: 0.06em;
-}
-
-.overviewValue {
-  font-size: 18px;
+.bannerValue {
+  font-size: 16px;
   font-weight: 800;
   color: var(--text-primary);
   display: flex;
@@ -53,357 +62,190 @@
   gap: 8px;
 }
 
-.overviewSub {
-  font-size: 11.5px;
-  color: var(--text-secondary);
-}
-
-/* Section Container */
-.sectionCard {
-  background: var(--bg-card);
-  border: 1px solid var(--border-default);
-  border-radius: var(--radius-lg);
-  padding: 24px;
-}
-
-.sectionHeader {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 16px;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.sectionTitleGroup {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-/* 3-Pillar Multimodal Hero Grid */
-.pillarsGrid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 16px;
-  margin-bottom: 20px;
-}
-
-@media (max-width: 900px) {
-  .pillarsGrid {
-    grid-template-columns: 1fr;
-  }
-}
-
-.pillarCard {
-  background: var(--bg-surface);
-  border: 1px solid var(--border-default);
-  border-radius: var(--radius-md);
-  padding: 18px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  transition: var(--transition-fast);
-}
-
-.pillarCard:hover {
-  background: var(--bg-card-hover);
-  border-color: var(--border-strong);
-}
-
-.pillarCardHeader {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding-bottom: 8px;
-  border-bottom: 1px solid var(--border-subtle);
-}
-
-.pillarMetricRow {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 12.5px;
-}
-
-.pillarScoreRow {
-  margin-top: auto;
-  padding-top: 10px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  border-top: 1px dashed var(--border-subtle);
-}
-
-/* "Why This Score" Breakdown */
-.scoreBreakdownBox {
-  background: var(--bg-surface);
-  border: 1px solid var(--border-default);
-  border-radius: var(--radius-md);
-  padding: 18px 20px;
-}
-
-.breakdownBars {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 12px;
-  margin: 14px 0;
-}
-
-@media (max-width: 768px) {
-  .breakdownBars {
-    grid-template-columns: 1fr 1fr;
-  }
-}
-
-.breakdownBarItem {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.progressBarTrack {
-  width: 100%;
-  height: 6px;
-  background: rgba(255, 255, 255, 0.08);
-  border-radius: 3px;
-  overflow: hidden;
-}
-
-.progressBarFill {
-  height: 100%;
-  border-radius: 3px;
-  transition: width 0.4s ease;
-}
-
-/* 2-Column Analytical Layout */
-.analyticalGrid {
+/* Reasoning Stage: Asymmetric 2-Column Scientific Layout */
+.reasoningStage {
   display: grid;
   grid-template-columns: 1.15fr 0.85fr;
   gap: 24px;
   align-items: start;
 }
 
-@media (max-width: 1100px) {
-  .analyticalGrid {
+@media (max-width: 1024px) {
+  .reasoningStage {
     grid-template-columns: 1fr;
   }
 }
 
-/* Observations Timeline Stream */
-.timelineList {
+/* Scientific Section Panels */
+.reasoningPanel {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  max-height: 420px;
-  overflow-y: auto;
-  padding-right: 4px;
-}
-
-.timelineItem {
-  background: var(--bg-surface);
+  gap: 16px;
+  background: var(--bg-canvas);
   border: 1px solid var(--border-default);
-  border-radius: var(--radius-md);
-  padding: 12px 14px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  transition: border-color 0.2s ease;
+  border-radius: var(--radius-lg);
+  padding: 22px 24px;
 }
 
-.timelineItem:hover {
-  border-color: var(--border-strong);
-  background: var(--bg-card-hover);
-}
-
-.timelineMetaRow {
+.panelHeader {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
-.sourceBadge {
-  font-size: 9.5px;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  padding: 2px 6px;
-  border-radius: 3px;
-}
-
-.sourceEsp32 {
-  background: var(--color-teal-dim);
-  color: var(--color-teal);
-  border: 1px solid var(--color-teal-border);
-}
-
-.sourceCamera {
-  background: var(--color-green-dim);
-  color: var(--color-green);
-  border: 1px solid var(--color-green-border);
-}
-
-.sourceHistory {
-  background: rgba(133, 160, 154, 0.12);
-  color: var(--text-primary);
-  border: 1px solid var(--border-default);
-}
-
-.sourceAnalytics {
-  background: var(--color-warning-dim);
-  color: var(--color-warning);
-  border: 1px solid var(--color-warning-border);
-}
-
-/* Anomalies & Warnings */
-.anomaliesList {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.anomalyItem {
-  background: var(--color-danger-dim);
-  border: 1px solid var(--color-danger-border);
-  border-radius: var(--radius-md);
-  padding: 14px 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.anomalyCleanCard {
-  background: var(--color-green-dim);
-  border: 1px solid var(--color-green-border);
-  border-radius: var(--radius-md);
-  padding: 16px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  color: var(--color-green);
-  font-size: 13px;
-  font-weight: 600;
-}
-
-/* Predictive Forecast Grid */
-.predictionsGrid {
+/* 3-Pillars Multimodal Breakdown */
+.pillarsStrip {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 12px;
 }
 
 @media (max-width: 768px) {
-  .predictionsGrid {
+  .pillarsStrip {
     grid-template-columns: 1fr;
   }
 }
 
-.predictionCard {
+.pillarNode {
   background: var(--bg-surface);
-  border: 1px solid var(--border-default);
-  border-radius: var(--radius-md);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
   padding: 14px;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-/* Recommendations List */
-.recommendationsList {
   display: flex;
   flex-direction: column;
   gap: 10px;
 }
 
-.recommendationCard {
+.pillarMetricRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+}
+
+/* Formula Breakdown Box */
+.formulaBox {
   background: var(--bg-surface);
-  border: 1px solid var(--border-default);
-  border-radius: var(--radius-md);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
   padding: 14px 16px;
+}
+
+.formulaBars {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  margin-top: 10px;
+}
+
+@media (max-width: 640px) {
+  .formulaBars {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.barItem {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 4px;
 }
 
-.priorityBadge {
-  font-size: 9.5px;
-  font-weight: 800;
-  padding: 2px 6px;
+.barTrack {
+  width: 100%;
+  height: 5px;
+  background: rgba(255, 255, 255, 0.08);
   border-radius: 3px;
-  text-transform: uppercase;
+  overflow: hidden;
 }
 
-.priorityHigh {
-  background: var(--color-danger-dim);
-  color: var(--color-danger);
-  border: 1px solid var(--color-danger-border);
+.barFill {
+  height: 100%;
+  border-radius: 3px;
 }
 
-.priorityMedium {
-  background: var(--color-warning-dim);
-  color: var(--color-warning);
-  border: 1px solid var(--color-warning-border);
+/* Observations Timeline Stream */
+.timelineStream {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 380px;
+  overflow-y: auto;
+  padding-right: 4px;
 }
 
-.priorityRoutine {
-  background: var(--color-teal-dim);
-  color: var(--color-teal);
-  border: 1px solid var(--color-teal-border);
+.timelineEvent {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  padding: 10px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  transition: border-color 0.15s ease;
 }
 
-/* Compact Visual Analysis Station */
-.compactVideoBox {
+.timelineEvent:hover {
+  border-color: var(--border-strong);
+}
+
+.timelineMeta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* Anomaly Warning Card */
+.anomalyWarningNode {
+  background: var(--bg-tint-amber);
+  border: 1px solid rgba(229, 169, 60, 0.35);
+  border-radius: var(--radius-sm);
+  padding: 12px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* Prediction Horizon Tiles */
+.predictionHorizons {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+@media (max-width: 768px) {
+  .predictionHorizons {
+    grid-template-columns: 1fr;
+  }
+}
+
+.horizonNode {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* Compact Optical Station in Lab */
+.opticalLabBox {
   position: relative;
   width: 100%;
-  height: 180px;
-  background: var(--bg-base);
-  border: 1px solid var(--border-default);
-  border-radius: var(--radius-md);
+  aspect-ratio: 16 / 9;
+  background: #020907;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
   overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
-.compactVideo {
+.opticalLabVideo {
   width: 100%;
   height: 100%;
   object-fit: cover;
-}
-
-.compactVideoOverlay {
-  position: absolute;
-  bottom: 8px;
-  left: 8px;
-  right: 8px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  pointer-events: none;
-}
-
-/* AI Synthesis / Why This Matters Card */
-.aiSynthesisCard {
-  background: var(--color-teal-dim);
-  border: 1px solid var(--color-teal-border);
-  border-radius: var(--radius-lg);
-  padding: 18px 20px;
-}
-
-.aiSynthesisHeader {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 8px;
-  color: var(--color-teal);
-  font-size: 13px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-.aiSynthesisBody {
-  font-size: 13.5px;
-  line-height: 1.6;
-  color: var(--text-primary);
 }

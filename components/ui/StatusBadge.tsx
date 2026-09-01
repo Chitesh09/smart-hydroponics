@@ -8,27 +8,32 @@ import {
   HelpCircle,
   Radio,
   Sparkles,
-  WifiOff
+  WifiOff,
+  Activity
 } from 'lucide-react';
 
 export type StatusVariant =
+  | 'thriving'
   | 'healthy'
   | 'optimal'
   | 'stable'
+  | 'recovering'
   | 'live'
+  | 'needs_attention'
   | 'attention'
   | 'warning'
   | 'critical'
   | 'danger'
+  | 'insufficient_data'
   | 'unavailable'
   | 'offline'
   | 'simulation'
   | 'neutral';
 
 interface StatusBadgeProps {
-  status: StatusVariant;
+  status: StatusVariant | string;
   label?: string;
-  size?: 'sm' | 'md';
+  size?: 'sm' | 'md' | 'lg';
   showIcon?: boolean;
 }
 
@@ -38,75 +43,100 @@ export function StatusBadge({
   size = 'md',
   showIcon = true,
 }: StatusBadgeProps) {
-  const getVariantStyles = () => {
-    switch (status) {
+  const normalizedStatus = (status || '').toLowerCase().replace(/\s+/g, '_');
+
+  const getConfig = () => {
+    switch (normalizedStatus) {
+      case 'thriving':
       case 'healthy':
       case 'optimal':
-      case 'stable':
         return {
-          bg: 'rgba(57, 184, 111, 0.12)',
-          color: '#39B86F',
-          border: 'rgba(57, 184, 111, 0.30)',
+          bg: 'var(--bg-tint-green)',
+          color: 'var(--color-green)',
+          border: 'var(--border-accent-green)',
           icon: CheckCircle2,
-          defaultLabel: 'Optimal',
+          defaultLabel: normalizedStatus.toUpperCase(),
+        };
+      case 'stable':
+      case 'recovering':
+        return {
+          bg: 'var(--bg-tint-teal)',
+          color: 'var(--color-teal)',
+          border: 'var(--border-accent-teal)',
+          icon: Activity,
+          defaultLabel: normalizedStatus.toUpperCase(),
         };
       case 'live':
         return {
-          bg: 'rgba(32, 184, 176, 0.12)',
-          color: '#20B8B0',
-          border: 'rgba(32, 184, 176, 0.30)',
+          bg: 'var(--bg-tint-teal)',
+          color: 'var(--color-teal)',
+          border: 'var(--border-accent-teal)',
           icon: Radio,
-          defaultLabel: 'Live Stream',
+          defaultLabel: 'ESP32 LIVE',
         };
+      case 'needs_attention':
       case 'attention':
       case 'warning':
         return {
-          bg: 'rgba(242, 184, 75, 0.12)',
-          color: '#F2B84B',
-          border: 'rgba(242, 184, 75, 0.30)',
+          bg: 'var(--bg-tint-amber)',
+          color: 'var(--color-amber)',
+          border: 'rgba(229, 169, 60, 0.35)',
           icon: AlertTriangle,
-          defaultLabel: 'Attention',
+          defaultLabel: 'NEEDS ATTENTION',
         };
       case 'critical':
       case 'danger':
         return {
-          bg: 'rgba(229, 107, 111, 0.12)',
-          color: '#E56B6F',
-          border: 'rgba(229, 107, 111, 0.30)',
+          bg: 'var(--bg-tint-red)',
+          color: 'var(--color-red)',
+          border: 'rgba(217, 93, 98, 0.35)',
           icon: AlertOctagon,
-          defaultLabel: 'Critical',
+          defaultLabel: 'CRITICAL',
         };
       case 'simulation':
         return {
-          bg: 'rgba(242, 184, 75, 0.12)',
-          color: '#F2B84B',
-          border: 'rgba(242, 184, 75, 0.30)',
+          bg: 'var(--bg-tint-amber)',
+          color: 'var(--color-amber)',
+          border: 'rgba(229, 169, 60, 0.35)',
           icon: Sparkles,
-          defaultLabel: 'Simulation Mode',
+          defaultLabel: 'SIMULATION',
         };
+      case 'insufficient_data':
       case 'unavailable':
       case 'offline':
         return {
-          bg: 'rgba(101, 126, 120, 0.12)',
-          color: '#9DB4AE',
-          border: 'rgba(101, 126, 120, 0.25)',
+          bg: 'rgba(94, 123, 116, 0.12)',
+          color: 'var(--text-muted)',
+          border: 'var(--border-subtle)',
           icon: WifiOff,
-          defaultLabel: 'Unavailable',
+          defaultLabel: normalizedStatus === 'insufficient_data' ? 'INSUFFICIENT DATA' : 'UNAVAILABLE',
         };
       default:
         return {
-          bg: 'rgba(133, 160, 154, 0.10)',
-          color: '#9DB4AE',
-          border: 'rgba(255, 255, 255, 0.08)',
+          bg: 'rgba(94, 123, 116, 0.10)',
+          color: 'var(--text-secondary)',
+          border: 'var(--border-hairline)',
           icon: HelpCircle,
-          defaultLabel: status,
+          defaultLabel: String(status).toUpperCase(),
         };
     }
   };
 
-  const config = getVariantStyles();
+  const config = getConfig();
   const Icon = config.icon;
   const displayLabel = label || config.defaultLabel;
+
+  const paddingMap = {
+    sm: '2px 7px',
+    md: '3px 10px',
+    lg: '5px 14px',
+  };
+
+  const fontMap = {
+    sm: '10px',
+    md: '11px',
+    lg: '12px',
+  };
 
   return (
     <span
@@ -114,19 +144,20 @@ export function StatusBadge({
         display: 'inline-flex',
         alignItems: 'center',
         gap: '5px',
-        padding: size === 'sm' ? '2px 6px' : '3px 9px',
-        fontSize: size === 'sm' ? '10px' : '11px',
+        padding: paddingMap[size],
+        fontSize: fontMap[size],
         fontWeight: 700,
-        borderRadius: '4px',
+        borderRadius: 'var(--radius-full)',
         textTransform: 'uppercase',
-        letterSpacing: '0.04em',
+        letterSpacing: '0.08em',
         background: config.bg,
         color: config.color,
         border: `1px solid ${config.border}`,
         fontFamily: 'var(--font-sans)',
+        lineHeight: 1.2,
       }}
     >
-      {showIcon && <Icon size={size === 'sm' ? 11 : 12} />}
+      {showIcon && <Icon size={size === 'sm' ? 10 : size === 'lg' ? 14 : 12} />}
       <span>{displayLabel}</span>
     </span>
   );

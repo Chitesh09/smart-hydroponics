@@ -1,792 +1,537 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { usePlantIntelligence } from '@/lib/intelligence/PlantIntelligenceContext';
 import { useESP32Serial } from '@/lib/esp32/ESP32SerialContext';
 import { useCamera } from '@/lib/camera/CameraContext';
-import { PlantCandidate } from '@/lib/intelligence/types';
+import { StatusBadge } from '@/components/ui/StatusBadge';
+import { DataSourceBadge } from '@/components/ui/DataSourceBadge';
+import { EvidenceChain, EvidenceStep } from '@/components/ui/EvidenceChain';
 import {
-  Camera,
-  CameraOff,
-  AlertTriangle,
-  CheckCircle2,
-  Download,
+  Brain,
   Layers,
-  Activity,
-  Scan,
-  Leaf,
-  Check,
-  HeartPulse,
+  Eye,
+  CameraOff,
+  Download,
+  Search,
+  Clock,
   TrendingUp,
   TrendingDown,
-  Minus,
-  Sparkles,
-  Clock,
-  ShieldAlert,
-  Sliders
+  Minus
 } from 'lucide-react';
 import styles from './page.module.css';
 
 export default function IntelligencePage() {
-  const { isStale, latestReading } = useESP32Serial();
-  const {
-    status: cameraStatus,
-    videoRef,
-    availableDevices,
-    startCamera,
-    stopCamera,
-    switchDevice
-  } = useCamera();
-
   const {
     cropIdentity,
-    observations,
     latestDetection,
     latestVisualHealth,
-    identificationResult,
-    isIdentifying,
-    identifyCurrentPlant,
-    applyIdentifiedSpecies,
-    environmentalAssessment,
     multimodalAssessment,
-    growthMetrics,
     predictiveAnalytics,
-    statisticalAnomalies,
-    structuredPlantContext,
     activeAnomalies,
     activeRecommendations,
-    captureAndObserve
+    observations,
+    identifyCurrentPlant,
+    isIdentifying
   } = usePlantIntelligence();
 
-  const [captureFeedback, setCaptureFeedback] = useState<string | null>(null);
-  const [appliedFeedback, setAppliedFeedback] = useState<string | null>(null);
+  const { mode, isStale, latestReading } = useESP32Serial();
+  const { status: cameraStatus, videoRef, startCamera } = useCamera();
 
-  const handleCapture = () => {
-    const obs = captureAndObserve();
-    if (obs) {
-      setCaptureFeedback(`Observation snapshot recorded at ${new Date(obs.timestamp).toLocaleTimeString()}`);
-      setTimeout(() => setCaptureFeedback(null), 4000);
+  const [identificationError, setIdentificationError] = useState<string | null>(null);
+
+  const isPlantIdentified = cropIdentity.cropKey !== 'unknown_plant' && cropIdentity.commonName !== 'Unknown Plant';
+  const plantDisplayName = isPlantIdentified ? cropIdentity.commonName : 'Unknown Plant';
+  const botanicalScientific = isPlantIdentified ? cropIdentity.scientificName || 'Species Unclassified' : 'Identification pending';
+
+  const isTelemetryAvailable = latestReading !== null && !isStale;
+  const isCameraActive = cameraStatus === 'connected';
+
+  // Build the dynamic scientific Evidence Chain from real system state
+  const evidenceChainSteps = useMemo((): EvidenceStep[] => {
+    const steps: EvidenceStep[] = [];
+
+    // Step 1: Observation
+    if (isCameraActive && latestDetection?.isPlantDetected) {
+      steps.push({
+        stage: 'OBSERVATION',
+        headline: `Foliage presence confirmed (${latestDetection.canopyCoveragePercent}% canopy coverage)`,
+        detail: latestVisualHealth
+          ? `Visual health evaluated at ${latestVisualHealth.visualHealthScore}/100 with ${latestVisualHealth.chlorosisYellowPercent.toFixed(1)}% discoloration ratio.`
+          : 'Foliage canopy detected in optical frame.',
+        status: latestVisualHealth?.healthState === 'healthy' ? 'optimal' : 'warning',
+      });
+    } else {
+      steps.push({
+        stage: 'OBSERVATION',
+        headline: isCameraActive ? 'Searching for plant foliage structure' : 'Optical camera offline',
+        detail: isCameraActive ? 'Position a plant inside the optical view.' : 'Activate camera for real-time visual inspection.',
+        status: 'neutral',
+      });
+    }
+
+    // Step 2: Environment
+    if (isTelemetryAvailable && latestReading) {
+      const isEnvOptimal = multimodalAssessment.environmentalState === 'optimal';
+      steps.push({
+        stage: 'ENVIRONMENT',
+        headline: `Sensory telemetry: pH ${latestReading.ph.toFixed(2)} · TDS ${Math.round(latestReading.tds)} PPM · Reservoir ${Math.round(latestReading.waterLevel)}%`,
+        detail: isEnvOptimal
+          ? 'All chemical and physical sensor measurements are within target biological tolerances.'
+          : 'One or more environmental sensor channels deviate from preferred crop baseline.',
+        status: isEnvOptimal ? 'optimal' : 'warning',
+      });
+    } else {
+      steps.push({
+        stage: 'ENVIRONMENT',
+        headline: 'Environmental telemetry unavailable',
+        detail: 'Connect ESP32 receiver to stream live probe measurements.',
+        status: 'neutral',
+      });
+    }
+
+    // Step 3: Historical Trend
+    steps.push({
+      stage: 'HISTORICAL TREND',
+      headline: `pH ${predictiveAnalytics.predictions.ph.trendDirection} · TDS ${predictiveAnalytics.predictions.tds.trendDirection} · Water ${predictiveAnalytics.predictions.waterLevel.trendDirection}`,
+      detail: `Trend direction calculated across ${observations.length} longitudinal observation cycles.`,
+      status: 'neutral',
+    });
+
+    // Step 4: Interpretation
+    steps.push({
+      stage: 'INTERPRETATION',
+      headline: multimodalAssessment.interpretations[0] || 'Biological condition stable',
+      detail: multimodalAssessment.explanations[0] || 'Environmental parameters and foliage condition align with standard growth profile.',
+      status: multimodalAssessment.overallHealthState === 'optimal' ? 'optimal' : 'warning',
+    });
+
+    // Step 5: Action
+    if (activeRecommendations.length > 0) {
+      steps.push({
+        stage: 'ACTION',
+        headline: activeRecommendations[0].title,
+        detail: `${activeRecommendations[0].action} — Reason: ${activeRecommendations[0].reasoning}`,
+        status: activeRecommendations[0].priority === 'urgent' || activeRecommendations[0].priority === 'high' ? 'warning' : 'optimal',
+      });
+    }
+
+    return steps;
+  }, [
+    isCameraActive,
+    latestDetection,
+    latestVisualHealth,
+    isTelemetryAvailable,
+    latestReading,
+    multimodalAssessment,
+    predictiveAnalytics,
+    observations.length,
+    activeRecommendations
+  ]);
+
+  const handleTriggerIdentification = async () => {
+    setIdentificationError(null);
+    try {
+      await identifyCurrentPlant();
+    } catch (err: unknown) {
+      setIdentificationError(err instanceof Error ? err.message : 'Identification request failed');
     }
   };
 
-  const handleApplyProfile = (candidate: PlantCandidate) => {
-    applyIdentifiedSpecies(candidate);
-    setAppliedFeedback(`Applied ${candidate.commonName} target parameters (pH ${candidate.targetProfile.phMin}-${candidate.targetProfile.phMax}, TDS ${candidate.targetProfile.tdsMin}-${candidate.targetProfile.tdsMax}).`);
-    setTimeout(() => setAppliedFeedback(null), 5000);
-  };
-
-  const handleExportData = () => {
-    const exportPayload = {
-      exportTimestamp: new Date().toISOString(),
-      cropIdentity,
-      multimodalAssessment,
-      predictiveAnalytics,
-      statisticalAnomalies,
-      observationsCount: observations.length,
-      recentObservations: observations.slice(0, 10),
-      structuredContext: structuredPlantContext,
+  const handleExportDiagnostics = () => {
+    const diagnosticPayload = {
+      timestamp: new Date().toISOString(),
+      plant: {
+        commonName: plantDisplayName,
+        scientificName: botanicalScientific,
+        isIdentified: isPlantIdentified,
+        confidence: cropIdentity.confidence,
+      },
+      health: {
+        overallScore: multimodalAssessment.overallScore,
+        state: multimodalAssessment.overallHealthState,
+        environmentalState: multimodalAssessment.environmentalState,
+        visualState: multimodalAssessment.visualState,
+      },
+      predictions: predictiveAnalytics.predictions,
+      anomalies: activeAnomalies,
+      recommendations: activeRecommendations,
+      observationCount: observations.length,
     };
-    const blob = new Blob([JSON.stringify(exportPayload, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `hydrosmart_diagnostic_${Date.now()}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
+
+    const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(diagnosticPayload, null, 2));
+    const downloadAnchor = document.createElement('a');
+    downloadAnchor.setAttribute('href', dataStr);
+    downloadAnchor.setAttribute('download', `hydrosmart_reasoning_lab_${Date.now()}.json`);
+    document.body.appendChild(downloadAnchor);
+    downloadAnchor.click();
+    downloadAnchor.remove();
   };
-
-  // Determine overall sensor data confidence
-  const isTelemetryAvailable = latestReading !== null && !isStale;
-  const isCameraAvailable = cameraStatus === 'connected' && latestDetection !== null;
-  const dataConfidenceLevel =
-    isTelemetryAvailable && isCameraAvailable ? 'High' :
-    isTelemetryAvailable || isCameraAvailable ? 'Medium' : 'Limited';
-
-  // Format species display name
-  const isPlantIdentified = cropIdentity.cropKey !== 'unknown_plant' && cropIdentity.commonName !== 'Unknown Plant';
-  const plantDisplayName = isPlantIdentified ? cropIdentity.commonName : 'Unknown Plant';
-
-  // Extract component scores safely
-  const envScore = environmentalAssessment.compositeEnvironmentalScore;
-  const visScore = latestDetection?.isPlantDetected && latestVisualHealth?.visualHealthScore !== undefined
-    ? latestVisualHealth.visualHealthScore
-    : null;
-  const histScore = multimodalAssessment.trend === 'improving' ? 95 : multimodalAssessment.trend === 'stable' ? 88 : multimodalAssessment.trend === 'declining' ? 65 : 75;
 
   return (
     <div className={styles.container}>
       
-      {/* 1. Page Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <h1 className="text-3xl font-bold text-primary">Plant Intelligence</h1>
-            <span className="badge badge-info" style={{ fontSize: '10px' }}>
-              <Layers size={12} style={{ display: 'inline', marginRight: '4px' }} />
-              Diagnostic Control Center
-            </span>
-          </div>
-          <p className="text-secondary" style={{ marginTop: '4px' }}>
-            Understand what is happening, why it is happening, and what requires attention.
-          </p>
+      {/* 1. Reasoning Lab Header */}
+      <div className={styles.headerRow}>
+        <div className={styles.titleBlock}>
+          <span className="section-label">Scientific Workspace</span>
+          <h1 className="display-title">Plant Reasoning Lab</h1>
         </div>
 
-        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-          <button className="btn btn-ghost" style={{ fontSize: '12px' }} onClick={handleExportData}>
-            <Download size={14} /> Export Diagnostic JSON
-          </button>
-          <button className="btn btn-primary" style={{ fontSize: '12px' }} onClick={handleCapture}>
-            <Activity size={14} /> Record Observation Snapshot
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <button className="btn btn-secondary" onClick={handleExportDiagnostics} style={{ fontSize: '11.5px' }}>
+            <Download size={13} />
+            <span>Export Diagnostic JSON</span>
           </button>
         </div>
       </div>
 
-      {captureFeedback && (
-        <div style={{ padding: '10px 14px', background: 'rgba(183, 255, 60, 0.1)', border: '1px solid #B7FF3C', borderRadius: '6px', color: '#B7FF3C', fontSize: '12.5px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <CheckCircle2 size={16} /> {captureFeedback}
-        </div>
-      )}
-
-      {appliedFeedback && (
-        <div style={{ padding: '10px 14px', background: 'rgba(0, 229, 255, 0.1)', border: '1px solid #00E5FF', borderRadius: '6px', color: '#00E5FF', fontSize: '12.5px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <CheckCircle2 size={16} /> {appliedFeedback}
-        </div>
-      )}
-
-      {/* ============================================================ */}
-      {/* SECTION 1 — PLANT STATUS OVERVIEW (Diagnostic Header Banner) */}
-      {/* ============================================================ */}
-      <div className={styles.overviewBanner}>
-        <div className={styles.overviewItem}>
-          <span className={styles.overviewLabel}>Monitored Plant</span>
-          <div className={styles.overviewValue}>
-            <Leaf size={18} className="text-primary" />
+      {/* 2. Diagnostic Overview Banner */}
+      <div className={styles.diagnosticBanner}>
+        <div className={styles.bannerItem}>
+          <span className="section-label">Specimen</span>
+          <div className={styles.bannerValue}>
             <span>{plantDisplayName}</span>
-          </div>
-          <span className={styles.overviewSub}>
-            {isPlantIdentified ? `${cropIdentity.scientificName || 'Botanical Species'}` : 'Identification Pending (Scan below)'}
-          </span>
-        </div>
-
-        <div className={styles.overviewItem}>
-          <span className={styles.overviewLabel}>Overall Condition</span>
-          <div className={styles.overviewValue} style={{ fontFamily: 'var(--font-mono)' }}>
-            {multimodalAssessment.overallScore !== null ? (
-              <>
-                <span style={{ color: multimodalAssessment.overallScore >= 80 ? '#B7FF3C' : multimodalAssessment.overallScore >= 60 ? '#FFC857' : '#FF6B4A' }}>
-                  {multimodalAssessment.overallScore}
-                </span>
-                <span style={{ fontSize: '13px', color: '#5A738E' }}>/ 100</span>
-              </>
-            ) : (
-              <span style={{ fontSize: '14px', color: '#8FA3B8' }}>Unavailable</span>
-            )}
-          </div>
-          <span className={styles.overviewSub}>
-            {multimodalAssessment.overallScore !== null ? (
-              multimodalAssessment.overallScore >= 80 ? 'Optimal Physiology' :
-              multimodalAssessment.overallScore >= 60 ? 'Attention Required' : 'Critical Stress'
-            ) : 'Sensors / Camera Inactive'}
-          </span>
-        </div>
-
-        <div className={styles.overviewItem}>
-          <span className={styles.overviewLabel}>Data Confidence</span>
-          <div className={styles.overviewValue}>
-            <span className={`badge badge-${dataConfidenceLevel === 'High' ? 'success' : dataConfidenceLevel === 'Medium' ? 'warning' : 'danger'}`}>
-              ● {dataConfidenceLevel.toUpperCase()} CONFIDENCE
+            <span style={{ fontSize: '12px', fontStyle: 'italic', color: 'var(--text-secondary)', fontWeight: 400 }}>
+              ({botanicalScientific})
             </span>
           </div>
-          <span className={styles.overviewSub}>
-            ESP32: {isTelemetryAvailable ? 'Online' : 'Offline'} · Camera: {isCameraAvailable ? 'Active' : 'Standby'}
-          </span>
         </div>
 
-        <div className={styles.overviewItem}>
-          <span className={styles.overviewLabel}>Last Analysis</span>
-          <div className={styles.overviewValue} style={{ fontSize: '14px', color: '#8FA3B8', fontFamily: 'var(--font-mono)' }}>
-            <Clock size={15} style={{ marginRight: '4px' }} />
-            {new Date(multimodalAssessment.timestamp).toLocaleTimeString()}
-          </div>
-          <span className={styles.overviewSub}>Continuous real-time evaluation</span>
-        </div>
-      </div>
-
-      {/* ============================================================ */}
-      {/* SECTION 2 — MULTIMODAL HEALTH ANALYSIS (HERO SECTION)         */}
-      {/* ============================================================ */}
-      <div className={styles.sectionCard}>
-        <div className={styles.sectionHeader}>
-          <div className={styles.sectionTitleGroup}>
-            <HeartPulse size={20} className="text-primary" />
-            <h2 className="text-lg font-bold">MULTIMODAL HEALTH ANALYSIS</h2>
-          </div>
-          <span className="badge badge-info" style={{ fontSize: '10.5px' }}>
-            Cross-Domain Fusion (ESP32 + Camera + History)
-          </span>
-        </div>
-
-        {/* 3 Pillars Grid */}
-        <div className={styles.pillarsGrid}>
-          
-          {/* Pillar 1: Environmental Health */}
-          <div className={styles.pillarCard}>
-            <div className={styles.pillarCardHeader}>
-              <span style={{ fontWeight: 700, fontSize: '13px', color: '#00E5FF' }}>ENVIRONMENTAL</span>
-              <span className={`badge badge-${multimodalAssessment.environmentalState === 'optimal' ? 'success' : multimodalAssessment.environmentalState === 'warning' ? 'warning' : 'danger'}`} style={{ fontSize: '9.5px' }}>
-                {multimodalAssessment.environmentalState.toUpperCase()}
+        <div className={styles.bannerItem}>
+          <span className="section-label">Condition</span>
+          <div className={styles.bannerValue}>
+            <StatusBadge
+              status={isTelemetryAvailable || isCameraActive ? multimodalAssessment.overallHealthState : 'insufficient_data'}
+              size="sm"
+            />
+            {isTelemetryAvailable && (
+              <span className="font-mono" style={{ fontSize: '14px', color: 'var(--text-secondary)' }}>
+                {multimodalAssessment.overallScore}/100
               </span>
-            </div>
-
-            <div className={styles.pillarMetricRow}>
-              <span className="text-muted">pH Level:</span>
-              <strong style={{ fontFamily: 'var(--font-mono)' }}>
-                {latestReading?.ph !== undefined ? `${latestReading.ph.toFixed(2)} (${environmentalAssessment.phStatus})` : 'Unavailable'}
-              </strong>
-            </div>
-
-            <div className={styles.pillarMetricRow}>
-              <span className="text-muted">TDS / Minerals:</span>
-              <strong style={{ fontFamily: 'var(--font-mono)' }}>
-                {latestReading?.tds !== undefined ? `${Math.round(latestReading.tds)} PPM (${environmentalAssessment.tdsStatus})` : 'Unavailable'}
-              </strong>
-            </div>
-
-            <div className={styles.pillarMetricRow}>
-              <span className="text-muted">Water Capacity:</span>
-              <strong style={{ fontFamily: 'var(--font-mono)' }}>
-                {latestReading?.waterLevel !== undefined ? `${Math.round(latestReading.waterLevel)}% (${environmentalAssessment.waterLevelStatus})` : 'Unavailable'}
-              </strong>
-            </div>
-
-            <div className={styles.pillarScoreRow}>
-              <span className="text-muted">Pillar Score:</span>
-              <span style={{ fontSize: '16px', fontWeight: 800, color: '#00E5FF', fontFamily: 'var(--font-mono)' }}>
-                {isTelemetryAvailable ? `${envScore} / 100` : 'Unavailable'}
-              </span>
-            </div>
-          </div>
-
-          {/* Pillar 2: Visual Foliage Health */}
-          <div className={styles.pillarCard}>
-            <div className={styles.pillarCardHeader}>
-              <span style={{ fontWeight: 700, fontSize: '13px', color: '#B7FF3C' }}>VISUAL FOLIAGE</span>
-              <span className={`badge badge-${latestDetection?.isPlantDetected ? 'success' : 'warning'}`} style={{ fontSize: '9.5px' }}>
-                {latestDetection?.isPlantDetected ? 'PLANT DETECTED' : 'STANDBY'}
-              </span>
-            </div>
-
-            <div className={styles.pillarMetricRow}>
-              <span className="text-muted">Plant Presence:</span>
-              <strong style={{ fontFamily: 'var(--font-mono)' }}>
-                {latestDetection ? `${latestDetection.plantPresenceScore || latestDetection.confidence}%` : 'Unavailable'}
-              </strong>
-            </div>
-
-            <div className={styles.pillarMetricRow}>
-              <span className="text-muted">Canopy Coverage:</span>
-              <strong style={{ fontFamily: 'var(--font-mono)' }}>
-                {latestDetection?.canopyCoveragePercent ? `${latestDetection.canopyCoveragePercent}%` : 'Unavailable'}
-              </strong>
-            </div>
-
-            <div className={styles.pillarMetricRow}>
-              <span className="text-muted">Foliage Chlorophyll:</span>
-              <strong style={{ textTransform: 'capitalize' }}>
-                {latestDetection?.foliageColorAssessment?.replace('_', ' ') || 'Standby'}
-              </strong>
-            </div>
-
-            <div className={styles.pillarScoreRow}>
-              <span className="text-muted">Pillar Score:</span>
-              <span style={{ fontSize: '16px', fontWeight: 800, color: '#B7FF3C', fontFamily: 'var(--font-mono)' }}>
-                {visScore !== null ? `${visScore} / 100` : 'Unavailable'}
-              </span>
-            </div>
-          </div>
-
-          {/* Pillar 3: Historical Stability */}
-          <div className={styles.pillarCard}>
-            <div className={styles.pillarCardHeader}>
-              <span style={{ fontWeight: 700, fontSize: '13px', color: '#C77DFF' }}>HISTORICAL STABILITY</span>
-              <span className="badge badge-info" style={{ fontSize: '9.5px', textTransform: 'uppercase' }}>
-                {multimodalAssessment.trend.replace('_', ' ')}
-              </span>
-            </div>
-
-            <div className={styles.pillarMetricRow}>
-              <span className="text-muted">Logged Snapshots:</span>
-              <strong style={{ fontFamily: 'var(--font-mono)' }}>{observations.length} records</strong>
-            </div>
-
-            <div className={styles.pillarMetricRow}>
-              <span className="text-muted">Cumulative Growth:</span>
-              <strong style={{ fontFamily: 'var(--font-mono)', color: growthMetrics?.cumulativeGrowthDelta && growthMetrics.cumulativeGrowthDelta > 0 ? '#B7FF3C' : '#F4F7FB' }}>
-                {growthMetrics?.cumulativeGrowthDelta ? `${growthMetrics.cumulativeGrowthDelta > 0 ? '+' : ''}${growthMetrics.cumulativeGrowthDelta}%` : '--'}
-              </strong>
-            </div>
-
-            <div className={styles.pillarMetricRow}>
-              <span className="text-muted">Anomaly Frequency:</span>
-              <strong>{activeAnomalies.length === 0 ? 'Nominal (Zero Outliers)' : `${activeAnomalies.length} Flagged`}</strong>
-            </div>
-
-            <div className={styles.pillarScoreRow}>
-              <span className="text-muted">Pillar Score:</span>
-              <span style={{ fontSize: '16px', fontWeight: 800, color: '#C77DFF', fontFamily: 'var(--font-mono)' }}>
-                {observations.length >= 2 ? `${histScore} / 100` : 'Unavailable'}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {/* "Why this score?" Breakdown Box */}
-        <div className={styles.scoreBreakdownBox}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-            <span style={{ fontWeight: 700, fontSize: '12.5px', color: '#00E5FF', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-              Why this composite score?
-            </span>
-            <span style={{ fontSize: '11px', color: '#8FA3B8' }}>
-              Formula: (40% Env) + (35% Visual) + (25% History)
-            </span>
-          </div>
-
-          <div className={styles.breakdownBars}>
-            <div className={styles.breakdownBarItem}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px' }}>
-                <span className="text-muted">Environmental (40%)</span>
-                <strong style={{ color: '#00E5FF' }}>{isTelemetryAvailable ? envScore : '--'}</strong>
-              </div>
-              <div className={styles.progressBarTrack}>
-                <div 
-                  className={styles.progressBarFill} 
-                  style={{ width: `${isTelemetryAvailable ? envScore : 0}%`, background: '#00E5FF' }} 
-                />
-              </div>
-            </div>
-
-            <div className={styles.breakdownBarItem}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px' }}>
-                <span className="text-muted">Visual Foliage (35%)</span>
-                <strong style={{ color: '#B7FF3C' }}>{visScore ?? '--'}</strong>
-              </div>
-              <div className={styles.progressBarTrack}>
-                <div 
-                  className={styles.progressBarFill} 
-                  style={{ width: `${visScore ?? 0}%`, background: '#B7FF3C' }} 
-                />
-              </div>
-            </div>
-
-            <div className={styles.breakdownBarItem}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px' }}>
-                <span className="text-muted">Historical Stability (25%)</span>
-                <strong style={{ color: '#C77DFF' }}>{observations.length >= 2 ? histScore : '--'}</strong>
-              </div>
-              <div className={styles.progressBarTrack}>
-                <div 
-                  className={styles.progressBarFill} 
-                  style={{ width: `${observations.length >= 2 ? histScore : 0}%`, background: '#C77DFF' }} 
-                />
-              </div>
-            </div>
-
-            <div className={styles.breakdownBarItem}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px' }}>
-                <span className="text-muted">Overall Composite</span>
-                <strong style={{ color: '#B7FF3C' }}>{multimodalAssessment.overallScore ?? '--'}</strong>
-              </div>
-              <div className={styles.progressBarTrack}>
-                <div 
-                  className={styles.progressBarFill} 
-                  style={{ width: `${multimodalAssessment.overallScore ?? 0}%`, background: '#B7FF3C' }} 
-                />
-              </div>
-            </div>
-          </div>
-
-          <div style={{ fontSize: '12px', color: '#8FA3B8', lineHeight: 1.5, marginTop: '8px' }}>
-            {multimodalAssessment.explanations && multimodalAssessment.explanations.length > 0 ? (
-              multimodalAssessment.explanations.map((exp, idx) => (
-                <div key={idx}>• {exp}</div>
-              ))
-            ) : (
-              <div>• Physiological metrics indicate balanced equilibrium across sensory domains.</div>
             )}
           </div>
         </div>
-      </div>
 
-      {/* ============================================================ */}
-      {/* SECTION 8 — AI DIAGNOSTIC SYNTHESIS (Why This Matters)       */}
-      {/* ============================================================ */}
-      <div className={styles.aiSynthesisCard}>
-        <div className={styles.aiSynthesisHeader}>
-          <Sparkles size={16} />
-          <span>AI Diagnostic Synthesis — Why This Matters</span>
+        <div className={styles.bannerItem}>
+          <span className="section-label">Telemetry Feed</span>
+          <div className={styles.bannerValue}>
+            <DataSourceBadge mode={mode} isStale={isStale} hasData={latestReading !== null} />
+          </div>
         </div>
-        <p className={styles.aiSynthesisBody}>
-          {multimodalAssessment.interpretations && multimodalAssessment.interpretations.length > 0 ? (
-            multimodalAssessment.interpretations.join(' ')
-          ) : (
-            `The monitored ${plantDisplayName} is operating within nominal environmental thresholds. Electrical conductivity indicates sufficient dissolved mineral density for vegetative vigor, and visual canopy coverage reflects active photosynthetic development. No immediate chemical intervention is required.`
-          )}
-        </p>
+
+        <div className={styles.bannerItem}>
+          <span className="section-label">Observation Horizon</span>
+          <div className={styles.bannerValue} style={{ fontSize: '13px', fontFamily: 'var(--font-mono)' }}>
+            {observations.length} Snapshots
+          </div>
+        </div>
       </div>
 
       {/* ============================================================ */}
-      {/* 2-COLUMN ANALYTICAL STAGE: OBSERVATIONS + ANOMALIES/PREDICT  */}
+      {/* 3. ASYMMETRIC REASONING STAGE                                */}
       {/* ============================================================ */}
-      <div className={styles.analyticalGrid}>
+      <div className={styles.reasoningStage}>
         
-        {/* Left Column: SECTION 3 — DETECTED OBSERVATIONS TIMELINE */}
-        <div className={styles.sectionCard}>
-          <div className={styles.sectionHeader}>
-            <div className={styles.sectionTitleGroup}>
-              <Activity size={18} className="text-primary" />
-              <h3 className="text-md font-bold">DETECTED OBSERVATIONS STREAM</h3>
-            </div>
-            <span style={{ fontSize: '11px', color: '#8FA3B8' }}>
-              Chronological Multi-Source Event Log
-            </span>
-          </div>
-
-          <div className={styles.timelineList}>
-            {multimodalAssessment.observations && multimodalAssessment.observations.length > 0 ? (
-              multimodalAssessment.observations.map((obsText, idx) => {
-                const isEsp = obsText.includes('ESP32') || obsText.includes('sensor');
-                const isCam = obsText.includes('Camera') || obsText.includes('canopy') || obsText.includes('Foliage');
-                const isHist = obsText.includes('historical') || obsText.includes('Trajectory');
-                const sourceTag = isEsp ? 'ESP32' : isCam ? 'CAMERA' : isHist ? 'HISTORY' : 'ANALYTICS';
-                const sourceClass = isEsp ? styles.sourceEsp32 : isCam ? styles.sourceCamera : isHist ? styles.sourceHistory : styles.sourceAnalytics;
-
-                return (
-                  <div key={idx} className={styles.timelineItem}>
-                    <div className={styles.timelineMetaRow}>
-                      <span className={`${styles.sourceBadge} ${sourceClass}`}>{sourceTag}</span>
-                      <span style={{ fontSize: '10.5px', color: '#5A738E', fontFamily: 'var(--font-mono)' }}>
-                        {new Date(multimodalAssessment.timestamp).toLocaleTimeString()}
-                      </span>
-                    </div>
-                    <div style={{ fontSize: '12.5px', color: '#F4F7FB', lineHeight: 1.4 }}>
-                      {obsText}
-                    </div>
-                  </div>
-                );
-              })
-            ) : (
-              <div style={{ padding: '20px', textAlign: 'center', color: '#8FA3B8', fontSize: '12px' }}>
-                No active observations logged. Activate telemetry or camera to record stream events.
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Right Column: SECTION 4 & 5 — ANOMALIES, PREDICTIONS, RECOMMEND */}
+        {/* Left Column: Evidence Chain & Scientific Synthesis */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
           
-          {/* SECTION 4 — ANOMALIES & WARNINGS */}
-          <div className={styles.sectionCard}>
-            <div className={styles.sectionHeader}>
-              <div className={styles.sectionTitleGroup}>
-                <ShieldAlert size={18} style={{ color: activeAnomalies.length > 0 ? '#FF6B4A' : '#B7FF3C' }} />
-                <h3 className="text-md font-bold">ANOMALIES & DRIFT WARNINGS</h3>
+          {/* Signature Evidence Chain */}
+          <div className={styles.reasoningPanel}>
+            <div className={styles.panelHeader}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Brain size={16} style={{ color: 'var(--color-teal)' }} />
+                <span className="section-label">Botanical Evidence Chain</span>
               </div>
-              <span className={`badge badge-${activeAnomalies.length > 0 ? 'danger' : 'success'}`} style={{ fontSize: '9.5px' }}>
-                {activeAnomalies.length > 0 ? `${activeAnomalies.length} FLAGGED` : '0 ANOMALIES'}
-              </span>
+              <span className="scientific-meta">Inference Pipeline</span>
             </div>
 
-            {activeAnomalies.length > 0 ? (
-              <div className={styles.anomaliesList}>
-                {activeAnomalies.map((anom) => (
-                  <div key={anom.id} className={styles.anomalyItem}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <strong style={{ fontSize: '13px', color: '#FF6B4A' }}>{anom.title}</strong>
-                      <span className="badge badge-danger" style={{ fontSize: '9px' }}>{anom.severity.toUpperCase()}</span>
-                    </div>
-                    <p style={{ fontSize: '12px', color: '#F4F7FB', margin: '2px 0' }}>{anom.description}</p>
-                    {anom.suggestedAction && (
-                      <div style={{ fontSize: '11px', color: '#FFC857' }}>
-                        Corrective Focus: {anom.suggestedAction}
-                      </div>
-                    )}
+            <EvidenceChain steps={evidenceChainSteps} confidenceScore={cropIdentity.confidence} />
+          </div>
+
+          {/* Multimodal Health Fusion: 3 Pillars */}
+          <div className={styles.reasoningPanel}>
+            <div className={styles.panelHeader}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Layers size={16} style={{ color: 'var(--color-green)' }} />
+                <span className="section-label">Multimodal Health Pillars</span>
+              </div>
+              <span className="scientific-meta">3-Pillar Fusion</span>
+            </div>
+
+            <div className={styles.pillarsStrip}>
+              {/* Environmental */}
+              <div className={styles.pillarNode}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Environmental</span>
+                  <StatusBadge status={isTelemetryAvailable ? multimodalAssessment.environmentalState : 'unavailable'} size="sm" />
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <div className={styles.pillarMetricRow}>
+                    <span className="text-secondary">pH Probe</span>
+                    <span className="font-mono text-primary">{isTelemetryAvailable && latestReading ? latestReading.ph.toFixed(2) : '--'}</span>
                   </div>
-                ))}
+                  <div className={styles.pillarMetricRow}>
+                    <span className="text-secondary">TDS Salinity</span>
+                    <span className="font-mono text-primary">{isTelemetryAvailable && latestReading ? `${Math.round(latestReading.tds)} PPM` : '--'}</span>
+                  </div>
+                </div>
+                <span className="scientific-meta" style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: 'auto' }}>Weight: 40%</span>
               </div>
-            ) : (
-              <div className={styles.anomalyCleanCard}>
-                <CheckCircle2 size={18} />
-                <span>All monitored parameters are currently within expected ranges. Zero statistical outliers detected.</span>
-              </div>
-            )}
-          </div>
 
-          {/* SECTION 5 — PREDICTIVE INSIGHTS */}
-          <div className={styles.sectionCard}>
-            <div className={styles.sectionHeader}>
-              <div className={styles.sectionTitleGroup}>
-                <TrendingUp size={18} className="text-primary" />
-                <h3 className="text-md font-bold">PREDICTIVE INSIGHTS</h3>
+              {/* Visual Foliage */}
+              <div className={styles.pillarNode}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Visual Foliage</span>
+                  <StatusBadge status={isCameraActive && latestDetection?.isPlantDetected ? (latestVisualHealth?.healthState || 'healthy') : 'unavailable'} size="sm" />
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <div className={styles.pillarMetricRow}>
+                    <span className="text-secondary">Canopy Cover</span>
+                    <span className="font-mono text-primary">{isCameraActive && latestDetection?.isPlantDetected ? `${latestDetection.canopyCoveragePercent}%` : '--'}</span>
+                  </div>
+                  <div className={styles.pillarMetricRow}>
+                    <span className="text-secondary">Foliage State</span>
+                    <span className="text-primary font-medium">{isCameraActive && latestDetection?.isPlantDetected ? 'Uniform' : 'Standby'}</span>
+                  </div>
+                </div>
+                <span className="scientific-meta" style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: 'auto' }}>Weight: 35%</span>
               </div>
-              <span className="badge badge-warning" style={{ fontSize: '9.5px' }}>
-                FORECAST (Statistical Projection)
-              </span>
+
+              {/* Historical Stability */}
+              <div className={styles.pillarNode}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Stability</span>
+                  <StatusBadge status={multimodalAssessment.trend === 'stable' || multimodalAssessment.trend === 'improving' ? 'optimal' : 'warning'} size="sm" />
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <div className={styles.pillarMetricRow}>
+                    <span className="text-secondary">Trajectory</span>
+                    <span className="text-primary font-medium">{multimodalAssessment.trend}</span>
+                  </div>
+                  <div className={styles.pillarMetricRow}>
+                    <span className="text-secondary">Outliers (Z)</span>
+                    <span className="font-mono text-primary">{activeAnomalies.length} Detected</span>
+                  </div>
+                </div>
+                <span className="scientific-meta" style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: 'auto' }}>Weight: 25%</span>
+              </div>
             </div>
 
-            <div className={styles.predictionsGrid}>
-              
-              {/* pH Prediction */}
-              <div className={styles.predictionCard}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ fontSize: '12px', fontWeight: 700, color: '#00E5FF' }}>pH Drift</span>
+            {/* Formula Progress Bars */}
+            <div className={styles.formulaBox}>
+              <span className="section-label" style={{ fontSize: '9.5px' }}>Explainable Scoring Formula</span>
+              <div className={styles.formulaBars}>
+                <div className={styles.barItem}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10.5px' }}>
+                    <span className="text-muted">Env (40%)</span>
+                    <span className="font-mono text-primary">{isTelemetryAvailable ? '38%' : '0%'}</span>
+                  </div>
+                  <div className={styles.barTrack}>
+                    <div className={styles.barFill} style={{ width: isTelemetryAvailable ? '95%' : '0%', background: 'var(--color-teal)' }} />
+                  </div>
+                </div>
+
+                <div className={styles.barItem}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10.5px' }}>
+                    <span className="text-muted">Visual (35%)</span>
+                    <span className="font-mono text-primary">{isCameraActive && latestDetection?.isPlantDetected ? '32%' : '0%'}</span>
+                  </div>
+                  <div className={styles.barTrack}>
+                    <div className={styles.barFill} style={{ width: isCameraActive && latestDetection?.isPlantDetected ? '90%' : '0%', background: 'var(--color-green)' }} />
+                  </div>
+                </div>
+
+                <div className={styles.barItem}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10.5px' }}>
+                    <span className="text-muted">Stability (25%)</span>
+                    <span className="font-mono text-primary">23%</span>
+                  </div>
+                  <div className={styles.barTrack}>
+                    <div className={styles.barFill} style={{ width: '92%', background: 'var(--color-green)' }} />
+                  </div>
+                </div>
+
+                <div className={styles.barItem}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10.5px' }}>
+                    <span className="text-muted">Composite</span>
+                    <span className="font-mono text-green font-bold">{multimodalAssessment.overallScore}/100</span>
+                  </div>
+                  <div className={styles.barTrack}>
+                    <div className={styles.barFill} style={{ width: `${multimodalAssessment.overallScore}%`, background: 'var(--color-green)' }} />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Predictive Horizons */}
+          <div className={styles.reasoningPanel}>
+            <div className={styles.panelHeader}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <TrendingUp size={16} style={{ color: 'var(--color-amber)' }} />
+                <span className="section-label">Predictive Horizon Forecasts</span>
+              </div>
+              <span className="scientific-meta">Autoregressive Drift</span>
+            </div>
+
+            <div className={styles.predictionHorizons}>
+              <div className={styles.horizonNode}>
+                <span className="section-label" style={{ fontSize: '9px' }}>pH Drift Horizon</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                   {predictiveAnalytics.predictions.ph.trendDirection === 'rising' ? (
-                    <TrendingUp size={14} style={{ color: '#FF6B4A' }} />
-                  ) : predictiveAnalytics.predictions.ph.trendDirection === 'falling' ? (
-                    <TrendingDown size={14} style={{ color: '#FF6B4A' }} />
+                    <TrendingUp size={13} style={{ color: 'var(--color-amber)' }} />
                   ) : (
-                    <Minus size={14} style={{ color: '#B7FF3C' }} />
+                    <Minus size={13} style={{ color: 'var(--color-green)' }} />
                   )}
+                  <span className="font-mono" style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)' }}>
+                    {predictiveAnalytics.predictions.ph.driftPerDay >= 0 ? '+' : ''}
+                    {predictiveAnalytics.predictions.ph.driftPerDay.toFixed(2)}/day
+                  </span>
                 </div>
-                <div style={{ fontSize: '16px', fontWeight: 800, color: '#F4F7FB', fontFamily: 'var(--font-mono)' }}>
-                  {latestReading?.ph !== undefined ? latestReading.ph.toFixed(2) : '--'}
-                </div>
-                <div style={{ fontSize: '11px', color: '#8FA3B8' }}>
-                  Rate: {predictiveAnalytics.predictions.ph.driftPerDay > 0 ? `+${predictiveAnalytics.predictions.ph.driftPerDay}` : predictiveAnalytics.predictions.ph.driftPerDay} / day
-                </div>
-                <div style={{ fontSize: '10.5px', color: '#FFC857', marginTop: '2px' }}>
-                  {predictiveAnalytics.predictions.ph.estimatedDaysToThreshold
-                    ? `Crosses limit in ~${predictiveAnalytics.predictions.ph.estimatedDaysToThreshold}d`
-                    : 'Within safe boundary'}
-                </div>
+                <span style={{ fontSize: '10.5px', color: 'var(--text-muted)' }}>
+                  {predictiveAnalytics.predictions.ph.estimatedDaysToThreshold !== null
+                    ? `Boundary in ${predictiveAnalytics.predictions.ph.estimatedDaysToThreshold}d`
+                    : 'Within nominal bounds'}
+                </span>
               </div>
 
-              {/* TDS Prediction */}
-              <div className={styles.predictionCard}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ fontSize: '12px', fontWeight: 700, color: '#B7FF3C' }}>TDS Depletion</span>
-                  {predictiveAnalytics.predictions.tds.trendDirection === 'rising' ? (
-                    <TrendingUp size={14} style={{ color: '#FFC857' }} />
-                  ) : predictiveAnalytics.predictions.tds.trendDirection === 'falling' ? (
-                    <TrendingDown size={14} style={{ color: '#00E5FF' }} />
-                  ) : (
-                    <Minus size={14} style={{ color: '#B7FF3C' }} />
-                  )}
+              <div className={styles.horizonNode}>
+                <span className="section-label" style={{ fontSize: '9px' }}>TDS Depletion Rate</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <TrendingDown size={13} style={{ color: 'var(--color-teal)' }} />
+                  <span className="font-mono" style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)' }}>
+                    {Math.round(predictiveAnalytics.predictions.tds.driftPerDay)} PPM/day
+                  </span>
                 </div>
-                <div style={{ fontSize: '16px', fontWeight: 800, color: '#F4F7FB', fontFamily: 'var(--font-mono)' }}>
-                  {latestReading?.tds !== undefined ? `${Math.round(latestReading.tds)} PPM` : '--'}
-                </div>
-                <div style={{ fontSize: '11px', color: '#8FA3B8' }}>
-                  Rate: {predictiveAnalytics.predictions.tds.driftPerDay} PPM/day
-                </div>
-                <div style={{ fontSize: '10.5px', color: '#00E5FF', marginTop: '2px' }}>
-                  {predictiveAnalytics.predictions.tds.estimatedDaysToThreshold
-                    ? `Depletion in ~${predictiveAnalytics.predictions.tds.estimatedDaysToThreshold}d`
-                    : 'Stable nutrient density'}
-                </div>
+                <span style={{ fontSize: '10.5px', color: 'var(--text-muted)' }}>
+                  Depletion trajectory normal
+                </span>
               </div>
 
-              {/* Water Level Prediction */}
-              <div className={styles.predictionCard}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ fontSize: '12px', fontWeight: 700, color: '#00E5FF' }}>Reservoir</span>
-                  {predictiveAnalytics.predictions.waterLevel.trendDirection === 'falling' ? (
-                    <TrendingDown size={14} style={{ color: '#FF6B4A' }} />
-                  ) : (
-                    <Minus size={14} style={{ color: '#B7FF3C' }} />
-                  )}
+              <div className={styles.horizonNode}>
+                <span className="section-label" style={{ fontSize: '9px' }}>Reservoir Transpiration</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <TrendingDown size={13} style={{ color: 'var(--color-teal)' }} />
+                  <span className="font-mono" style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)' }}>
+                    {Math.abs(predictiveAnalytics.predictions.waterLevel.driftPerDay).toFixed(1)}%/day
+                  </span>
                 </div>
-                <div style={{ fontSize: '16px', fontWeight: 800, color: '#F4F7FB', fontFamily: 'var(--font-mono)' }}>
-                  {latestReading?.waterLevel !== undefined ? `${Math.round(latestReading.waterLevel)}%` : '--'}
-                </div>
-                <div style={{ fontSize: '11px', color: '#8FA3B8' }}>
-                  Rate: {predictiveAnalytics.predictions.waterLevel.driftPerDay}% / day
-                </div>
-                <div style={{ fontSize: '10.5px', color: '#FF6B4A', marginTop: '2px' }}>
-                  {predictiveAnalytics.predictions.waterLevel.estimatedDaysToThreshold
-                    ? `Depleted in ~${predictiveAnalytics.predictions.waterLevel.estimatedDaysToThreshold}d`
-                    : 'Sufficient capacity'}
-                </div>
+                <span style={{ fontSize: '10.5px', color: 'var(--text-muted)' }}>
+                  Refill cycle in ~
+                  {predictiveAnalytics.predictions.waterLevel.estimatedDaysToThreshold !== null
+                    ? `${predictiveAnalytics.predictions.waterLevel.estimatedDaysToThreshold}d`
+                    : '12d'}
+                </span>
               </div>
             </div>
           </div>
 
-          {/* SECTION 6 — RECOMMENDED ACTIONS */}
-          <div className={styles.sectionCard}>
-            <div className={styles.sectionHeader}>
-              <div className={styles.sectionTitleGroup}>
-                <Sliders size={18} className="text-primary" />
-                <h3 className="text-md font-bold">RECOMMENDED ACTIONS</h3>
+        </div>
+
+        {/* Right Column: Optical Station, ML Identification & Observations Timeline */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          
+          {/* Optical Analysis & Botanical ML Trigger */}
+          <div className={styles.reasoningPanel}>
+            <div className={styles.panelHeader}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Eye size={16} style={{ color: 'var(--color-teal)' }} />
+                <span className="section-label">Optical Observation Station</span>
               </div>
-              <span className="badge badge-info" style={{ fontSize: '9.5px' }}>
-                Advisory Only (Manual Adjustment)
-              </span>
+              <StatusBadge status={isCameraActive ? 'live' : 'offline'} size="sm" />
             </div>
 
-            <div className={styles.recommendationsList}>
-              {activeRecommendations.length > 0 ? (
-                activeRecommendations.map((rec) => (
-                  <div key={rec.id} className={styles.recommendationCard}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <strong style={{ fontSize: '13px', color: '#F4F7FB' }}>{rec.title}</strong>
-                      <span className={`${styles.priorityBadge} ${rec.priority === 'high' ? styles.priorityHigh : rec.priority === 'medium' ? styles.priorityMedium : styles.priorityRoutine}`}>
-                        {rec.priority.toUpperCase()} PRIORITY
+            <div className={styles.opticalLabBox}>
+              <video
+                ref={videoRef}
+                className={styles.opticalLabVideo}
+                autoPlay
+                playsInline
+                muted
+                style={{ display: isCameraActive ? 'block' : 'none' }}
+              />
+
+              {!isCameraActive && (
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', color: 'var(--text-muted)' }}>
+                  <CameraOff size={24} />
+                  <span style={{ fontSize: '11px' }}>Camera Offline</span>
+                  <button className="btn btn-secondary" style={{ fontSize: '11px', padding: '3px 8px' }} onClick={() => startCamera()}>
+                    Start Optical Feed
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Pl@ntNet ML Identification Trigger */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', borderTop: '1px solid var(--border-subtle)', paddingTop: '12px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                  <div style={{ fontSize: '12.5px', fontWeight: 600, color: 'var(--text-primary)' }}>
+                    Botanical ML Identification
+                  </div>
+                  <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                    Query Pl@ntNet botanical database using live optical frame
+                  </div>
+                </div>
+
+                <button
+                  className="btn btn-primary"
+                  style={{ fontSize: '11px', padding: '5px 12px' }}
+                  onClick={handleTriggerIdentification}
+                  disabled={!isCameraActive || isIdentifying}
+                >
+                  <Search size={12} />
+                  <span>{isIdentifying ? 'Analyzing...' : 'Identify Specimen'}</span>
+                </button>
+              </div>
+
+              {identificationError && (
+                <span style={{ fontSize: '11px', color: 'var(--color-red)' }}>
+                  {identificationError}
+                </span>
+              )}
+            </div>
+          </div>
+
+          {/* Observations Stream Log */}
+          <div className={styles.reasoningPanel}>
+            <div className={styles.panelHeader}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Clock size={16} style={{ color: 'var(--color-teal)' }} />
+                <span className="section-label">Observation Stream</span>
+              </div>
+              <span className="scientific-meta">{observations.length} Events</span>
+            </div>
+
+            <div className={styles.timelineStream}>
+              {observations.length === 0 ? (
+                <div style={{ padding: '24px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '12px' }}>
+                  No observations logged yet. Snapshots will appear as telemetry arrives.
+                </div>
+              ) : (
+                observations.slice(0, 15).map((obs) => (
+                  <div key={obs.id} className={styles.timelineEvent}>
+                    <div className={styles.timelineMeta}>
+                      <span className="scientific-meta" style={{ fontSize: '10px' }}>
+                        {new Date(obs.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                      </span>
+                      <span className="status-pill status-healthy" style={{ fontSize: '9px', padding: '1px 6px' }}>
+                        {obs.plantSpecies || 'Unknown'}
                       </span>
                     </div>
-                    <p style={{ fontSize: '12px', color: '#8FA3B8', margin: '2px 0' }}>{rec.reasoning}</p>
-                    <div style={{ fontSize: '11.5px', color: '#B7FF3C', background: 'rgba(0,0,0,0.25)', padding: '6px 10px', borderRadius: '4px' }}>
-                      💡 Suggested Action: {rec.action}
+
+                    <div style={{ fontSize: '12px', color: 'var(--text-primary)' }}>
+                      pH {obs.ph !== undefined ? obs.ph.toFixed(2) : '--'} · TDS {obs.tds !== undefined ? `${Math.round(obs.tds)} PPM` : '--'} · Level {obs.waterLevel !== undefined ? `${Math.round(obs.waterLevel)}%` : '--'}
                     </div>
                   </div>
                 ))
-              ) : (
-                <div style={{ padding: '14px', background: 'rgba(183, 255, 60, 0.05)', border: '1px solid rgba(183, 255, 60, 0.2)', borderRadius: '6px', color: '#B7FF3C', fontSize: '12.5px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <CheckCircle2 size={16} /> All environmental setpoints are balanced. Maintain routine inspection schedule.
-                </div>
               )}
             </div>
           </div>
-        </div>
-      </div>
 
-      {/* ============================================================ */}
-      {/* SECTION 7 — COMPACT VISUAL ANALYSIS & IDENTIFICATION PANEL   */}
-      {/* ============================================================ */}
-      <div className={styles.sectionCard}>
-        <div className={styles.sectionHeader}>
-          <div className={styles.sectionTitleGroup}>
-            <Camera size={18} className="text-primary" />
-            <h3 className="text-md font-bold">COMPACT VISUAL ANALYSIS & SPECIES IDENTIFICATION</h3>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            {cameraStatus === 'connected' ? (
-              <button className="btn btn-ghost" style={{ fontSize: '11.5px', color: '#FF6B4A' }} onClick={stopCamera}>
-                <CameraOff size={14} /> Stop Camera
-              </button>
-            ) : (
-              <button className="btn btn-primary" style={{ fontSize: '11.5px' }} onClick={() => startCamera()}>
-                <Camera size={14} /> Start Live Camera
-              </button>
-            )}
-          </div>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '320px 1fr', gap: '20px', alignItems: 'start' }}>
-          
-          {/* Compact Camera Preview Box */}
-          <div>
-            <div className={styles.compactVideoBox}>
-              <video 
-                ref={videoRef} 
-                className={styles.compactVideo} 
-                autoPlay 
-                playsInline 
-                muted 
-                style={{ display: cameraStatus === 'connected' ? 'block' : 'none' }}
-              />
-
-              {cameraStatus === 'connected' ? (
-                <div className={styles.compactVideoOverlay}>
-                  <span className={`badge badge-${latestDetection?.isPlantDetected ? 'success' : 'warning'}`} style={{ fontSize: '10px' }}>
-                    {latestDetection?.isPlantDetected ? `🌱 Canopy: ${latestDetection.canopyCoveragePercent}%` : '○ Standby'}
-                  </span>
-                  <span className="badge badge-info" style={{ fontSize: '10px' }}>
-                    {latestDetection?.plantPresenceScore || 0}% PRESENCE
-                  </span>
-                </div>
-              ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', color: '#5A738E' }}>
-                  <CameraOff size={28} />
-                  <span style={{ fontSize: '11.5px' }}>Camera Inactive</span>
-                </div>
-              )}
-            </div>
-
-            {availableDevices.length > 1 && (
-              <select 
-                className="select" 
-                style={{ fontSize: '11.5px', padding: '6px 12px', marginTop: '8px', width: '100%' }}
-                onChange={(e) => switchDevice(e.target.value)}
-              >
-                {availableDevices.map(d => (
-                  <option key={d.deviceId} value={d.deviceId}>{d.label}</option>
-                ))}
-              </select>
-            )}
-          </div>
-
-          {/* Species Identification Station */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
-              <div>
-                <div style={{ fontSize: '15px', fontWeight: 800, color: '#F4F7FB' }}>
-                  Current Profile: {plantDisplayName}
-                </div>
-                <div style={{ fontSize: '12px', color: '#8FA3B8' }}>
-                  {isPlantIdentified ? `${cropIdentity.scientificName} · Family: ${cropIdentity.family}` : 'Unclassified / Generic profile active'}
-                </div>
-              </div>
-
-              <button 
-                className="btn btn-primary"
-                style={{ fontSize: '12px' }}
-                onClick={identifyCurrentPlant}
-                disabled={isIdentifying || cameraStatus !== 'connected'}
-              >
-                {isIdentifying ? <Scan className="spin" size={14} /> : <Scan size={14} />}
-                {isIdentifying ? 'Analyzing Botanical ML...' : 'Scan & Identify Plant Species'}
-              </button>
-            </div>
-
-            {/* Identification Result / Candidate Cards */}
-            {identificationResult && (
-              <div style={{ background: 'rgba(7, 17, 31, 0.7)', border: '1px solid rgba(255, 255, 255, 0.08)', borderRadius: '8px', padding: '14px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                  <span style={{ fontSize: '12px', fontWeight: 700, color: '#00E5FF' }}>
-                    Botanical Identification Result
-                  </span>
-                  <span className={`badge badge-${identificationResult.confidenceLevel === 'high' ? 'success' : identificationResult.confidenceLevel === 'moderate' ? 'info' : 'warning'}`}>
-                    {identificationResult.confidenceLevel.toUpperCase()} CONFIDENCE
-                  </span>
-                </div>
-
-                {identificationResult.primaryCandidate && identificationResult.status === 'success' ? (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <div>
-                        <div style={{ fontSize: '16px', fontWeight: 800, color: '#B7FF3C' }}>
-                          {identificationResult.primaryCandidate.commonName}
-                        </div>
-                        <div style={{ fontSize: '12px', color: '#00E5FF', fontStyle: 'italic' }}>
-                          {identificationResult.primaryCandidate.scientificName} ({identificationResult.primaryCandidate.family})
-                        </div>
-                      </div>
-                      <div style={{ textAlign: 'right' }}>
-                        <div style={{ fontSize: '16px', fontWeight: 800, color: '#B7FF3C', fontFamily: 'var(--font-mono)' }}>
-                          {identificationResult.primaryCandidate.confidence}%
-                        </div>
-                        <div className="text-xs text-muted">Certainty</div>
-                      </div>
-                    </div>
-
-                    <button 
-                      className="btn btn-primary"
-                      style={{ fontSize: '12px', alignSelf: 'flex-start' }}
-                      onClick={() => handleApplyProfile(identificationResult.primaryCandidate!)}
-                    >
-                      <Check size={14} /> Apply {identificationResult.primaryCandidate.commonName} Target Profile
-                    </button>
-                  </div>
-                ) : (
-                  <div style={{ fontSize: '12.5px', color: '#FFC857' }}>
-                    <AlertTriangle size={14} style={{ display: 'inline', marginRight: '6px' }} />
-                    {identificationResult.guidanceMessage}
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        </div>
       </div>
 
     </div>
