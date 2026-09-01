@@ -1,38 +1,64 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
+import Link from 'next/link';
 import { useAuth } from '@/lib/auth/AuthContext';
 import { useESP32Serial } from '@/lib/esp32/ESP32SerialContext';
+import { useCamera } from '@/lib/camera/CameraContext';
+import { usePlantIntelligence } from '@/lib/intelligence/PlantIntelligenceContext';
 import ESP32Connection from '@/components/esp32/ESP32Connection';
 import { SENSOR_THRESHOLDS } from '@/lib/sensorConfig';
 import { LiveLineChart } from '@/components/LiveLineChart';
-import { FlaskConical, Sparkles, Cpu, AlertTriangle, ShieldCheck } from 'lucide-react';
+import { StatusBadge } from '@/components/ui/StatusBadge';
+import { DataSourceBadge } from '@/components/ui/DataSourceBadge';
+import {
+  FlaskConical,
+  Sparkles,
+  Droplets,
+  Ruler,
+  Cpu,
+  Camera,
+  CameraOff,
+  Leaf,
+  ShieldCheck,
+  TrendingUp,
+  TrendingDown,
+  Minus,
+  ChevronRight,
+  Activity
+} from 'lucide-react';
 import styles from './page.module.css';
 
-// Fallback values if data streams are inactive
 const DEFAULT_READING = { ph: 6.0, tds: 1000, waterLevel: 85, distance: 23.5, timestamp: 0 };
 
 export default function Dashboard() {
   const { currentUser, userProfile } = useAuth();
   const { mode, isStale, latestReading, history } = useESP32Serial();
+  const { status: cameraStatus, videoRef, startCamera } = useCamera();
+  const {
+    cropIdentity,
+    latestDetection,
+    latestVisualHealth,
+    multimodalAssessment,
+    predictiveAnalytics
+  } = usePlantIntelligence();
+
   const [selectedMetric, setSelectedMetric] = useState<'ph' | 'tds' | 'waterLevel' | 'distance'>('ph');
 
   const reading = latestReading || DEFAULT_READING;
+  const isTelemetryAvailable = latestReading !== null && !isStale;
+  const isCameraActive = cameraStatus === 'connected';
 
-  // Personalize dashboard greeting based on local time and authenticated user identity
+  // Personalize greeting
   const greeting = useMemo(() => {
     const resolvedName = currentUser?.displayName || userProfile?.displayName;
     const now = new Date();
     const hour = now.getHours();
     
     let timeGreeting = 'Welcome back';
-    if (hour < 12) {
-      timeGreeting = 'Good morning';
-    } else if (hour < 17) {
-      timeGreeting = 'Good afternoon';
-    } else {
-      timeGreeting = 'Good evening';
-    }
+    if (hour < 12) timeGreeting = 'Good morning';
+    else if (hour < 17) timeGreeting = 'Good afternoon';
+    else timeGreeting = 'Good evening';
 
     if (resolvedName && resolvedName !== 'null' && resolvedName !== 'undefined') {
       return `${timeGreeting}, ${resolvedName} 👋`;
@@ -40,7 +66,7 @@ export default function Dashboard() {
     return `${timeGreeting} 👋`;
   }, [currentUser?.displayName, userProfile?.displayName]);
 
-  // Format historical chart timestamps
+  // Chart timestamps
   const chartLabels = useMemo(() => {
     return history.map((item) =>
       new Date(item.timestamp).toLocaleTimeString([], {
@@ -51,7 +77,7 @@ export default function Dashboard() {
     );
   }, [history]);
 
-  // Determine current active metric configuration
+  // Active chart metric configuration
   const chartConfig = useMemo(() => {
     const dataMap = {
       ph: history.map((item) => item.ph),
@@ -63,29 +89,29 @@ export default function Dashboard() {
     const configs = {
       ph: {
         data: dataMap.ph,
-        color: '#00E5FF',
-        title: 'pH Level Telemetry (1m Window)',
+        color: '#20B8B0',
+        title: 'pH Acidity Telemetry (Real-time)',
         min: 4.0,
         max: 8.0,
       },
       tds: {
         data: dataMap.tds,
-        color: '#B7FF3C',
-        title: 'TDS Nutrient Telemetry (1m Window)',
+        color: '#39B86F',
+        title: 'TDS Mineral Density Telemetry (Real-time)',
         min: 600,
         max: 1400,
       },
       waterLevel: {
         data: dataMap.waterLevel,
-        color: '#00E5FF',
-        title: 'Reservoir Percent Telemetry (1m Window)',
+        color: '#20B8B0',
+        title: 'Reservoir Capacity Percentage (Real-time)',
         min: 0,
         max: 100,
       },
       distance: {
         data: dataMap.distance,
-        color: '#FFC857',
-        title: 'Ultrasonic Distance Telemetry (1m Window)',
+        color: '#F2B84B',
+        title: 'Ultrasonic Sensor Distance (Real-time)',
         min: 0,
         max: 60,
       },
@@ -94,7 +120,7 @@ export default function Dashboard() {
     return configs[selectedMetric];
   }, [history, selectedMetric]);
 
-  // Compute seconds elapsed since the last telemetry packet
+  // Seconds elapsed since last packet
   const [secondsAgo, setSecondsAgo] = useState<number | null>(null);
   useEffect(() => {
     const updateTime = () => {
@@ -109,328 +135,373 @@ export default function Dashboard() {
     return () => clearInterval(interval);
   }, [reading.timestamp]);
 
-  // Define sensor card statuses dynamically based on thresholds
-  const phCardStatus = useMemo(() => {
-    if (reading.ph < SENSOR_THRESHOLDS.ph.min || reading.ph > SENSOR_THRESHOLDS.ph.max) return 'warning';
-    return 'optimal';
-  }, [reading.ph]);
+  // Status determinations
+  const phStatus = reading.ph < SENSOR_THRESHOLDS.ph.min || reading.ph > SENSOR_THRESHOLDS.ph.max ? 'warning' : 'optimal';
+  const tdsStatus = reading.tds < SENSOR_THRESHOLDS.tds.min || reading.tds > SENSOR_THRESHOLDS.tds.max ? 'warning' : 'optimal';
+  const waterStatus = reading.waterLevel < SENSOR_THRESHOLDS.waterLevel.critical ? 'critical' : reading.waterLevel < SENSOR_THRESHOLDS.waterLevel.warning ? 'warning' : 'optimal';
 
-  const tdsCardStatus = useMemo(() => {
-    if (reading.tds < SENSOR_THRESHOLDS.tds.min || reading.tds > SENSOR_THRESHOLDS.tds.max) return 'warning';
-    return 'optimal';
-  }, [reading.tds]);
-
-  const waterCardStatus = useMemo(() => {
-    if (reading.waterLevel < SENSOR_THRESHOLDS.waterLevel.critical) return 'danger';
-    if (reading.waterLevel < SENSOR_THRESHOLDS.waterLevel.warning) return 'warning';
-    return 'optimal';
-  }, [reading.waterLevel]);
+  const isPlantIdentified = cropIdentity.cropKey !== 'unknown_plant' && cropIdentity.commonName !== 'Unknown Plant';
+  const plantDisplayName = isPlantIdentified ? cropIdentity.commonName : 'Unknown Plant';
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
+    <div className={styles.dashboardContainer}>
       
-      {/* 1. Personalized Header */}
-      <div>
-        <h1 className="text-3xl font-bold text-primary mb-sm">{greeting}</h1>
-        <p className="text-secondary">Your hydroponic system is being monitored in real time.</p>
-        
-        {/* Status Line */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '12px', fontSize: '13px' }}>
-          <span style={{ 
-            display: 'inline-block',
-            width: '8px', 
-            height: '8px', 
-            borderRadius: '50%', 
-            background: mode === 'real' && !isStale ? '#B7FF3C' : '#FFC857',
-            boxShadow: `0 0 8px ${mode === 'real' && !isStale ? '#B7FF3C' : '#FFC857'}`
-          }} />
-          <span className="font-mono text-secondary">
-            {mode === 'real' ? 'ESP32 ● LIVE' : 'DEMO MODE (Simulated)'}
-          </span>
+      {/* 1. Page Header */}
+      <div className={styles.dashboardHeader}>
+        <div>
+          <h1 className="text-3xl font-bold text-primary mb-xs">{greeting}</h1>
+          <p className="text-secondary">Operational telemetry and real-time plant monitoring.</p>
+        </div>
+
+        <div className={styles.statusPill}>
+          <DataSourceBadge mode={mode} isStale={isStale} hasData={latestReading !== null} />
           {secondsAgo !== null && (
-            <span className="text-muted">· Last telemetry: {secondsAgo}s ago</span>
+            <span className="text-muted font-mono" style={{ fontSize: '11px' }}>
+              · {secondsAgo}s ago
+            </span>
           )}
         </div>
       </div>
 
-      {/* 2. Primary Sensor Focus Grid */}
-      <div className={styles.sensorGrid}>
+      {/* ============================================================ */}
+      {/* SECTION 1 — PLANT STATUS HERO BANNER                         */}
+      {/* ============================================================ */}
+      <div className={styles.plantStatusHero}>
+        <div className={styles.heroItem}>
+          <span className={styles.heroLabel}>Monitored Plant</span>
+          <div className={styles.heroValue}>
+            <Leaf size={18} style={{ color: 'var(--color-green)' }} />
+            <span>{plantDisplayName}</span>
+          </div>
+          <span className={styles.heroSub}>
+            {isPlantIdentified ? cropIdentity.scientificName || 'Botanical Species' : 'Identification pending in Intelligence'}
+          </span>
+        </div>
+
+        <div className={styles.heroItem}>
+          <span className={styles.heroLabel}>Overall Condition</span>
+          <div className={styles.heroValue}>
+            {isTelemetryAvailable || isCameraActive ? (
+              <StatusBadge status={multimodalAssessment.overallHealthState} label={multimodalAssessment.overallHealthState.toUpperCase()} />
+            ) : (
+              <StatusBadge status="unavailable" label="UNAVAILABLE" />
+            )}
+          </div>
+          <span className={styles.heroSub}>
+            {isTelemetryAvailable ? `Composite score: ${multimodalAssessment.overallScore}/100` : 'Telemetry required'}
+          </span>
+        </div>
+
+        <div className={styles.heroItem}>
+          <span className={styles.heroLabel}>Environmental State</span>
+          <div className={styles.heroValue}>
+            {isTelemetryAvailable ? (
+              <StatusBadge status={multimodalAssessment.environmentalState} label={multimodalAssessment.environmentalState.toUpperCase()} />
+            ) : (
+              <StatusBadge status="unavailable" label="UNAVAILABLE" />
+            )}
+          </div>
+          <span className={styles.heroSub}>
+            {isTelemetryAvailable ? 'Sensors within thresholds' : 'ESP32 disconnected'}
+          </span>
+        </div>
+
+        <div className={styles.heroItem}>
+          <span className={styles.heroLabel}>Visual Health</span>
+          <div className={styles.heroValue}>
+            {isCameraActive && latestDetection?.isPlantDetected ? (
+              <StatusBadge status={latestVisualHealth?.healthState === 'healthy' ? 'healthy' : 'attention'} label={latestVisualHealth?.healthState.toUpperCase() || 'HEALTHY'} />
+            ) : isCameraActive ? (
+              <StatusBadge status="attention" label="STANDBY" />
+            ) : (
+              <StatusBadge status="unavailable" label="UNAVAILABLE" />
+            )}
+          </div>
+          <span className={styles.heroSub}>
+            {isCameraActive ? (latestDetection?.isPlantDetected ? `Canopy: ${latestDetection.canopyCoveragePercent}%` : 'Searching for foliage...') : 'Camera offline'}
+          </span>
+        </div>
+      </div>
+
+      {/* ============================================================ */}
+      {/* SECTION 2 — ENVIRONMENTAL CONDITIONS (Grouped Tiles)         */}
+      {/* ============================================================ */}
+      <div className={styles.conditionsGrid}>
         
-        {/* pH Card */}
-        <div className="glass-card" style={{ padding: '24px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-          <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
-              <span className="text-sm font-bold text-secondary uppercase">pH Level</span>
-              <FlaskConical size={18} style={{ color: '#00E5FF' }} />
-            </div>
-            <div className="text-3xl font-bold text-primary font-mono" style={{ margin: '8px 0' }}>
-              {reading.ph.toFixed(2)}
-            </div>
+        {/* pH Tile */}
+        <div className={styles.metricTile}>
+          <div className={styles.metricTileHeader}>
+            <span className="text-xs font-bold uppercase text-secondary">Acidity (pH)</span>
+            <FlaskConical size={16} style={{ color: 'var(--color-teal)' }} />
           </div>
-          
+
           <div>
-            {/* pH Semicircular scale visualizer */}
-            <div style={{ width: '100%', marginTop: '16px', marginBottom: '8px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', color: '#5A738E', marginBottom: '4px' }}>
-                <span>5.5</span>
-                <span>6.5</span>
-              </div>
-              <div style={{ position: 'relative', width: '100%', height: '4px', background: 'rgba(255, 255, 255, 0.08)', borderRadius: '2px' }}>
-                {/* Target optimal window */}
-                <div style={{
-                  position: 'absolute',
-                  left: '30%',
-                  right: '30%',
-                  top: 0,
-                  bottom: 0,
-                  background: 'rgba(183, 255, 60, 0.15)',
-                  borderRadius: '2px'
-                }} />
-                {/* Float marker dot */}
-                <div style={{
-                  position: 'absolute',
-                  left: `${Math.max(0, Math.min(100, ((reading.ph - 4) / 5) * 100))}%`,
-                  top: '50%',
-                  transform: 'translate(-50%, -50%)',
-                  width: '9px',
-                  height: '9px',
-                  borderRadius: '50%',
-                  background: phCardStatus === 'optimal' ? '#B7FF3C' : '#FFC857',
-                  boxShadow: `0 0 8px ${phCardStatus === 'optimal' ? '#B7FF3C' : '#FFC857'}`,
-                  transition: 'left 0.4s cubic-bezier(0.4, 0, 0.2, 1)'
-                }} />
-              </div>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '12px' }}>
-              <span className={`badge badge-${phCardStatus === 'optimal' ? 'success' : 'warning'}`}>
-                ● {phCardStatus.toUpperCase()}
+            <div className={styles.metricValueRow}>
+              <span className={styles.metricValue}>
+                {isTelemetryAvailable ? reading.ph.toFixed(2) : '--'}
               </span>
-              <span className="text-xs text-muted">LIVE SENSOR</span>
+              <span className={styles.metricUnit}>pH</span>
+            </div>
+            <StatusBadge status={isTelemetryAvailable ? phStatus : 'unavailable'} size="sm" />
+          </div>
+
+          <div className={styles.metricTileFooter}>
+            <span className="text-muted">Target: 5.5 - 6.5</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--text-secondary)' }}>
+              {predictiveAnalytics.predictions.ph.trendDirection === 'rising' ? (
+                <TrendingUp size={12} style={{ color: 'var(--color-warning)' }} />
+              ) : predictiveAnalytics.predictions.ph.trendDirection === 'falling' ? (
+                <TrendingDown size={12} style={{ color: 'var(--color-warning)' }} />
+              ) : (
+                <Minus size={12} style={{ color: 'var(--color-green)' }} />
+              )}
+              <span style={{ fontSize: '10.5px' }}>{predictiveAnalytics.predictions.ph.trendDirection}</span>
             </div>
           </div>
         </div>
 
-        {/* TDS Card */}
-        <div className="glass-card" style={{ padding: '24px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-          <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
-              <span className="text-sm font-bold text-secondary uppercase">Nutrients (TDS)</span>
-              <Sparkles size={18} style={{ color: '#B7FF3C' }} />
-            </div>
-            <div className="text-3xl font-bold text-primary font-mono" style={{ margin: '8px 0' }}>
-              {Math.round(reading.tds)} <span style={{ fontSize: '14px', color: 'var(--text-secondary)' }}>PPM</span>
-            </div>
+        {/* TDS Tile */}
+        <div className={styles.metricTile}>
+          <div className={styles.metricTileHeader}>
+            <span className="text-xs font-bold uppercase text-secondary">Nutrients (TDS)</span>
+            <Sparkles size={16} style={{ color: 'var(--color-green)' }} />
           </div>
-          
+
           <div>
-            {/* TDS Linear indicator bar */}
-            <div style={{ width: '100%', marginTop: '16px', marginBottom: '8px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', color: '#5A738E', marginBottom: '6px' }}>
-                <span>100 PPM</span>
-                <span>2500 PPM</span>
-              </div>
-              <div style={{ position: 'relative', width: '100%', height: '6px', background: 'rgba(7, 17, 31, 0.4)', borderRadius: '3px', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.05)' }}>
-                <div style={{
-                  width: `${Math.max(0, Math.min(100, ((reading.tds - 100) / 2400) * 100))}%`,
-                  height: '100%',
-                  background: 'linear-gradient(90deg, #00E5FF 0%, #B7FF3C 100%)',
-                  transition: 'width 0.4s ease-out'
-                }} />
-              </div>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '12px' }}>
-              <span className={`badge badge-${tdsCardStatus === 'optimal' ? 'success' : 'warning'}`}>
-                ● {tdsCardStatus.toUpperCase()}
+            <div className={styles.metricValueRow}>
+              <span className={styles.metricValue}>
+                {isTelemetryAvailable ? Math.round(reading.tds) : '--'}
               </span>
-              <span className="text-xs text-muted">LIVE SENSOR</span>
+              <span className={styles.metricUnit}>PPM</span>
+            </div>
+            <StatusBadge status={isTelemetryAvailable ? tdsStatus : 'unavailable'} size="sm" />
+          </div>
+
+          <div className={styles.metricTileFooter}>
+            <span className="text-muted">Target: 800 - 1200 PPM</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--text-secondary)' }}>
+              {predictiveAnalytics.predictions.tds.trendDirection === 'rising' ? (
+                <TrendingUp size={12} style={{ color: 'var(--color-green)' }} />
+              ) : predictiveAnalytics.predictions.tds.trendDirection === 'falling' ? (
+                <TrendingDown size={12} style={{ color: 'var(--color-teal)' }} />
+              ) : (
+                <Minus size={12} style={{ color: 'var(--color-green)' }} />
+              )}
+              <span style={{ fontSize: '10.5px' }}>{predictiveAnalytics.predictions.tds.trendDirection}</span>
             </div>
           </div>
         </div>
 
-        {/* Double-Spanned Reservoir Level & Distance Visualization */}
-        <div className={`glass-card ${styles.reservoirCard}`} style={{ padding: '24px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-            <span className="text-sm font-bold text-secondary uppercase">Water Reservoir Status</span>
-            <span className={`badge badge-${waterCardStatus === 'optimal' ? 'success' : waterCardStatus === 'warning' ? 'warning' : 'danger'}`}>
-              ● LEVEL {waterCardStatus.toUpperCase()}
-            </span>
+        {/* Water Level Tile */}
+        <div className={styles.metricTile}>
+          <div className={styles.metricTileHeader}>
+            <span className="text-xs font-bold uppercase text-secondary">Reservoir Level</span>
+            <Droplets size={16} style={{ color: 'var(--color-teal)' }} />
           </div>
 
-          <div className={styles.reservoirFlex}>
-            {/* industrial reservoir tank visualizer */}
-            <div style={{ 
-              position: 'relative', 
-              width: '90px', 
-              height: '130px', 
-              background: '#07111F', 
-              border: '2px solid rgba(255, 255, 255, 0.08)', 
-              borderRadius: '6px 6px 10px 10px',
-              overflow: 'hidden',
-              flexShrink: 0
-            }}>
-              {/* Liquid Level fill */}
-              <div style={{
-                position: 'absolute',
-                bottom: 0,
-                left: 0,
-                right: 0,
-                height: `${Math.max(0, Math.min(100, reading.waterLevel))}%`,
-                background: 'linear-gradient(180deg, rgba(0, 229, 255, 0.35) 0%, rgba(0, 150, 255, 0.08) 100%)',
-                transition: 'height 0.8s cubic-bezier(0.4, 0, 0.2, 1)'
-              }}>
-                {/* Wave effect layer overlay */}
-                <div className={styles.waveEffect} style={{
-                  width: '200%',
-                  height: '10px',
-                  background: 'rgba(0, 229, 255, 0.12)',
-                  position: 'absolute',
-                  top: '-4px',
-                  left: 0
-                }} />
-              </div>
-              
-              {/* Value inside tank */}
-              <div className="font-mono" style={{
-                position: 'absolute',
-                top: '50%',
-                left: '50%',
-                transform: 'translate(-50%, -50%)',
-                fontSize: '17px',
-                fontWeight: 800,
-                color: '#F4F7FB',
-                textShadow: '0 1px 3px rgba(0,0,0,0.8)',
-                zIndex: 10
-              }}>
-                {Math.round(reading.waterLevel)}%
-              </div>
+          <div>
+            <div className={styles.metricValueRow}>
+              <span className={styles.metricValue}>
+                {isTelemetryAvailable ? Math.round(reading.waterLevel) : '--'}
+              </span>
+              <span className={styles.metricUnit}>% capacity</span>
             </div>
+            <StatusBadge status={isTelemetryAvailable ? waterStatus : 'unavailable'} size="sm" />
+          </div>
 
-            {/* Hardware Metrics Column */}
-            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              <div className="grid-2" style={{ gap: '16px' }}>
-                <div>
-                  <div className="text-xs text-secondary uppercase">Water Level</div>
-                  <div className="text-2xl font-bold text-primary font-mono">{Math.round(reading.waterLevel)}%</div>
-                  <div className="text-xs text-muted" style={{ marginTop: '2px' }}>Capacity Percentage</div>
-                </div>
-                <div>
-                  <div className="text-xs text-secondary uppercase">Ultrasonic Distance</div>
-                  <div className="text-2xl font-bold text-accent font-mono">{reading.distance.toFixed(1)} <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>cm</span></div>
-                  <div className="text-xs text-muted" style={{ marginTop: '2px' }}>Sensor Offset Value</div>
-                </div>
-              </div>
-              <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '12px', fontSize: '11px', color: 'var(--text-secondary)' }}>
-                Target: level &gt; {SENSOR_THRESHOLDS.waterLevel.warning}% · sensor calibration offset active.
-              </div>
+          <div className={styles.metricTileFooter}>
+            <span className="text-muted">Critical: &lt; 20%</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--text-secondary)' }}>
+              {predictiveAnalytics.predictions.waterLevel.trendDirection === 'falling' ? (
+                <TrendingDown size={12} style={{ color: 'var(--color-danger)' }} />
+              ) : (
+                <Minus size={12} style={{ color: 'var(--color-green)' }} />
+              )}
+              <span style={{ fontSize: '10.5px' }}>{predictiveAnalytics.predictions.waterLevel.trendDirection}</span>
             </div>
+          </div>
+        </div>
+
+        {/* Ultrasonic Distance Tile */}
+        <div className={styles.metricTile}>
+          <div className={styles.metricTileHeader}>
+            <span className="text-xs font-bold uppercase text-secondary">Ultrasonic Distance</span>
+            <Ruler size={16} style={{ color: 'var(--color-warning)' }} />
+          </div>
+
+          <div>
+            <div className={styles.metricValueRow}>
+              <span className={styles.metricValue}>
+                {isTelemetryAvailable ? reading.distance.toFixed(1) : '--'}
+              </span>
+              <span className={styles.metricUnit}>cm</span>
+            </div>
+            <StatusBadge status={isTelemetryAvailable ? 'optimal' : 'unavailable'} size="sm" label={isTelemetryAvailable ? 'CALIBRATED' : 'OFFLINE'} />
+          </div>
+
+          <div className={styles.metricTileFooter}>
+            <span className="text-muted">Sensor Air Gap</span>
+            <span style={{ fontSize: '10.5px', color: 'var(--text-muted)' }}>Raw Telemetry</span>
           </div>
         </div>
 
       </div>
 
-      {/* 3. Hardware connection controls & Diagnostics layout */}
-      <div className={styles.dashboardLayout}>
+      {/* ============================================================ */}
+      {/* SECTION 3 — 2-COLUMN OPERATIONAL STAGE                       */}
+      {/* ============================================================ */}
+      <div className={styles.stageGrid}>
         
-        {/* Left Column: Connection Status & System Diagnostics */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+        {/* Left Column: Live Instrumentation Chart + ESP32 Controls */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
           
-          {/* Connection controls wrapper */}
-          <ESP32Connection />
+          {/* Live Line Chart Card */}
+          <div className={styles.sectionCard}>
+            <div className={styles.sectionHeader}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Activity size={16} style={{ color: 'var(--color-teal)' }} />
+                <h3 className="text-sm font-bold uppercase text-secondary">Live Instrumentation Stream</h3>
+              </div>
 
-          {/* System Diagnostics Panel */}
-          <div className="glass-card" style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <Cpu size={18} className="text-primary" />
-              <h3 className="text-sm font-bold text-secondary uppercase tracking-wide">System Diagnostics</h3>
+              {/* Metric Select Tabs */}
+              <div className={styles.tabsContainer}>
+                <button
+                  className={`${styles.tabBtn} ${selectedMetric === 'ph' ? styles.tabBtnActive : ''}`}
+                  onClick={() => setSelectedMetric('ph')}
+                >
+                  pH
+                </button>
+                <button
+                  className={`${styles.tabBtn} ${selectedMetric === 'tds' ? styles.tabBtnActive : ''}`}
+                  onClick={() => setSelectedMetric('tds')}
+                >
+                  TDS
+                </button>
+                <button
+                  className={`${styles.tabBtn} ${selectedMetric === 'waterLevel' ? styles.tabBtnActive : ''}`}
+                  onClick={() => setSelectedMetric('waterLevel')}
+                >
+                  Level
+                </button>
+                <button
+                  className={`${styles.tabBtn} ${selectedMetric === 'distance' ? styles.tabBtnActive : ''}`}
+                  onClick={() => setSelectedMetric('distance')}
+                >
+                  Distance
+                </button>
+              </div>
             </div>
-            
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.04)', paddingBottom: '8px' }}>
-                <span className="text-sm text-secondary">ESP32 Controller</span>
-                <span style={{ fontSize: '13px', fontWeight: 700, color: mode === 'real' ? '#B7FF3C' : '#FFC857', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <ShieldCheck size={14} /> {mode === 'real' ? 'ONLINE' : 'SIMULATOR'}
-                </span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.04)', paddingBottom: '8px' }}>
-                <span className="text-sm text-secondary">pH Sensor Channel</span>
-                <span style={{ fontSize: '13px', fontWeight: 700, color: '#B7FF3C', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <ShieldCheck size={14} /> ACTIVE
-                </span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.04)', paddingBottom: '8px' }}>
-                <span className="text-sm text-secondary">TDS Nutrient Channel</span>
-                <span style={{ fontSize: '13px', fontWeight: 700, color: '#B7FF3C', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <ShieldCheck size={14} /> ACTIVE
-                </span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.04)', paddingBottom: '8px' }}>
-                <span className="text-sm text-secondary">Ultrasonic Transceiver</span>
-                <span style={{ fontSize: '13px', fontWeight: 700, color: '#B7FF3C', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <ShieldCheck size={14} /> ACTIVE
-                </span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span className="text-sm text-secondary">Telemetry Data Stream</span>
-                <span style={{ fontSize: '13px', fontWeight: 700, color: isStale ? '#FF6B4A' : '#B7FF3C', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  {isStale ? <AlertTriangle size={14} /> : <ShieldCheck size={14} />} {isStale ? 'STALE' : 'STABLE'}
-                </span>
-              </div>
+
+            <div style={{ padding: '6px 0' }}>
+              {history.length === 0 ? (
+                <div style={{ height: '220px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', fontSize: '13px' }}>
+                  Waiting for serial telemetry packets...
+                </div>
+              ) : (
+                <LiveLineChart
+                  data={chartConfig.data}
+                  labels={chartLabels}
+                  title={chartConfig.title}
+                  color={chartConfig.color}
+                  min={chartConfig.min}
+                  max={chartConfig.max}
+                />
+              )}
             </div>
           </div>
+
+          {/* Web Serial Connection Bar */}
+          <ESP32Connection />
 
         </div>
 
-        {/* Right Column: Live Telemetry Section (Charts) */}
-        <div className="glass-card" style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
-            <h3 className="text-sm font-bold text-secondary uppercase tracking-wide">Live Instrumentation Chart</h3>
-            
-            {/* Metric select tabs controls */}
-            <div className={styles.tabsContainer}>
-              <button 
-                className={`${styles.tabBtn} ${selectedMetric === 'ph' ? styles.tabBtnActive : ''}`}
-                onClick={() => setSelectedMetric('ph')}
-              >
-                pH
-              </button>
-              <button 
-                className={`${styles.tabBtn} ${selectedMetric === 'tds' ? styles.tabBtnActive : ''}`}
-                onClick={() => setSelectedMetric('tds')}
-              >
-                TDS
-              </button>
-              <button 
-                className={`${styles.tabBtn} ${selectedMetric === 'waterLevel' ? styles.tabBtnActive : ''}`}
-                onClick={() => setSelectedMetric('waterLevel')}
-              >
-                Level
-              </button>
-              <button 
-                className={`${styles.tabBtn} ${selectedMetric === 'distance' ? styles.tabBtnActive : ''}`}
-                onClick={() => setSelectedMetric('distance')}
-              >
-                Distance
-              </button>
+        {/* Right Column: Plant Vision Preview + Hardware Diagnostics */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          
+          {/* Plant Vision Card */}
+          <div className={styles.sectionCard}>
+            <div className={styles.sectionHeader}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Camera size={16} style={{ color: 'var(--color-teal)' }} />
+                <h3 className="text-sm font-bold uppercase text-secondary">Plant Vision Status</h3>
+              </div>
+              <Link href="/dashboard/intelligence" className="text-xs text-teal" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <span>Open Intelligence</span>
+                <ChevronRight size={12} />
+              </Link>
+            </div>
+
+            <div className={styles.compactCamBox}>
+              <video
+                ref={videoRef}
+                className={styles.compactCamVideo}
+                autoPlay
+                playsInline
+                muted
+                style={{ display: isCameraActive ? 'block' : 'none' }}
+              />
+
+              {isCameraActive ? (
+                <div className={styles.camOverlay}>
+                  <StatusBadge
+                    status={latestDetection?.isPlantDetected ? 'healthy' : 'attention'}
+                    label={latestDetection?.isPlantDetected ? `🌱 Canopy: ${latestDetection.canopyCoveragePercent}%` : 'Standby'}
+                    size="sm"
+                  />
+                  <span className="badge badge-teal" style={{ fontSize: '9.5px' }}>
+                    {latestDetection?.plantPresenceScore || 0}% PRESENCE
+                  </span>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', color: 'var(--text-muted)' }}>
+                  <CameraOff size={28} />
+                  <span style={{ fontSize: '11.5px' }}>Camera Inactive</span>
+                  <button className="btn btn-secondary" style={{ fontSize: '11.5px', padding: '4px 10px' }} onClick={() => startCamera()}>
+                    Activate Camera
+                  </button>
+                </div>
+              )}
             </div>
           </div>
 
-          {/* Chart Display area */}
-          <div style={{ padding: '8px 0' }}>
-            {history.length === 0 ? (
-              <div style={{ height: '240px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>
-                Waiting for incoming serial telemetry packets...
+          {/* Hardware & Sensor Integrity */}
+          <div className={styles.sectionCard}>
+            <div className={styles.sectionHeader}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Cpu size={16} style={{ color: 'var(--color-teal)' }} />
+                <h3 className="text-sm font-bold uppercase text-secondary">Sensor Channel Integrity</h3>
               </div>
-            ) : (
-              <LiveLineChart 
-                data={chartConfig.data} 
-                labels={chartLabels} 
-                title={chartConfig.title} 
-                color={chartConfig.color} 
-                min={chartConfig.min} 
-                max={chartConfig.max} 
-              />
-            )}
+              <StatusBadge status={isTelemetryAvailable ? 'optimal' : 'unavailable'} label={isTelemetryAvailable ? 'CHANNELS ACTIVE' : 'OFFLINE'} size="sm" />
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '12.5px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '6px' }}>
+                <span className="text-secondary">Analog pH Probe</span>
+                <span style={{ color: isTelemetryAvailable ? 'var(--color-green)' : 'var(--text-muted)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <ShieldCheck size={13} /> {isTelemetryAvailable ? 'Calibrated (A0)' : 'Inactive'}
+                </span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '6px' }}>
+                <span className="text-secondary">TDS Electrical Conductivity</span>
+                <span style={{ color: isTelemetryAvailable ? 'var(--color-green)' : 'var(--text-muted)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <ShieldCheck size={13} /> {isTelemetryAvailable ? 'Calibrated (A1)' : 'Inactive'}
+                </span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '6px' }}>
+                <span className="text-secondary">HC-SR04 Ultrasonic Sensor</span>
+                <span style={{ color: isTelemetryAvailable ? 'var(--color-green)' : 'var(--text-muted)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <ShieldCheck size={13} /> {isTelemetryAvailable ? 'Echo/Trig (GPIO)' : 'Inactive'}
+                </span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span className="text-secondary">Peristaltic Dosing Actuators</span>
+                <span style={{ color: 'var(--text-muted)', fontWeight: 600 }}>
+                  Not installed (Manual)
+                </span>
+              </div>
+            </div>
           </div>
+
         </div>
 
       </div>

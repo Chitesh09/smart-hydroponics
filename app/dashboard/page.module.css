@@ -1,112 +1,240 @@
-@keyframes waveMove {
-  0% { transform: translateX(0); }
-  50% { transform: translateX(-25%); }
-  100% { transform: translateX(0); }
-}
+/* HydroSmart Operational Dashboard Styles */
 
-.waveEffect {
-  animation: waveMove 3s ease-in-out infinite;
-}
-
-@keyframes pulseGlow {
-  0% { box-shadow: 0 0 0 0 rgba(0, 229, 255, 0.4); }
-  70% { box-shadow: 0 0 0 10px rgba(0, 229, 255, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(0, 229, 255, 0); }
-}
-
-.telemetryPulse {
-  animation: pulseGlow 1.8s infinite;
-}
-
-.dashboardLayout {
-  display: grid;
-  grid-template-columns: 1fr 2fr;
+.dashboardContainer {
+  display: flex;
+  flex-direction: column;
   gap: 24px;
-  align-items: start;
+}
+
+/* Header & Status Bar */
+.dashboardHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.statusPill {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-full);
+  padding: 6px 14px;
+  font-size: 12px;
+}
+
+/* Plant Status Hero Banner */
+.plantStatusHero {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr 1fr 1fr;
+  gap: 16px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  padding: 20px 24px;
+  align-items: center;
 }
 
 @media (max-width: 1024px) {
-  .dashboardLayout {
+  .plantStatusHero {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .plantStatusHero {
     grid-template-columns: 1fr;
   }
 }
 
-.sensorGrid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 24px;
+.heroItem {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
 }
 
-@media (max-width: 1200px) {
-  .sensorGrid {
+.heroLabel {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  letter-spacing: 0.06em;
+}
+
+.heroValue {
+  font-size: 17px;
+  font-weight: 800;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.heroSub {
+  font-size: 11.5px;
+  color: var(--text-secondary);
+}
+
+/* Section Container */
+.sectionCard {
+  background: var(--bg-card);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  padding: 22px 24px;
+}
+
+.sectionHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* Environmental Conditions Grid */
+.conditionsGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+}
+
+@media (max-width: 1024px) {
+  .conditionsGrid {
     grid-template-columns: repeat(2, 1fr);
   }
 }
 
 @media (max-width: 640px) {
-  .sensorGrid {
+  .conditionsGrid {
     grid-template-columns: 1fr;
   }
 }
 
-.reservoirCard {
-  grid-column: span 2;
+.metricTile {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 10px;
+  transition: var(--transition-fast);
 }
 
-@media (max-width: 1200px) {
-  .reservoirCard {
-    grid-column: span 2;
+.metricTile:hover {
+  background: var(--bg-card-hover);
+  border-color: var(--border-strong);
+}
+
+.metricTileHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.metricValueRow {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin: 4px 0;
+}
+
+.metricValue {
+  font-size: 26px;
+  font-weight: 800;
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+}
+
+.metricUnit {
+  font-size: 12.5px;
+  color: var(--text-secondary);
+}
+
+.metricTileFooter {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 8px;
+  border-top: 1px solid var(--border-subtle);
+  font-size: 11px;
+}
+
+/* 2-Column Dashboard Stage */
+.stageGrid {
+  display: grid;
+  grid-template-columns: 1.15fr 0.85fr;
+  gap: 24px;
+  align-items: start;
+}
+
+@media (max-width: 1024px) {
+  .stageGrid {
+    grid-template-columns: 1fr;
   }
 }
 
-@media (max-width: 640px) {
-  .reservoirCard {
-    grid-column: span 1;
-  }
-}
-
-/* Metric Tabs */
+/* Live Chart Tabs */
 .tabsContainer {
   display: flex;
-  gap: 8px;
-  background: rgba(7, 17, 31, 0.4);
-  padding: 4px;
-  border-radius: var(--radius-md);
+  gap: 6px;
+  background: var(--bg-base);
   border: 1px solid var(--border-default);
-  align-self: flex-start;
+  border-radius: var(--radius-md);
+  padding: 3px;
 }
 
 .tabBtn {
-  padding: 6px 12px;
-  font-size: 12px;
-  font-weight: 600;
-  border-radius: var(--radius-sm);
+  padding: 5px 12px;
+  font-size: 11.5px;
+  font-weight: 700;
+  border-radius: 4px;
   color: var(--text-secondary);
   transition: var(--transition-fast);
 }
 
 .tabBtn:hover {
   color: var(--text-primary);
-  background: rgba(255, 255, 255, 0.02);
 }
 
 .tabBtnActive {
-  background: var(--color-primary-dim);
-  border: 1px solid rgba(0, 229, 255, 0.2);
-  color: var(--color-primary);
+  background: var(--bg-surface-elevated);
+  color: var(--color-teal);
+  border: 1px solid var(--border-strong);
 }
 
-.reservoirFlex {
+/* Camera Preview Box in Dashboard */
+.compactCamBox {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  background: var(--bg-base);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  overflow: hidden;
   display: flex;
   align-items: center;
-  gap: 32px;
-  flex-wrap: wrap;
+  justify-content: center;
 }
 
-@media (max-width: 640px) {
-  .reservoirFlex {
-    justify-content: center;
-    gap: 20px;
-    text-align: center;
-  }
+.compactCamVideo {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.camOverlay {
+  position: absolute;
+  bottom: 8px;
+  left: 8px;
+  right: 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  pointer-events: none;
 }

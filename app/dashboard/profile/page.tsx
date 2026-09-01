@@ -1,11 +1,11 @@
 'use client';
 
 // ============================================================
-// HydroSmart — Operator Profile & Authentication Settings
+// HydroSmart — Operator Profile & Settings
 // ============================================================
 
 import { useState, useEffect } from 'react';
-import { User, Mail, Shield, Bell, LogOut, CheckCircle, Fingerprint } from 'lucide-react';
+import { User, Mail, Shield, LogOut, CheckCircle, Fingerprint, Save } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { toast, Toaster } from 'react-hot-toast';
 import { useAuth } from '@/lib/auth/AuthContext';
@@ -70,115 +70,135 @@ export default function ProfilePage() {
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '32px', maxWidth: '800px' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', maxWidth: '900px' }}>
       <Toaster position="top-right" />
       <div>
-        <h1 className="text-3xl font-bold text-primary mb-sm">User Profile</h1>
-        <p className="text-secondary">Manage your operator credentials, system access, and security.</p>
+        <h1 className="text-3xl font-bold text-primary mb-xs">Station Settings & Profile</h1>
+        <p className="text-secondary">Operator credentials, station authentication, and platform preferences.</p>
       </div>
 
       <div className={styles.profileGrid}>
         
         {/* Left column - Account Basics */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
           <div className="glass-card" style={{ padding: '24px', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
-            <div style={{ width: '80px', height: '80px', borderRadius: '50%', background: 'linear-gradient(135deg, rgba(0,212,170,0.2), transparent)', border: '1px solid rgba(0,212,170,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#00d4aa', marginBottom: '16px' }}>
-              <User size={36} />
+            <div style={{
+              width: '72px',
+              height: '72px',
+              borderRadius: '50%',
+              background: 'var(--color-teal-dim)',
+              border: '1px solid var(--color-teal-border)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: 'var(--color-teal)',
+              marginBottom: '14px'
+            }}>
+              <User size={32} />
             </div>
-            <h2 className="text-lg font-bold">{userName}</h2>
-            <p className="text-sm text-secondary mb-md">Farm Station Operator</p>
-            <span className="badge badge-success" style={{ marginBottom: '16px' }}><CheckCircle size={12}/> Firebase Authenticated</span>
+            <h2 className="text-md font-bold text-primary">{userName}</h2>
+            <p className="text-xs text-secondary mb-md">Farm Station Operator</p>
+            <span className="badge badge-success" style={{ marginBottom: '16px' }}>
+              <CheckCircle size={11}/> Firebase Verified
+            </span>
             
-            <button className="btn btn-ghost" style={{ width: '100%', justifyContent: 'center', color: 'var(--color-danger)', borderColor: 'rgba(239, 68, 68, 0.3)' }} onClick={handleLogout} disabled={loading}>
-              <LogOut size={16} /> {loading ? 'Logging out...' : 'Sign Out'}
+            <button
+              className="btn btn-danger"
+              style={{ width: '100%', justifyContent: 'center' }}
+              onClick={handleLogout}
+              disabled={loading}
+            >
+              <LogOut size={15} /> {loading ? 'Signing out...' : 'Sign Out'}
             </button>
           </div>
 
-          <div className="glass-card" style={{ padding: '24px' }}>
-            <h3 className="text-md font-bold mb-md" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Fingerprint size={18} className="text-primary"/> Operator Identity
+          <div className="glass-card" style={{ padding: '20px' }}>
+            <h3 className="text-sm font-bold mb-sm" style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-primary)' }}>
+              <Fingerprint size={16} style={{ color: 'var(--color-teal)' }}/> Operator Identity
             </h3>
-            <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '8px' }}>Firebase UID:</div>
-            <div style={{
-              background: 'rgba(0,0,0,0.3)',
-              padding: '8px 10px',
-              borderRadius: '6px',
-              fontFamily: 'var(--font-mono)',
-              fontSize: '11px',
-              wordBreak: 'break-all',
-              color: '#00E5FF'
-            }}>
-              {currentUser?.uid || 'Not authenticated'}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '12px' }}>
+              <div>
+                <span className="text-muted block text-xs">UID:</span>
+                <span className="font-mono text-secondary" style={{ fontSize: '11px', wordBreak: 'break-all' }}>
+                  {currentUser?.uid || 'Not available'}
+                </span>
+              </div>
+              <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: '8px' }}>
+                <span className="text-muted block text-xs">Auth Provider:</span>
+                <span className="text-primary font-medium">Email / Password</span>
+              </div>
             </div>
-          </div>
-
-          <div className="glass-card" style={{ padding: '24px' }}>
-            <h3 className="text-md font-bold mb-md" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Shield size={18} className="text-primary"/> Security
-            </h3>
-            <button className="btn btn-ghost" style={{ width: '100%', marginBottom: '12px' }} onClick={() => toast('Password reset emails can be triggered from Firebase Console')}>Change Password</button>
-            <button className="btn btn-ghost" style={{ width: '100%' }} onClick={() => toast('2FA configuration')}>Security Logs</button>
           </div>
         </div>
 
-        {/* Right column - Preferences Data */}
-        <div className="glass-card" style={{ padding: '32px' }}>
-          <h2 className="text-lg font-bold mb-lg" style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '12px' }}>Account Information</h2>
-          
-          <form onSubmit={handleSave} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+        {/* Right column - Edit Profile & Preferences */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          <div className="glass-card" style={{ padding: '24px' }}>
+            <h3 className="text-md font-bold mb-md" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <User size={18} style={{ color: 'var(--color-teal)' }}/> Operator Credentials
+            </h3>
             
-            <div>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '8px' }}>Display Name</label>
-              <div style={{ position: 'relative' }}>
-                 <User size={18} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
-                 <input type="text" className="input" value={userName} onChange={(e) => setUserName(e.target.value)} style={{ paddingLeft: '44px' }} placeholder="Operator Display Name" />
+            <form onSubmit={handleSave} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div>
+                <label className="text-xs font-bold uppercase text-secondary block mb-xs">Display Name</label>
+                <input 
+                  type="text" 
+                  className="input" 
+                  value={userName} 
+                  onChange={(e) => setUserName(e.target.value)}
+                  placeholder="Your Name"
+                  required
+                />
               </div>
-            </div>
 
-            <div>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '8px' }}>Email Address</label>
-              <div style={{ position: 'relative' }}>
-                 <Mail size={18} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
-                 <input type="email" className="input" value={userEmail} style={{ paddingLeft: '44px', opacity: 0.8 }} readOnly />
-              </div>
-              <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>Primary identifier linked to Firebase Authentication.</p>
-            </div>
-
-            <div style={{ marginTop: '12px', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '20px' }}>
-              <h3 className="text-md font-bold mb-md" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <Bell size={18} className="text-primary"/> Notifications
-              </h3>
-
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-                <div>
-                  <div style={{ fontSize: '14px', fontWeight: 600 }}>System Alerts</div>
-                  <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Push notifications for telemetry faults & critical thresholds.</div>
+              <div>
+                <label className="text-xs font-bold uppercase text-secondary block mb-xs">Email Address</label>
+                <div style={{ position: 'relative' }}>
+                  <input 
+                    type="email" 
+                    className="input" 
+                    value={userEmail} 
+                    disabled 
+                    style={{ opacity: 0.7, cursor: 'not-allowed', paddingLeft: '36px' }}
+                  />
+                  <Mail size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
                 </div>
-                <label className="toggle">
-                  <input type="checkbox" defaultChecked />
-                  <span className="toggle-slider"></span>
-                </label>
+                <span className="text-xs text-muted" style={{ marginTop: '4px', display: 'block' }}>
+                  Email is managed through Firebase Authentication.
+                </span>
               </div>
 
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '8px' }}>
+                <button type="submit" className="btn btn-primary" disabled={saving}>
+                  <Save size={15} /> {saving ? 'Saving...' : 'Save Changes'}
+                </button>
+              </div>
+            </form>
+          </div>
+
+          <div className="glass-card" style={{ padding: '24px' }}>
+            <h3 className="text-md font-bold mb-md" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Shield size={18} style={{ color: 'var(--color-green)' }}/> System Preferences
+            </h3>
+            
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
-                  <div style={{ fontSize: '14px', fontWeight: 600 }}>Daily Agronomic Reports</div>
-                  <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Summary of nutrient consumption and canopy expansion.</div>
+                  <div className="text-sm font-bold text-primary">Autonomous Safety Failsafe</div>
+                  <div className="text-xs text-secondary">Prevent chemical dosing over-correction lockouts</div>
                 </div>
-                <label className="toggle">
-                  <input type="checkbox" defaultChecked />
-                  <span className="toggle-slider"></span>
-                </label>
+                <span className="badge badge-success">ACTIVE</span>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--border-subtle)', paddingTop: '14px' }}>
+                <div>
+                  <div className="text-sm font-bold text-primary">Telemetry Interval</div>
+                  <div className="text-xs text-secondary">ESP32 serial baud rate rate streaming at 115200 bps</div>
+                </div>
+                <span className="badge badge-teal">1000 MS</span>
               </div>
             </div>
-
-            <div style={{ marginTop: '12px', display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
-              <button type="submit" className="btn btn-primary" disabled={saving}>
-                {saving ? 'Saving...' : 'Save Changes'}
-              </button>
-            </div>
-
-          </form>
+          </div>
         </div>
 
       </div>

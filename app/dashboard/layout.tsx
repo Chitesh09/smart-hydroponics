@@ -92,25 +92,25 @@ function DashboardLayoutContent({
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: '#07111F',
-        color: '#F4F7FB'
+        backgroundColor: '#071A17',
+        color: '#F1F7F4'
       }}>
         <div style={{
-          width: '56px',
-          height: '56px',
+          width: '52px',
+          height: '52px',
           borderRadius: '50%',
-          background: 'rgba(0, 229, 255, 0.08)',
-          border: '1px solid rgba(0, 229, 255, 0.2)',
+          background: 'rgba(32, 184, 176, 0.12)',
+          border: '1px solid rgba(32, 184, 176, 0.3)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           marginBottom: '16px',
-          color: '#00E5FF'
+          color: '#20B8B0'
         }}>
-          <Leaf size={28} />
+          <Leaf size={26} />
         </div>
-        <h3 style={{ fontSize: '16px', fontWeight: 700, marginBottom: '6px' }}>HydroSmart Console</h3>
-        <p style={{ fontSize: '12.5px', color: '#8FA3B8' }}>Verifying session credentials...</p>
+        <h3 style={{ fontSize: '16px', fontWeight: 700, marginBottom: '6px' }}>HydroSmart Agri-Tech</h3>
+        <p style={{ fontSize: '12.5px', color: '#9DB4AE' }}>Verifying authenticated session...</p>
       </div>
     );
   }
@@ -132,18 +132,17 @@ function DashboardLayoutContent({
           <Menu size={22} />
         </button>
         <div className={styles.mobileLogo}>
-          <Leaf size={18} style={{ color: '#00E5FF', marginRight: '6px' }} />
-          <span style={{ fontWeight: 800, fontSize: '15px', color: '#F4F7FB', letterSpacing: '-0.01em' }}>HydroSmart</span>
+          <Leaf size={18} style={{ color: '#20B8B0', marginRight: '6px' }} />
+          <span style={{ fontWeight: 800, fontSize: '15px', color: '#F1F7F4', letterSpacing: '-0.02em' }}>HydroSmart</span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', fontFamily: 'var(--font-mono)' }}>
           <span style={{ 
             width: '6px', 
             height: '6px', 
             borderRadius: '50%', 
-            background: mode === 'real' && !isStale ? '#B7FF3C' : '#FFC857',
-            boxShadow: `0 0 6px ${mode === 'real' && !isStale ? '#B7FF3C' : '#FFC857'}`
+            background: mode === 'real' && !isStale ? 'var(--color-green)' : 'var(--color-warning)'
           }} />
-          <span style={{ color: '#8FA3B8' }}>{mode === 'real' ? 'LIVE' : 'DEMO'}</span>
+          <span style={{ color: 'var(--text-secondary)' }}>{mode === 'real' ? 'LIVE' : 'DEMO'}</span>
         </div>
       </header>
 

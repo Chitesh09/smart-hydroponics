@@ -6,11 +6,11 @@
 
 .main {
   flex: 1;
-  margin-left: 240px; /* Sidebar width */
-  padding: 32px 40px;
+  margin-left: 250px; /* Aligned with sidebar width */
+  padding: 32px 36px;
   position: relative;
   z-index: 10;
-  min-width: 0; /* Prevents overflow from children */
+  min-width: 0;
 }
 
 .mobileHeader {
@@ -20,10 +20,10 @@
 .backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(3, 7, 18, 0.55);
-  backdrop-filter: blur(3px);
+  background: rgba(7, 26, 23, 0.7);
+  backdrop-filter: blur(4px);
   z-index: 95;
-  animation: fadeIn 0.22s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  animation: fadeIn 0.2s cubic-bezier(0.4, 0, 0.2, 1) forwards;
 }
 
 @keyframes fadeIn {
@@ -31,15 +31,17 @@
   to { opacity: 1; }
 }
 
-@media (max-width: 768px) {
+@media (max-width: 1024px) {
   .layout {
     flex-direction: column;
   }
+
   .main {
     margin-left: 0;
-    margin-top: 56px; /* Space for the top header */
-    padding: 24px 16px;
+    margin-top: 56px;
+    padding: 20px 16px;
   }
+
   .mobileHeader {
     display: flex;
     align-items: center;
@@ -49,20 +51,21 @@
     left: 0;
     right: 0;
     height: 56px;
-    background: #0D1B2A;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    background: var(--bg-surface);
+    border-bottom: 1px solid var(--border-default);
     padding: 0 16px;
-    z-index: 100;
+    z-index: 90;
   }
+
   .menuBtn {
     color: var(--text-primary);
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 8px;
-    margin-left: -8px;
-    cursor: pointer;
+    padding: 6px;
+    border-radius: var(--radius-sm);
   }
+
   .mobileLogo {
     display: flex;
     align-items: center;

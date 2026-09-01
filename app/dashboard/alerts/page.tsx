@@ -2,42 +2,40 @@
 
 import { useState } from 'react';
 import { AlertBanner, AlertData } from '@/components/AlertBanner';
-import { BellRing, ShieldAlert, Bug } from 'lucide-react';
+import { BellRing, Bug } from 'lucide-react';
 import { toast, Toaster } from 'react-hot-toast';
 
-// Helper defined outside component to remain pure during render
 function createFaultAlert(faultType: string): AlertData {
   return {
     id: `fault-${Date.now()}-${Math.random()}`,
     type: 'danger',
-    title: 'Sensor Hardware Anomaly Detected',
+    title: 'Sensor Telemetry Anomaly Detected',
     message: `Abnormal rapid flux detected in sensor channel: ${faultType}.`,
     timestamp: Date.now()
   };
 }
 
 export default function AlertsPage() {
-  // Use a lazy initializer function to make render pure and satisfy React 19 rules
   const [alerts, setAlerts] = useState<AlertData[]>(() => [
     {
       id: '1',
       type: 'danger',
-      title: 'Water Level Critical',
-      message: 'Reservoir dropped below 15%. Circulation pump disabled to prevent dry-run damage.',
+      title: 'Water Reservoir Low Threshold',
+      message: 'Reservoir dropped below 20%. Refill required.',
       timestamp: Date.now() - 3600000 * 2,
     },
     {
       id: '2',
       type: 'warning',
-      title: 'pH Correction Extended',
-      message: 'pH took longer than 5 minutes to stabilize after dosing. Check pH-Down solution tank.',
+      title: 'pH Upward Drift Detected',
+      message: 'pH drift rate exceeded +0.15 pH/day over last 6 observation cycles.',
       timestamp: Date.now() - 86400000,
     },
     {
       id: '3',
       type: 'info',
-      title: 'System Restart',
-      message: 'ESP32 successfully reconnected to WiFi and MQTT broker after power cycle.',
+      title: 'Serial Port Initialized',
+      message: 'ESP32 serial connection established at 115200 baud.',
       timestamp: Date.now() - 86400000 * 2,
     }
   ]);
@@ -45,26 +43,20 @@ export default function AlertsPage() {
   const INJECTABLE_FAULTS = [
     { type: 'ph_spike', label: 'Spike pH (7.8)' },
     { type: 'tds_drop', label: 'Drop TDS (200)' },
-    { type: 'temp_spike', label: 'Overheat (32°C)' },
     { type: 'low_water', label: 'Drain Reservoir' },
   ];
 
-  const handleInjectFault = async (faultType: string) => {
-    toast('Injecting hardware fault...', { icon: '🐛' });
-    try {
-      toast.error(`Simulated ${faultType} fault injected into pipeline!`);
-      const newAlert = createFaultAlert(faultType);
-      setAlerts(prev => [newAlert, ...prev]);
-    } catch (_e) {
-      toast.error('Simulation injected failed');
-    }
+  const handleInjectFault = (faultType: string) => {
+    toast.error(`Simulated ${faultType} fault logged!`);
+    const newAlert = createFaultAlert(faultType);
+    setAlerts(prev => [newAlert, ...prev]);
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
       <Toaster position="top-right" />
       <div>
-        <h1 className="text-3xl font-bold text-primary mb-sm">System Alerts & Logs</h1>
+        <h1 className="text-3xl font-bold text-primary mb-xs">System Alerts & Logs</h1>
         <p className="text-secondary">Historical log of warnings, faults, and critical system events.</p>
       </div>
 
@@ -74,8 +66,8 @@ export default function AlertsPage() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           <div className="glass-card" style={{ padding: '24px' }}>
              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
-                <BellRing size={20} className="text-primary" />
-                <h2 className="text-lg font-bold">Recent Notifications</h2>
+                <BellRing size={18} style={{ color: 'var(--color-teal)' }} />
+                <h2 className="text-md font-bold">Recent Notifications</h2>
              </div>
              
              {alerts.length === 0 ? (
@@ -83,7 +75,7 @@ export default function AlertsPage() {
                   No recent alerts or faults.
                 </div>
              ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                   {alerts.map(a => (
                      <AlertBanner key={a.id} alert={a} autoDismiss={false} />
                   ))}
@@ -95,24 +87,25 @@ export default function AlertsPage() {
         {/* Demo Simulator Panel */}
         <div className="glass-card" style={{ padding: '24px', alignSelf: 'flex-start' }}>
            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
-              <Bug size={20} className="text-accent" />
-              <h2 className="text-lg font-bold">Simulator Controls</h2>
+              <Bug size={18} style={{ color: 'var(--color-warning)' }} />
+              <h2 className="text-md font-bold">Simulator Controls</h2>
            </div>
-           <p className="text-sm text-secondary mb-lg">
-             For demonstration purposes, you can forcefully inject errors into the ESP32 simulator to test the system&apos;s resilience.
+           <p className="text-xs text-secondary mb-md">
+             Inject simulated edge-case conditions to test platform anomaly handlers.
            </p>
            
-           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-             {INJECTABLE_FAULTS.map(f => (
-               <button 
-                 key={f.type} 
-                 className="btn btn-ghost" 
-                 style={{ width: '100%', justifyContent: 'flex-start' }}
-                 onClick={() => handleInjectFault(f.type)}
-               >
-                 <ShieldAlert size={16} /> Inject: {f.label}
-               </button>
-             ))}
+           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {INJECTABLE_FAULTS.map(f => (
+                <button
+                  key={f.type} 
+                  className="btn btn-secondary" 
+                  style={{ justifyContent: 'space-between', width: '100%', fontSize: '12px' }}
+                  onClick={() => handleInjectFault(f.type)}
+                >
+                  <span>{f.label}</span>
+                  <span className="badge badge-warning" style={{ fontSize: '9px' }}>INJECT</span>
+                </button>
+              ))}
            </div>
         </div>
 

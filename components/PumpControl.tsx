@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Settings, Play, Square, Activity } from 'lucide-react';
+import { Play, Activity } from 'lucide-react';
 import styles from './PumpControl.module.css';
 
 interface PumpControlProps {
@@ -29,7 +29,7 @@ export function PumpControl({ pumpId, pumpName, status, onActivate, disabled }: 
 
   const statusColor = {
     idle: 'var(--text-muted)',
-    active: 'var(--color-primary)',
+    active: 'var(--color-teal)',
     fault: 'var(--color-danger)',
   }[status];
 
@@ -38,50 +38,41 @@ export function PumpControl({ pumpId, pumpName, status, onActivate, disabled }: 
       <div className={styles.header}>
         <div className={styles.titleInfo}>
            <div className={styles.icon} style={{ color: statusColor }}>
-             <Activity size={18} />
+             <Activity size={16} />
            </div>
            <div>
              <div className={styles.name}>{pumpName}</div>
              <div className={styles.status} style={{ color: statusColor }}>
-               {status === 'active' ? 'Dispensing...' : status === 'fault' ? 'Fault Detected' : 'Idle'}
+               {status === 'active' ? 'Dispensing...' : status === 'fault' ? 'Fault Detected' : 'Idle / Standby'}
              </div>
            </div>
         </div>
-        
-        {/* Status Dot */}
-        <div className={`status-dot ${status === 'active' ? 'online' : status === 'fault' ? 'offline' : 'idle'}`} />
       </div>
 
       <div className={styles.controls}>
         <div className={styles.sliderGroup}>
           <div className={styles.sliderHeader}>
-            <label>Dose Duration</label>
-            <span>{duration}s</span>
+            <span>Dose Duration</span>
+            <span className="font-mono">{duration}s</span>
           </div>
-          <input
-            type="range"
-            min="1"
-            max="30"
-            value={duration}
-            onChange={(e) => setDuration(parseInt(e.target.value))}
-            disabled={disabled || isRunning || status === 'active'}
+          <input 
+            type="range" 
+            min="1" 
+            max="30" 
+            value={duration} 
+            onChange={(e) => setDuration(Number(e.target.value))}
+            className={styles.slider}
+            disabled={disabled || isRunning}
           />
         </div>
 
         <button 
-          className={`btn ${styles.actionBtn} ${(isRunning || status === 'active') ? 'btn-danger' : 'btn-primary'}`}
+          className="btn btn-primary" 
+          style={{ width: '100%', fontSize: '12px', minHeight: '34px' }}
           onClick={handleActivate}
-          disabled={disabled || status === 'fault'}
+          disabled={disabled || isRunning}
         >
-          {isRunning || status === 'active' ? (
-            <>
-              <Square size={16} /> Stop
-            </>
-          ) : (
-            <>
-              <Play size={16} /> Override
-            </>
-          )}
+          <Play size={13} /> {disabled ? 'Actuator Disabled' : isRunning ? 'Dosing...' : 'Execute Pulse'}
         </button>
       </div>
     </div>

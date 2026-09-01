@@ -11,9 +11,9 @@
   display: grid;
   grid-template-columns: 1.5fr 1fr 1fr 1fr;
   gap: 16px;
-  background: rgba(15, 29, 49, 0.75);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: var(--radius-lg, 12px);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
   padding: 20px 24px;
   align-items: center;
 }
@@ -40,29 +40,29 @@
   font-size: 11px;
   font-weight: 700;
   text-transform: uppercase;
-  color: #8FA3B8;
-  letter-spacing: 0.5px;
+  color: var(--text-muted);
+  letter-spacing: 0.06em;
 }
 
 .overviewValue {
   font-size: 18px;
   font-weight: 800;
-  color: #F4F7FB;
+  color: var(--text-primary);
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
 .overviewSub {
-  font-size: 11px;
-  color: #5A738E;
+  font-size: 11.5px;
+  color: var(--text-secondary);
 }
 
 /* Section Container */
 .sectionCard {
-  background: rgba(15, 29, 49, 0.7);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: var(--radius-lg, 12px);
+  background: var(--bg-card);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
   padding: 24px;
 }
 
@@ -96,13 +96,19 @@
 }
 
 .pillarCard {
-  background: rgba(7, 17, 31, 0.6);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 8px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
   padding: 18px;
   display: flex;
   flex-direction: column;
   gap: 12px;
+  transition: var(--transition-fast);
+}
+
+.pillarCard:hover {
+  background: var(--bg-card-hover);
+  border-color: var(--border-strong);
 }
 
 .pillarCardHeader {
@@ -110,14 +116,14 @@
   justify-content: space-between;
   align-items: center;
   padding-bottom: 8px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  border-bottom: 1px solid var(--border-subtle);
 }
 
 .pillarMetricRow {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  font-size: 12px;
+  font-size: 12.5px;
 }
 
 .pillarScoreRow {
@@ -126,14 +132,14 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  border-top: 1px dashed rgba(255, 255, 255, 0.08);
+  border-top: 1px dashed var(--border-subtle);
 }
 
 /* "Why This Score" Breakdown */
 .scoreBreakdownBox {
-  background: rgba(7, 17, 31, 0.7);
-  border: 1px solid rgba(0, 229, 255, 0.2);
-  border-radius: 8px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
   padding: 18px 20px;
 }
 
@@ -195,9 +201,9 @@
 }
 
 .timelineItem {
-  background: rgba(7, 17, 31, 0.6);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  border-radius: 8px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
   padding: 12px 14px;
   display: flex;
   flex-direction: column;
@@ -206,7 +212,8 @@
 }
 
 .timelineItem:hover {
-  border-color: rgba(0, 229, 255, 0.3);
+  border-color: var(--border-strong);
+  background: var(--bg-card-hover);
 }
 
 .timelineMetaRow {
@@ -219,33 +226,33 @@
   font-size: 9.5px;
   font-weight: 800;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.05em;
   padding: 2px 6px;
   border-radius: 3px;
 }
 
 .sourceEsp32 {
-  background: rgba(0, 229, 255, 0.15);
-  color: #00E5FF;
-  border: 1px solid rgba(0, 229, 255, 0.3);
+  background: var(--color-teal-dim);
+  color: var(--color-teal);
+  border: 1px solid var(--color-teal-border);
 }
 
 .sourceCamera {
-  background: rgba(183, 255, 60, 0.15);
-  color: #B7FF3C;
-  border: 1px solid rgba(183, 255, 60, 0.3);
+  background: var(--color-green-dim);
+  color: var(--color-green);
+  border: 1px solid var(--color-green-border);
 }
 
 .sourceHistory {
-  background: rgba(199, 125, 255, 0.15);
-  color: #C77DFF;
-  border: 1px solid rgba(199, 125, 255, 0.3);
+  background: rgba(133, 160, 154, 0.12);
+  color: var(--text-primary);
+  border: 1px solid var(--border-default);
 }
 
 .sourceAnalytics {
-  background: rgba(255, 200, 87, 0.15);
-  color: #FFC857;
-  border: 1px solid rgba(255, 200, 87, 0.3);
+  background: var(--color-warning-dim);
+  color: var(--color-warning);
+  border: 1px solid var(--color-warning-border);
 }
 
 /* Anomalies & Warnings */
@@ -256,9 +263,9 @@
 }
 
 .anomalyItem {
-  background: rgba(255, 107, 74, 0.08);
-  border: 1px solid rgba(255, 107, 74, 0.3);
-  border-radius: 8px;
+  background: var(--color-danger-dim);
+  border: 1px solid var(--color-danger-border);
+  border-radius: var(--radius-md);
   padding: 14px 16px;
   display: flex;
   flex-direction: column;
@@ -266,14 +273,14 @@
 }
 
 .anomalyCleanCard {
-  background: rgba(183, 255, 60, 0.06);
-  border: 1px solid rgba(183, 255, 60, 0.25);
-  border-radius: 8px;
+  background: var(--color-green-dim);
+  border: 1px solid var(--color-green-border);
+  border-radius: var(--radius-md);
   padding: 16px;
   display: flex;
   align-items: center;
   gap: 12px;
-  color: #B7FF3C;
+  color: var(--color-green);
   font-size: 13px;
   font-weight: 600;
 }
@@ -292,9 +299,9 @@
 }
 
 .predictionCard {
-  background: rgba(7, 17, 31, 0.6);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 8px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
   padding: 14px;
   display: flex;
   flex-direction: column;
@@ -309,9 +316,9 @@
 }
 
 .recommendationCard {
-  background: rgba(7, 17, 31, 0.6);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 8px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
   padding: 14px 16px;
   display: flex;
   flex-direction: column;
@@ -327,21 +334,21 @@
 }
 
 .priorityHigh {
-  background: rgba(255, 107, 74, 0.2);
-  color: #FF6B4A;
-  border: 1px solid rgba(255, 107, 74, 0.4);
+  background: var(--color-danger-dim);
+  color: var(--color-danger);
+  border: 1px solid var(--color-danger-border);
 }
 
 .priorityMedium {
-  background: rgba(255, 200, 87, 0.2);
-  color: #FFC857;
-  border: 1px solid rgba(255, 200, 87, 0.4);
+  background: var(--color-warning-dim);
+  color: var(--color-warning);
+  border: 1px solid var(--color-warning-border);
 }
 
 .priorityRoutine {
-  background: rgba(0, 229, 255, 0.15);
-  color: #00E5FF;
-  border: 1px solid rgba(0, 229, 255, 0.3);
+  background: var(--color-teal-dim);
+  color: var(--color-teal);
+  border: 1px solid var(--color-teal-border);
 }
 
 /* Compact Visual Analysis Station */
@@ -349,9 +356,9 @@
   position: relative;
   width: 100%;
   height: 180px;
-  background: #07111F;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 8px;
+  background: var(--bg-base);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
   overflow: hidden;
   display: flex;
   align-items: center;
@@ -377,9 +384,9 @@
 
 /* AI Synthesis / Why This Matters Card */
 .aiSynthesisCard {
-  background: rgba(0, 229, 255, 0.05);
-  border: 1px solid rgba(0, 229, 255, 0.25);
-  border-radius: 8px;
+  background: var(--color-teal-dim);
+  border: 1px solid var(--color-teal-border);
+  border-radius: var(--radius-lg);
   padding: 18px 20px;
 }
 
@@ -388,15 +395,15 @@
   align-items: center;
   gap: 8px;
   margin-bottom: 8px;
-  color: #00E5FF;
+  color: var(--color-teal);
   font-size: 13px;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.05em;
 }
 
 .aiSynthesisBody {
   font-size: 13.5px;
   line-height: 1.6;
-  color: #F4F7FB;
+  color: var(--text-primary);
 }
