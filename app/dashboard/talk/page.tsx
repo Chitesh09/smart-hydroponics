@@ -127,7 +127,7 @@ export default function TalkToPlantPage() {
                       }}
                     >
                       <span className={styles.boundingBoxTag}>
-                        🌱 FOLIAGE DETECTED ({latestDetection.confidence}%)
+                        🌱 PLANT CANOPY ({latestDetection.plantPresenceScore || latestDetection.confidence}%)
                       </span>
                     </div>
                   )}

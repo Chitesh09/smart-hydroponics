@@ -307,7 +307,7 @@ export default function IntelligencePage() {
                       <span className={styles.boundingBoxTag}>
                         {identificationResult && identificationResult.status === 'success' && identificationResult.primaryCandidate
                           ? `🌱 ${identificationResult.primaryCandidate.commonName} (${identificationResult.overallConfidence}%)`
-                          : `🌱 FOLIAGE DETECTED (${latestDetection.confidence}%)`}
+                          : `🌱 PLANT CANOPY (${latestDetection.plantPresenceScore || latestDetection.confidence}%)`}
                       </span>
                     </div>
                   )}

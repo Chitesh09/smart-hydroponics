@@ -42,6 +42,7 @@ import {
 } from './healthScore';
 import { detectEnvironmentalAnomalies } from './anomalyDetection';
 import { identifyPlant } from './plantIdentification';
+import { cropPlantRegion } from '@/lib/vision/plantIdentifier';
 import { multimodalHealthEngine } from './multimodalEngine';
 import {
   computeGrowthEstimates,
@@ -106,7 +107,7 @@ const PlantIntelligenceContext = createContext<PlantIntelligenceContextType | un
 export function PlantIntelligenceProvider({ children }: { children: React.ReactNode }) {
   const { currentUser } = useAuth();
   const { mode, isStale, latestReading } = useESP32Serial();
-  const { status: cameraStatus, captureFrame } = useCamera();
+  const { status: cameraStatus, captureFrame, videoRef } = useCamera();
   const { latestDetection, latestVisualHealth, isScanning, setIsScanning, analyzeNow } = usePlantMonitor();
 
   // Cloud Station Hierarchy
@@ -397,7 +398,27 @@ export function PlantIntelligenceProvider({ children }: { children: React.ReactN
 
   // Identify plant from current camera frame
   const identifyCurrentPlant = useCallback(async (): Promise<PlantIdentificationResponse | null> => {
-    const snapshot = captureFrame();
+    // Gate: Require plant presence before identifying
+    if (!latestDetection?.isPlantDetected) {
+      const noPlantResp: PlantIdentificationResponse = {
+        status: 'no_plant_detected',
+        rankedCandidates: [],
+        overallConfidence: 0,
+        confidenceLevel: 'uncertain',
+        guidanceMessage: 'No plant detected in camera frame. Position a plant clearly within the camera view before identifying.',
+        timestamp: Date.now(),
+      };
+      setIdentificationResult(noPlantResp);
+      return noPlantResp;
+    }
+
+    let snapshot: string | null = null;
+    if (videoRef?.current && latestDetection?.boundingBox) {
+      snapshot = cropPlantRegion(videoRef.current, { boundingBox: latestDetection.boundingBox, targetMaxDimension: 800 });
+    }
+    if (!snapshot) {
+      snapshot = captureFrame();
+    }
     if (!snapshot) return null;
 
     setIsIdentifying(true);
@@ -420,7 +441,7 @@ export function PlantIntelligenceProvider({ children }: { children: React.ReactN
     } finally {
       setIsIdentifying(false);
     }
-  }, [captureFrame]);
+  }, [captureFrame, latestDetection, videoRef]);
 
   // Apply identified candidate as active crop profile
   const applyIdentifiedSpecies = useCallback((candidate: PlantCandidate, imageRef?: string) => {

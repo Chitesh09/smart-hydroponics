@@ -25,7 +25,8 @@ export type PlantIdentificationStatus =
   | 'KNOWN_PLANT'
   | 'UNKNOWN_PLANT'
   | 'LOW_CONFIDENCE'
-  | 'NO_PLANT';
+  | 'NO_PLANT'
+  | 'ERROR';
 
 export interface ImageQualityAssessment {
   brightnessScore: number; // 0 - 100
@@ -54,19 +55,22 @@ export interface PlantIdentificationCandidate {
   commonName: string;
   scientificName: string;
   family: string;
-  similarityScore: number; // 0 - 1.0 (raw feature distance)
+  similarityScore: number; // 0 - 1.0 (Pl@ntNet / ML confidence probability)
   confidenceLevel: VisionConfidenceLevel;
-  description: string;
+  description?: string;
+  imageUrl?: string;
 }
 
 export interface PlantIdentificationResult {
   status: PlantIdentificationStatus;
   primarySpecies: string | null;
   scientificName?: string;
+  family?: string;
   confidenceScore: number; // 0.0 - 1.0
   confidenceLevel: VisionConfidenceLevel;
   rankedCandidates: PlantIdentificationCandidate[];
   guidanceMessage: string;
+  source?: 'plantnet_api' | 'plantclef_model' | 'fallback' | 'offline';
   extractedFeatures?: {
     canopyCoverage: number;
     aspectRatio: number;
@@ -83,7 +87,7 @@ export interface VisualObservation {
   plantSpecies: string | null;
   speciesConfidence: number;
   identificationStatus: PlantIdentificationStatus;
-  visualHealthScore: number | null; // null if image is unacceptable
+  visualHealthScore: number | null; // null if image is unacceptable or no plant
   healthState: VisionHealthState;
   anomalies: VisualAnomaly[];
   canopyCoveragePercent: number;
@@ -92,7 +96,7 @@ export interface VisualObservation {
   confidence: VisionConfidenceLevel;
   confidenceScore: number; // 0.0 - 1.0
   processingTimeMs: number;
-  method: 'heuristic' | 'ml_model' | 'fallback';
+  method: 'plantnet_ml' | 'heuristic' | 'fallback';
   limitations: string[];
   explainableFindings: string[];
 }
@@ -101,7 +105,7 @@ export interface VisionModelInfo {
   id: string;
   name: string;
   version: string;
-  type: 'heuristic' | 'onnx' | 'tfjs';
+  type: 'plantnet_api' | 'heuristic' | 'onnx' | 'tfjs';
   classes: string[];
   inputSize: [number, number];
   enabled: boolean;
