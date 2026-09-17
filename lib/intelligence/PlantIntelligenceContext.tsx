@@ -62,6 +62,7 @@ import {
 } from './observationStore';
 import { ensureDefaultHierarchy } from '@/lib/firebase/firestore';
 import { DEMO_SCENARIOS } from './demoScenarios';
+import { deriveFarmerSemanticState, FarmerSemanticState } from './farmerSemanticLayer';
 
 interface PlantIntelligenceContextType {
   cropIdentity: PlantIdentity;
@@ -70,6 +71,7 @@ interface PlantIntelligenceContextType {
   latestObservation: PlantObservation | null;
   latestDetection: PlantDetectionResult | null;
   latestVisualHealth: VisualHealthAnalysisResult | null;
+  farmerSemanticState: FarmerSemanticState;
   isScanning: boolean;
   setIsScanning: (scanning: boolean) => void;
   analyzeNow: () => { detection: PlantDetectionResult; health: VisualHealthAnalysisResult } | null;
@@ -559,6 +561,29 @@ export function PlantIntelligenceProvider({ children }: { children: React.ReactN
     }
   }, [mode]);
 
+  // 8. Farmer-Friendly Semantic Interpretation Layer
+  const farmerSemanticState = useMemo(() => {
+    return deriveFarmerSemanticState({
+      isTelemetryAvailable: latestReading !== null && !isStale,
+      latestReading,
+      environmentalAssessment,
+      multimodalAssessment,
+      latestDetection,
+      latestVisualHealth,
+      activeAnomalies,
+      isCameraActive: cameraStatus === 'connected',
+    });
+  }, [
+    latestReading,
+    isStale,
+    environmentalAssessment,
+    multimodalAssessment,
+    latestDetection,
+    latestVisualHealth,
+    activeAnomalies,
+    cameraStatus
+  ]);
+
   const latestObservation = observations.length > 0 ? observations[0] : null;
 
   return (
@@ -570,6 +595,7 @@ export function PlantIntelligenceProvider({ children }: { children: React.ReactN
         latestObservation,
         latestDetection,
         latestVisualHealth,
+        farmerSemanticState,
         isScanning,
         setIsScanning,
         analyzeNow,

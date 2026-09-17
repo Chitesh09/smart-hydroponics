@@ -7,7 +7,6 @@ import { useESP32Serial } from '@/lib/esp32/ESP32SerialContext';
 import { useCamera } from '@/lib/camera/CameraContext';
 import { usePlantIntelligence } from '@/lib/intelligence/PlantIntelligenceContext';
 import ESP32Connection from '@/components/esp32/ESP32Connection';
-import { SENSOR_THRESHOLDS } from '@/lib/sensorConfig';
 import { LiveLineChart } from '@/components/LiveLineChart';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { DataSourceBadge } from '@/components/ui/DataSourceBadge';
@@ -35,9 +34,9 @@ export default function Dashboard() {
   const {
     cropIdentity,
     latestDetection,
-    latestVisualHealth,
     multimodalAssessment,
-    activeAnomalies
+    activeAnomalies,
+    farmerSemanticState
   } = usePlantIntelligence();
 
   const [selectedMetric, setSelectedMetric] = useState<'ph' | 'tds' | 'waterLevel' | 'distance'>('ph');
@@ -132,25 +131,9 @@ export default function Dashboard() {
     return () => clearInterval(interval);
   }, [reading.timestamp]);
 
-  // Status determinations
-  const phStatus = reading.ph < SENSOR_THRESHOLDS.ph.min || reading.ph > SENSOR_THRESHOLDS.ph.max ? 'warning' : 'optimal';
-  const tdsStatus = reading.tds < SENSOR_THRESHOLDS.tds.min || reading.tds > SENSOR_THRESHOLDS.tds.max ? 'warning' : 'optimal';
-  const waterStatus = reading.waterLevel < SENSOR_THRESHOLDS.waterLevel.critical ? 'critical' : reading.waterLevel < SENSOR_THRESHOLDS.waterLevel.warning ? 'warning' : 'optimal';
-
   const isPlantIdentified = cropIdentity.cropKey !== 'unknown_plant' && cropIdentity.commonName !== 'Unknown Plant';
   const plantDisplayName = isPlantIdentified ? cropIdentity.commonName : 'Unknown Plant';
   const botanicalScientific = isPlantIdentified ? cropIdentity.scientificName || 'Botanical Species' : 'Botanical identification unavailable';
-
-  // Human-readable plant state calculation
-  const humanPlantState = useMemo(() => {
-    if (!isTelemetryAvailable && !isCameraActive) return 'INSUFFICIENT DATA';
-    const score = multimodalAssessment.overallScore;
-    if (score >= 88) return 'THRIVING';
-    if (score >= 75) return 'HEALTHY';
-    if (score >= 60) return 'STABLE';
-    if (score >= 45) return 'NEEDS ATTENTION';
-    return 'CRITICAL';
-  }, [isTelemetryAvailable, isCameraActive, multimodalAssessment.overallScore]);
 
   // Real historical deltas calculation for "WHAT CHANGED TODAY"
   const calculatedDeltas = useMemo((): MetricDelta[] => {
@@ -312,7 +295,7 @@ export default function Dashboard() {
             </div>
 
             <div className={styles.stateRow}>
-              <StatusBadge status={humanPlantState} size="md" />
+              <StatusBadge status={farmerSemanticState.plantStatus.toLowerCase()} label={farmerSemanticState.plantMessage} size="md" />
               {isTelemetryAvailable && (
                 <div className={styles.conditionScoreDisplay}>
                   <span className={styles.scoreNumber}>{multimodalAssessment.overallScore}</span>
@@ -322,26 +305,26 @@ export default function Dashboard() {
             </div>
           </div>
 
-          {/* Plant State Digital Twin Matrix */}
+          {/* Plant State Digital Twin Matrix (Farmer Semantic Interpretation) */}
           <div className={styles.twinPillars}>
             <div className={styles.pillarItem}>
-              <span className={styles.pillarLabel}>Environment</span>
-              <span className={styles.pillarValue} style={{ color: isTelemetryAvailable ? 'var(--color-green)' : 'var(--text-muted)' }}>
-                {isTelemetryAvailable ? multimodalAssessment.environmentalState.toUpperCase() : 'UNAVAILABLE'}
+              <span className={styles.pillarLabel}>Water Status</span>
+              <span className={styles.pillarValue} style={{ color: `var(--color-${farmerSemanticState.waterColor})` }}>
+                {farmerSemanticState.waterMessage}
               </span>
             </div>
 
             <div className={styles.pillarItem}>
-              <span className={styles.pillarLabel}>Visual Foliage</span>
-              <span className={styles.pillarValue} style={{ color: isCameraActive && latestDetection?.isPlantDetected ? 'var(--color-green)' : 'var(--text-muted)' }}>
-                {isCameraActive && latestDetection?.isPlantDetected ? (latestVisualHealth?.healthState.toUpperCase() || 'HEALTHY') : 'STANDBY'}
+              <span className={styles.pillarLabel}>Nutrients</span>
+              <span className={styles.pillarValue} style={{ color: `var(--color-${farmerSemanticState.nutrientColor})` }}>
+                {farmerSemanticState.nutrientMessage}
               </span>
             </div>
 
             <div className={styles.pillarItem}>
-              <span className={styles.pillarLabel}>Confidence</span>
-              <span className={styles.pillarValue} style={{ color: 'var(--color-teal)' }}>
-                {isPlantIdentified ? `${cropIdentity.confidence}%` : 'PENDING'}
+              <span className={styles.pillarLabel}>Camera View</span>
+              <span className={styles.pillarValue} style={{ color: `var(--color-${farmerSemanticState.cameraColor})` }}>
+                {farmerSemanticState.cameraMessage}
               </span>
             </div>
           </div>
@@ -430,7 +413,7 @@ export default function Dashboard() {
             </div>
             <div className={styles.envFooter}>
               <span>Target: 5.5 - 6.5</span>
-              <StatusBadge status={isTelemetryAvailable ? phStatus : 'unavailable'} size="sm" />
+              <StatusBadge status={isTelemetryAvailable ? farmerSemanticState.nutrientStatus.toLowerCase() : 'unavailable'} size="sm" />
             </div>
           </div>
 
@@ -448,7 +431,7 @@ export default function Dashboard() {
             </div>
             <div className={styles.envFooter}>
               <span>Target: 800 - 1200</span>
-              <StatusBadge status={isTelemetryAvailable ? tdsStatus : 'unavailable'} size="sm" />
+              <StatusBadge status={isTelemetryAvailable ? farmerSemanticState.nutrientStatus.toLowerCase() : 'unavailable'} size="sm" />
             </div>
           </div>
 
@@ -466,7 +449,7 @@ export default function Dashboard() {
             </div>
             <div className={styles.envFooter}>
               <span>Critical: &lt; 20%</span>
-              <StatusBadge status={isTelemetryAvailable ? waterStatus : 'unavailable'} size="sm" />
+              <StatusBadge status={isTelemetryAvailable ? farmerSemanticState.waterStatus.toLowerCase() : 'unavailable'} size="sm" />
             </div>
           </div>
 

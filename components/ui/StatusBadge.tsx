@@ -50,12 +50,13 @@ export function StatusBadge({
       case 'thriving':
       case 'healthy':
       case 'optimal':
+      case 'good':
         return {
           bg: 'var(--bg-tint-green)',
           color: 'var(--color-green)',
           border: 'var(--border-accent-green)',
           icon: CheckCircle2,
-          defaultLabel: normalizedStatus.toUpperCase(),
+          defaultLabel: normalizedStatus === 'good' ? 'GOOD' : normalizedStatus.toUpperCase(),
         };
       case 'stable':
       case 'recovering':
@@ -74,24 +75,35 @@ export function StatusBadge({
           icon: Radio,
           defaultLabel: 'ESP32 LIVE',
         };
+      case 'plant_detected':
+        return {
+          bg: 'var(--bg-tint-teal)',
+          color: 'var(--color-teal)',
+          border: 'var(--border-accent-teal)',
+          icon: CheckCircle2,
+          defaultLabel: 'PLANT DETECTED',
+        };
       case 'needs_attention':
       case 'attention':
       case 'warning':
+      case 'no_plant':
+      case 'low_confidence':
         return {
           bg: 'var(--bg-tint-amber)',
           color: 'var(--color-amber)',
           border: 'rgba(229, 169, 60, 0.35)',
           icon: AlertTriangle,
-          defaultLabel: 'NEEDS ATTENTION',
+          defaultLabel: normalizedStatus === 'low_confidence' ? 'LOW CONFIDENCE' : normalizedStatus === 'no_plant' ? 'NO PLANT' : 'ATTENTION',
         };
       case 'critical':
       case 'danger':
+      case 'urgent':
         return {
           bg: 'var(--bg-tint-red)',
           color: 'var(--color-red)',
           border: 'rgba(217, 93, 98, 0.35)',
           icon: AlertOctagon,
-          defaultLabel: 'CRITICAL',
+          defaultLabel: normalizedStatus === 'urgent' ? 'URGENT' : 'CRITICAL',
         };
       case 'simulation':
         return {
@@ -101,15 +113,17 @@ export function StatusBadge({
           icon: Sparkles,
           defaultLabel: 'SIMULATION',
         };
+      case 'unknown':
       case 'insufficient_data':
       case 'unavailable':
       case 'offline':
+      case 'scan_not_ready':
         return {
           bg: 'rgba(94, 123, 116, 0.12)',
           color: 'var(--text-muted)',
           border: 'var(--border-subtle)',
           icon: WifiOff,
-          defaultLabel: normalizedStatus === 'insufficient_data' ? 'INSUFFICIENT DATA' : 'UNAVAILABLE',
+          defaultLabel: normalizedStatus === 'unknown' ? 'NOT ENOUGH INFO' : normalizedStatus === 'insufficient_data' ? 'INSUFFICIENT DATA' : 'OFFLINE',
         };
       default:
         return {

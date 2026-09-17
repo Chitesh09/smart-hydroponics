@@ -28,7 +28,8 @@ export default function IntelligencePage() {
     predictiveAnalytics,
     activeAnomalies,
     activeRecommendations,
-    observations
+    observations,
+    farmerSemanticState
   } = usePlantIntelligence();
 
   const { mode, isStale, latestReading } = useESP32Serial();
@@ -182,15 +183,16 @@ export default function IntelligencePage() {
         </div>
 
         <div className={styles.bannerItem}>
-          <span className="section-label">Condition</span>
+          <span className="section-label">Plant Condition</span>
           <div className={styles.bannerValue}>
             <StatusBadge
-              status={isTelemetryAvailable || latestDetection?.isPlantDetected ? multimodalAssessment.overallHealthState : 'insufficient_data'}
+              status={farmerSemanticState.plantStatus.toLowerCase()}
+              label={farmerSemanticState.plantMessage}
               size="sm"
             />
             {isTelemetryAvailable && (
               <span className="font-mono" style={{ fontSize: '14px', color: 'var(--text-secondary)' }}>
-                {multimodalAssessment.overallScore}/100
+                ({multimodalAssessment.overallScore}/100)
               </span>
             )}
           </div>
