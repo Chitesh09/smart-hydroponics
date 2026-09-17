@@ -10,6 +10,8 @@ import ESP32Connection from '@/components/esp32/ESP32Connection';
 import { LiveLineChart } from '@/components/LiveLineChart';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { DataSourceBadge } from '@/components/ui/DataSourceBadge';
+import { ModeToggle } from '@/components/ui/ModeToggle';
+import { FarmerActionCard } from '@/components/ui/FarmerActionCard';
 import { WhatChanged, MetricDelta } from '@/components/ui/WhatChanged';
 import {
   FlaskConical,
@@ -36,7 +38,10 @@ export default function Dashboard() {
     latestDetection,
     multimodalAssessment,
     activeAnomalies,
-    farmerSemanticState
+    activeRecommendations,
+    farmerSemanticState,
+    userMode,
+    setUserMode
   } = usePlantIntelligence();
 
   const [selectedMetric, setSelectedMetric] = useState<'ph' | 'tds' | 'waterLevel' | 'distance'>('ph');
@@ -192,7 +197,8 @@ export default function Dashboard() {
           <h1 className="display-title">{greeting}</h1>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+          <ModeToggle mode={userMode} onModeChange={setUserMode} size="sm" />
           <DataSourceBadge mode={mode} isStale={isStale} hasData={latestReading !== null} />
           {secondsAgo !== null && (
             <span className="scientific-meta">
@@ -356,6 +362,11 @@ export default function Dashboard() {
       {/* 3. WHAT CHANGED TODAY (Historical Deltas)                     */}
       {/* ============================================================ */}
       <WhatChanged deltas={calculatedDeltas} hasHistory={history.length >= 5} />
+
+      {/* ============================================================ */}
+      {/* 3. PROMINENT ACTIONABLE SECTION: WHAT SHOULD I DO NOW?        */}
+      {/* ============================================================ */}
+      <FarmerActionCard semanticState={farmerSemanticState} recommendations={activeRecommendations} />
 
       {/* ============================================================ */}
       {/* 4. WHAT NEEDS YOUR ATTENTION                                 */}

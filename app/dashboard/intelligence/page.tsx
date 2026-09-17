@@ -6,6 +6,7 @@ import { useESP32Serial } from '@/lib/esp32/ESP32SerialContext';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { DataSourceBadge } from '@/components/ui/DataSourceBadge';
 import { EvidenceChain, EvidenceStep } from '@/components/ui/EvidenceChain';
+import { ModeToggle } from '@/components/ui/ModeToggle';
 import {
   Brain,
   Layers,
@@ -29,7 +30,9 @@ export default function IntelligencePage() {
     activeAnomalies,
     activeRecommendations,
     observations,
-    farmerSemanticState
+    farmerSemanticState,
+    userMode,
+    setUserMode
   } = usePlantIntelligence();
 
   const { mode, isStale, latestReading } = useESP32Serial();
@@ -49,16 +52,20 @@ export default function IntelligencePage() {
     if (latestDetection?.isPlantDetected) {
       steps.push({
         stage: 'OBSERVATION',
-        headline: `Foliage presence confirmed (${latestDetection.canopyCoveragePercent}% canopy coverage)`,
-        detail: latestVisualHealth
-          ? `Visual health evaluated at ${latestVisualHealth.visualHealthScore}/100 with ${latestVisualHealth.chlorosisYellowPercent.toFixed(1)}% discoloration ratio.`
-          : 'Foliage canopy detected in optical frame.',
+        headline: userMode === 'farmer'
+          ? farmerSemanticState.cameraMessage
+          : `Foliage presence confirmed (${latestDetection.canopyCoveragePercent}% canopy coverage)`,
+        detail: userMode === 'farmer'
+          ? farmerSemanticState.plantMessage
+          : (latestVisualHealth
+              ? `Visual health evaluated at ${latestVisualHealth.visualHealthScore}/100 with ${latestVisualHealth.chlorosisYellowPercent.toFixed(1)}% discoloration ratio.`
+              : 'Foliage canopy detected in optical frame.'),
         status: latestVisualHealth?.healthState === 'healthy' ? 'optimal' : 'warning',
       });
     } else {
       steps.push({
         stage: 'OBSERVATION',
-        headline: 'No visual observation available',
+        headline: userMode === 'farmer' ? 'Camera view check' : 'No visual observation available',
         detail: 'Start the Live Plant Camera from Dashboard to collect a new observation.',
         status: 'neutral',
       });
@@ -69,16 +76,20 @@ export default function IntelligencePage() {
       const isEnvOptimal = multimodalAssessment.environmentalState === 'optimal';
       steps.push({
         stage: 'ENVIRONMENT',
-        headline: `Sensory telemetry: pH ${latestReading.ph.toFixed(2)} · TDS ${Math.round(latestReading.tds)} PPM · Reservoir ${Math.round(latestReading.waterLevel)}%`,
-        detail: isEnvOptimal
-          ? 'All chemical and physical sensor measurements are within target biological tolerances.'
-          : 'One or more environmental sensor channels deviate from preferred crop baseline.',
+        headline: userMode === 'farmer'
+          ? farmerSemanticState.environmentMessage
+          : `Sensory telemetry: pH ${latestReading.ph.toFixed(2)} · TDS ${Math.round(latestReading.tds)} PPM · Reservoir ${Math.round(latestReading.waterLevel)}%`,
+        detail: userMode === 'farmer'
+          ? `${farmerSemanticState.waterMessage}. ${farmerSemanticState.nutrientMessage}.`
+          : (isEnvOptimal
+              ? 'All chemical and physical sensor measurements are within target biological tolerances.'
+              : 'One or more environmental sensor channels deviate from preferred crop baseline.'),
         status: isEnvOptimal ? 'optimal' : 'warning',
       });
     } else {
       steps.push({
         stage: 'ENVIRONMENT',
-        headline: 'Environmental telemetry unavailable',
+        headline: userMode === 'farmer' ? 'Unable to check environment' : 'Environmental telemetry unavailable',
         detail: 'Connect ESP32 receiver to stream live probe measurements.',
         status: 'neutral',
       });
@@ -87,7 +98,9 @@ export default function IntelligencePage() {
     // Step 3: Historical Trend
     steps.push({
       stage: 'HISTORICAL TREND',
-      headline: `pH ${predictiveAnalytics.predictions.ph.trendDirection} · TDS ${predictiveAnalytics.predictions.tds.trendDirection} · Water ${predictiveAnalytics.predictions.waterLevel.trendDirection}`,
+      headline: userMode === 'farmer'
+        ? 'Plant condition trajectory'
+        : `pH ${predictiveAnalytics.predictions.ph.trendDirection} · TDS ${predictiveAnalytics.predictions.tds.trendDirection} · Water ${predictiveAnalytics.predictions.waterLevel.trendDirection}`,
       detail: `Trend direction calculated across ${observations.length} longitudinal observation cycles.`,
       status: 'neutral',
     });
@@ -101,17 +114,19 @@ export default function IntelligencePage() {
     });
 
     // Step 5: Action
-    if (activeRecommendations.length > 0) {
-      steps.push({
-        stage: 'ACTION',
-        headline: activeRecommendations[0].title,
-        detail: `${activeRecommendations[0].action} — Reason: ${activeRecommendations[0].reasoning}`,
-        status: activeRecommendations[0].priority === 'urgent' || activeRecommendations[0].priority === 'high' ? 'warning' : 'optimal',
-      });
-    }
+    steps.push({
+      stage: 'ACTION',
+      headline: userMode === 'farmer' ? farmerSemanticState.actionableSummary : (activeRecommendations[0]?.title || 'No urgent action needed'),
+      detail: activeRecommendations[0]
+        ? `${activeRecommendations[0].action} — Reason: ${activeRecommendations[0].reasoning}`
+        : 'All environmental parameters and plant health indicators are stable.',
+      status: activeRecommendations[0]?.priority === 'urgent' || activeRecommendations[0]?.priority === 'high' ? 'warning' : 'optimal',
+    });
 
     return steps;
   }, [
+    userMode,
+    farmerSemanticState,
     latestDetection,
     latestVisualHealth,
     isTelemetryAvailable,
@@ -162,7 +177,8 @@ export default function IntelligencePage() {
           <h1 className="display-title">Plant Reasoning Lab</h1>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+          <ModeToggle mode={userMode} onModeChange={setUserMode} size="sm" />
           <button className="btn btn-secondary" onClick={handleExportDiagnostics} style={{ fontSize: '11.5px' }}>
             <Download size={13} />
             <span>Export Diagnostic JSON</span>

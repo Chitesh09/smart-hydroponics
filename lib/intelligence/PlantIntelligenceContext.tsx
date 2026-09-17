@@ -63,6 +63,7 @@ import {
 import { ensureDefaultHierarchy } from '@/lib/firebase/firestore';
 import { DEMO_SCENARIOS } from './demoScenarios';
 import { deriveFarmerSemanticState, FarmerSemanticState } from './farmerSemanticLayer';
+import { AssistantMode, ASSISTANT_MODE_STORAGE_KEY } from '@/lib/assistant/assistantConfig';
 
 interface PlantIntelligenceContextType {
   cropIdentity: PlantIdentity;
@@ -72,6 +73,8 @@ interface PlantIntelligenceContextType {
   latestDetection: PlantDetectionResult | null;
   latestVisualHealth: VisualHealthAnalysisResult | null;
   farmerSemanticState: FarmerSemanticState;
+  userMode: AssistantMode;
+  setUserMode: (mode: AssistantMode) => void;
   isScanning: boolean;
   setIsScanning: (scanning: boolean) => void;
   analyzeNow: () => { detection: PlantDetectionResult; health: VisualHealthAnalysisResult } | null;
@@ -132,6 +135,25 @@ export function PlantIntelligenceProvider({ children }: { children: React.ReactN
   // Identification State
   const [identificationResult, setIdentificationResult] = useState<PlantIdentificationResponse | null>(null);
   const [isIdentifying, setIsIdentifying] = useState<boolean>(false);
+
+  // User Experience Mode State ('farmer' by default)
+  const [userMode, setUserModeState] = useState<AssistantMode>('farmer');
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const savedMode = localStorage.getItem(ASSISTANT_MODE_STORAGE_KEY) as AssistantMode;
+      if (savedMode === 'technical' || savedMode === 'farmer') {
+        setUserModeState(savedMode);
+      }
+    }
+  }, []);
+
+  const setUserMode = useCallback((newMode: AssistantMode) => {
+    setUserModeState(newMode);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(ASSISTANT_MODE_STORAGE_KEY, newMode);
+    }
+  }, []);
 
   // Multimodal Observation History (loaded from Firestore or local fallback)
   const [observations, setObservations] = useState<PlantObservation[]>(() => getStoredObservations());
@@ -596,6 +618,8 @@ export function PlantIntelligenceProvider({ children }: { children: React.ReactN
         latestDetection,
         latestVisualHealth,
         farmerSemanticState,
+        userMode,
+        setUserMode,
         isScanning,
         setIsScanning,
         analyzeNow,

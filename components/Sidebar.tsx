@@ -3,7 +3,9 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/lib/auth/AuthContext';
+import { usePlantIntelligence } from '@/lib/intelligence/PlantIntelligenceContext';
 import { BrandLogo } from '@/components/ui/BrandLogo';
+import { ModeToggle } from '@/components/ui/ModeToggle';
 import {
   LayoutDashboard,
   BarChart3,
@@ -59,6 +61,7 @@ export function Sidebar({
 }: SidebarProps) {
   const pathname = usePathname();
   const { currentUser, userProfile, signOut } = useAuth();
+  const { userMode, setUserMode } = usePlantIntelligence();
 
   const statusConfig = {
     stable: { color: 'var(--color-green)', label: 'Biological Node Stable' },
@@ -73,6 +76,11 @@ export function Sidebar({
       {/* Brand Header with Official Logo */}
       <div className={styles.brand}>
         <BrandLogo size={32} showText subtitle="Living Intelligence" priority />
+      </div>
+
+      {/* Mode Switch Toggle (Farmer Mode vs Technical Mode) */}
+      <div style={{ padding: '0 4px', marginBottom: '8px' }}>
+        <ModeToggle mode={userMode} onModeChange={setUserMode} size="sm" />
       </div>
 
       {/* Hardware Node Status */}
