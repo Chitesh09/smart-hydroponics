@@ -8,7 +8,6 @@ import {
   LayoutDashboard,
   BarChart3,
   Sparkles,
-  MessageSquare,
   Radio,
   Settings,
   ChevronRight,
@@ -35,12 +34,6 @@ const navSections: { title: string; items: NavItemDef[] }[] = [
     items: [
       { href: '/dashboard/intelligence', icon: Sparkles, label: 'Reasoning Lab' },
       { href: '/dashboard/analytics', icon: BarChart3, label: 'Plant Journey' },
-    ],
-  },
-  {
-    title: 'Interaction',
-    items: [
-      { href: '/dashboard/talk', icon: MessageSquare, label: 'Talk to Plant' },
     ],
   },
   {
