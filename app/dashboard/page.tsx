@@ -137,8 +137,10 @@ export default function Dashboard() {
   }, [reading.timestamp]);
 
   const isPlantIdentified = cropIdentity.cropKey !== 'unknown_plant' && cropIdentity.commonName !== 'Unknown Plant';
-  const plantDisplayName = isPlantIdentified ? cropIdentity.commonName : 'Unknown Plant';
-  const botanicalScientific = isPlantIdentified ? cropIdentity.scientificName || 'Botanical Species' : 'Botanical identification unavailable';
+  const plantDisplayName = isPlantIdentified ? cropIdentity.commonName : 'Plant type not identified yet';
+  const botanicalScientific = isPlantIdentified
+    ? cropIdentity.scientificName || 'Species Unclassified'
+    : 'Awaiting visual identification scan';
 
   // Real historical deltas calculation for "WHAT CHANGED TODAY"
   const calculatedDeltas = useMemo((): MetricDelta[] => {
@@ -178,19 +180,19 @@ export default function Dashboard() {
 
   // Optical detection progression label
   const opticalProgression = useMemo(() => {
-    if (!isCameraActive) return 'CAMERA OFFLINE';
-    if (!latestDetection?.isPlantDetected) return 'SCANNING ENVIRONMENT';
-    if (latestDetection.isPlantDetected && !isPlantIdentified) return 'PLANT STRUCTURE DETECTED';
-    if (latestDetection.isPlantDetected && isPlantIdentified) return 'READY · LIVE MONITORING';
-    return 'ANALYZING FOLIAGE';
-  }, [isCameraActive, latestDetection, isPlantIdentified]);
+    if (!isCameraActive) return 'Camera View Offline';
+    if (!latestDetection?.isPlantDetected) return 'No plant detected. Place the plant in front of the camera.';
+    if (latestDetection.confidence && latestDetection.confidence < 45) return 'Camera view is unclear. Move closer or improve lighting.';
+    if (isPlantIdentified) return `Plant Detected · ${cropIdentity.commonName} (${cropIdentity.confidence}% Match)`;
+    return `Plant Detected · Canopy ${latestDetection.canopyCoveragePercent}%`;
+  }, [isCameraActive, latestDetection, isPlantIdentified, cropIdentity.commonName, cropIdentity.confidence]);
 
   const hasActiveAttention = activeAnomalies.length > 0;
 
   return (
     <div className={styles.container}>
       
-      {/* 1. Scientific Header Bar */}
+      {/* 1. Header Bar */}
       <div className={styles.headerRow}>
         <div className={styles.greetingBlock}>
           <span className="section-label">Plant Command Center</span>
@@ -209,11 +211,11 @@ export default function Dashboard() {
       </div>
 
       {/* ============================================================ */}
-      {/* 2. HERO PLANT EXPERIENCE (The Central Visual Object)         */}
+      {/* 2. PRIMARY: PLANT CONDITION HERO BANNER                       */}
       {/* ============================================================ */}
       <div className={styles.plantHeroStage}>
         
-        {/* Left: Optical Camera Viewport */}
+        {/* Left: Live Plant Camera Viewport (Single Primary Camera Interface) */}
         <div className={styles.opticalViewport}>
           <video
             ref={videoRef}
@@ -226,7 +228,7 @@ export default function Dashboard() {
 
           {isCameraActive ? (
             <>
-              {/* Subtle Botanical Scanning Reticle */}
+              {/* Botanical Scanning Reticle */}
               <div className={styles.opticalReticle}>
                 <div className={styles.reticleCornerTL} />
                 <div className={styles.reticleCornerBR} />
@@ -236,15 +238,15 @@ export default function Dashboard() {
               <div className={styles.opticalStatusOverlay}>
                 <span
                   style={{
-                    fontSize: '10px',
+                    fontSize: '11px',
                     fontWeight: 700,
-                    letterSpacing: '0.08em',
-                    padding: '3px 8px',
+                    letterSpacing: '0.05em',
+                    padding: '4px 10px',
                     borderRadius: 'var(--radius-xs)',
-                    background: 'rgba(5, 19, 17, 0.85)',
+                    background: 'rgba(5, 19, 17, 0.90)',
                     color: latestDetection?.isPlantDetected ? 'var(--color-green)' : 'var(--text-secondary)',
                     border: '1px solid var(--border-default)',
-                    fontFamily: 'var(--font-mono)',
+                    fontFamily: 'var(--font-sans)',
                   }}
                 >
                   {opticalProgression}
@@ -253,11 +255,11 @@ export default function Dashboard() {
                 {latestDetection?.isPlantDetected && (
                   <span
                     style={{
-                      fontSize: '10px',
+                      fontSize: '11px',
                       fontWeight: 700,
-                      padding: '3px 8px',
+                      padding: '4px 10px',
                       borderRadius: 'var(--radius-xs)',
-                      background: 'rgba(5, 19, 17, 0.85)',
+                      background: 'rgba(5, 19, 17, 0.90)',
                       color: 'var(--color-teal)',
                       border: '1px solid var(--border-default)',
                       fontFamily: 'var(--font-mono)',
@@ -273,28 +275,28 @@ export default function Dashboard() {
               <CameraOff size={32} style={{ color: 'var(--text-muted)' }} />
               <div>
                 <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)' }}>
-                  Optical Stream Offline
+                  Live Plant Camera Offline
                 </div>
-                <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>
-                  Activate camera to stream live botanical foliage observations.
+                <div style={{ fontSize: '11.5px', color: 'var(--text-muted)', marginTop: '2px' }}>
+                  Activate camera to inspect plant foliage and stream observations.
                 </div>
               </div>
               <button
                 className="btn btn-secondary"
-                style={{ fontSize: '11.5px', padding: '5px 12px', marginTop: '4px' }}
+                style={{ fontSize: '11.5px', padding: '6px 14px', marginTop: '4px' }}
                 onClick={() => startCamera()}
               >
                 <Camera size={13} />
-                <span>Initialize Camera</span>
+                <span>Start Live Plant Camera</span>
               </button>
             </div>
           )}
         </div>
 
-        {/* Right: Botanical Identity & Digital Twin State */}
+        {/* Right: Botanical Identity & Current Plant Status */}
         <div className={styles.botanicalStateBlock}>
           <div>
-            <span className="section-label">Monitored Plant</span>
+            <span className="section-label">Monitored Crop</span>
             <div className={styles.speciesBlock} style={{ marginTop: '4px' }}>
               <div className={styles.commonName}>{plantDisplayName}</div>
               <div className={styles.scientificName}>{botanicalScientific}</div>
@@ -302,7 +304,7 @@ export default function Dashboard() {
 
             <div className={styles.stateRow}>
               <StatusBadge status={farmerSemanticState.plantStatus.toLowerCase()} label={farmerSemanticState.plantMessage} size="md" />
-              {isTelemetryAvailable && (
+              {isTelemetryAvailable && userMode === 'technical' && (
                 <div className={styles.conditionScoreDisplay}>
                   <span className={styles.scoreNumber}>{multimodalAssessment.overallScore}</span>
                   <span className={styles.scoreOutOf}>/ 100</span>
@@ -311,17 +313,17 @@ export default function Dashboard() {
             </div>
           </div>
 
-          {/* Plant State Digital Twin Matrix (Farmer Semantic Interpretation) */}
+          {/* Farmer Status Summary Matrix */}
           <div className={styles.twinPillars}>
             <div className={styles.pillarItem}>
-              <span className={styles.pillarLabel}>Water Status</span>
+              <span className={styles.pillarLabel}>Water Level</span>
               <span className={styles.pillarValue} style={{ color: `var(--color-${farmerSemanticState.waterColor})` }}>
                 {farmerSemanticState.waterMessage}
               </span>
             </div>
 
             <div className={styles.pillarItem}>
-              <span className={styles.pillarLabel}>Nutrients</span>
+              <span className={styles.pillarLabel}>Nutrient Level</span>
               <span className={styles.pillarValue} style={{ color: `var(--color-${farmerSemanticState.nutrientColor})` }}>
                 {farmerSemanticState.nutrientMessage}
               </span>
@@ -335,7 +337,7 @@ export default function Dashboard() {
             </div>
           </div>
 
-          {/* Reasoning Lab Link */}
+          {/* Plant Reasoning Lab Link */}
           <Link
             href="/dashboard/intelligence"
             style={{
@@ -359,17 +361,12 @@ export default function Dashboard() {
       </div>
 
       {/* ============================================================ */}
-      {/* 3. WHAT CHANGED TODAY (Historical Deltas)                     */}
-      {/* ============================================================ */}
-      <WhatChanged deltas={calculatedDeltas} hasHistory={history.length >= 5} />
-
-      {/* ============================================================ */}
-      {/* 3. PROMINENT ACTIONABLE SECTION: WHAT SHOULD I DO NOW?        */}
+      {/* 3. SECONDARY: PROMINENT "WHAT SHOULD I DO NOW?" SECTION       */}
       {/* ============================================================ */}
       <FarmerActionCard semanticState={farmerSemanticState} recommendations={activeRecommendations} />
 
       {/* ============================================================ */}
-      {/* 4. WHAT NEEDS YOUR ATTENTION                                 */}
+      {/* 4. SECONDARY: WHAT NEEDS YOUR ATTENTION                       */}
       {/* ============================================================ */}
       {hasActiveAttention ? (
         <div className={`${styles.attentionBanner} ${styles.attentionWarning}`}>
@@ -403,82 +400,78 @@ export default function Dashboard() {
       )}
 
       {/* ============================================================ */}
-      {/* 5. PLANT ENVIRONMENT (Open Strip Layout)                     */}
+      {/* 5. SUPPORTING: PLANT ENVIRONMENT OVERVIEW                    */}
       {/* ============================================================ */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-        <span className="section-label">Plant Environment</span>
+        <span className="section-label">Plant Environment Summary</span>
         
         <div className={styles.environmentalStrip}>
           
-          {/* pH Node */}
+          {/* Water Node */}
           <div className={styles.envNode}>
             <div className={styles.envNodeHeader}>
-              <span className="section-label" style={{ fontSize: '9.5px' }}>Acidity (pH)</span>
-              <FlaskConical size={14} style={{ color: 'var(--color-teal)' }} />
-            </div>
-            <div className={styles.envValueRow}>
-              <span className={styles.envValue}>
-                {isTelemetryAvailable ? reading.ph.toFixed(2) : '--'}
-              </span>
-              <span className={styles.envUnit}>pH</span>
-            </div>
-            <div className={styles.envFooter}>
-              <span>Target: 5.5 - 6.5</span>
-              <StatusBadge status={isTelemetryAvailable ? farmerSemanticState.nutrientStatus.toLowerCase() : 'unavailable'} size="sm" />
-            </div>
-          </div>
-
-          {/* TDS Node */}
-          <div className={styles.envNode}>
-            <div className={styles.envNodeHeader}>
-              <span className="section-label" style={{ fontSize: '9.5px' }}>Nutrients (TDS)</span>
-              <Sparkles size={14} style={{ color: 'var(--color-green)' }} />
-            </div>
-            <div className={styles.envValueRow}>
-              <span className={styles.envValue}>
-                {isTelemetryAvailable ? Math.round(reading.tds) : '--'}
-              </span>
-              <span className={styles.envUnit}>PPM</span>
-            </div>
-            <div className={styles.envFooter}>
-              <span>Target: 800 - 1200</span>
-              <StatusBadge status={isTelemetryAvailable ? farmerSemanticState.nutrientStatus.toLowerCase() : 'unavailable'} size="sm" />
-            </div>
-          </div>
-
-          {/* Reservoir Node */}
-          <div className={styles.envNode}>
-            <div className={styles.envNodeHeader}>
-              <span className="section-label" style={{ fontSize: '9.5px' }}>Reservoir Level</span>
+              <span className="section-label" style={{ fontSize: '9.5px' }}>Water Level</span>
               <Droplets size={14} style={{ color: 'var(--color-teal)' }} />
             </div>
             <div className={styles.envValueRow}>
               <span className={styles.envValue}>
-                {isTelemetryAvailable ? Math.round(reading.waterLevel) : '--'}
+                {userMode === 'technical' ? (isTelemetryAvailable ? `${Math.round(reading.waterLevel)}%` : '--') : farmerSemanticState.waterStatus}
               </span>
-              <span className={styles.envUnit}>%</span>
             </div>
             <div className={styles.envFooter}>
-              <span>Critical: &lt; 20%</span>
+              <span>{farmerSemanticState.waterMessage}</span>
               <StatusBadge status={isTelemetryAvailable ? farmerSemanticState.waterStatus.toLowerCase() : 'unavailable'} size="sm" />
             </div>
           </div>
 
-          {/* Distance Node */}
+          {/* Nutrient Node */}
           <div className={styles.envNode}>
             <div className={styles.envNodeHeader}>
-              <span className="section-label" style={{ fontSize: '9.5px' }}>Ultrasonic Air Gap</span>
+              <span className="section-label" style={{ fontSize: '9.5px' }}>Nutrient Balance</span>
+              <Sparkles size={14} style={{ color: 'var(--color-green)' }} />
+            </div>
+            <div className={styles.envValueRow}>
+              <span className={styles.envValue}>
+                {userMode === 'technical' ? (isTelemetryAvailable ? `${Math.round(reading.tds)} PPM` : '--') : farmerSemanticState.nutrientStatus}
+              </span>
+            </div>
+            <div className={styles.envFooter}>
+              <span>{farmerSemanticState.nutrientMessage}</span>
+              <StatusBadge status={isTelemetryAvailable ? farmerSemanticState.nutrientStatus.toLowerCase() : 'unavailable'} size="sm" />
+            </div>
+          </div>
+
+          {/* Acidity / pH Node */}
+          <div className={styles.envNode}>
+            <div className={styles.envNodeHeader}>
+              <span className="section-label" style={{ fontSize: '9.5px' }}>Solution Acidity</span>
+              <FlaskConical size={14} style={{ color: 'var(--color-teal)' }} />
+            </div>
+            <div className={styles.envValueRow}>
+              <span className={styles.envValue}>
+                {userMode === 'technical' ? (isTelemetryAvailable ? `${reading.ph.toFixed(2)} pH` : '--') : farmerSemanticState.nutrientStatus}
+              </span>
+            </div>
+            <div className={styles.envFooter}>
+              <span>{userMode === 'technical' ? 'Target: 5.5 - 6.5 pH' : farmerSemanticState.nutrientMessage}</span>
+              <StatusBadge status={isTelemetryAvailable ? farmerSemanticState.nutrientStatus.toLowerCase() : 'unavailable'} size="sm" />
+            </div>
+          </div>
+
+          {/* Environment Status Node */}
+          <div className={styles.envNode}>
+            <div className={styles.envNodeHeader}>
+              <span className="section-label" style={{ fontSize: '9.5px' }}>Growing Conditions</span>
               <Ruler size={14} style={{ color: 'var(--color-amber)' }} />
             </div>
             <div className={styles.envValueRow}>
               <span className={styles.envValue}>
-                {isTelemetryAvailable ? reading.distance.toFixed(1) : '--'}
+                {farmerSemanticState.environmentStatus}
               </span>
-              <span className={styles.envUnit}>cm</span>
             </div>
             <div className={styles.envFooter}>
-              <span>Sensor Depth</span>
-              <span className="scientific-meta" style={{ fontSize: '10px' }}>Calibrated</span>
+              <span>{farmerSemanticState.environmentMessage}</span>
+              <StatusBadge status={farmerSemanticState.environmentStatus.toLowerCase()} size="sm" />
             </div>
           </div>
 
@@ -486,62 +479,69 @@ export default function Dashboard() {
       </div>
 
       {/* ============================================================ */}
-      {/* 6. LIVE INSTRUMENTATION & SERIAL STREAM                      */}
+      {/* 6. SUPPORTING: WHAT CHANGED TODAY? (Historical Deltas)        */}
       {/* ============================================================ */}
-      <div className={styles.instrumentationSection}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', flexWrap: 'wrap', gap: '8px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Activity size={15} style={{ color: 'var(--color-teal)' }} />
-            <span className="section-label">Live Telemetry Sparkline</span>
+      <WhatChanged deltas={calculatedDeltas} hasHistory={history.length >= 5} />
+
+      {/* ============================================================ */}
+      {/* 7. ADVANCED: TECHNICAL MODE TELEMETRY & SERIAL (Conditional) */}
+      {/* ============================================================ */}
+      {userMode === 'technical' && (
+        <div className={styles.instrumentationSection}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', flexWrap: 'wrap', gap: '8px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Activity size={15} style={{ color: 'var(--color-teal)' }} />
+              <span className="section-label">Technical Telemetry Sparkline & Probe History</span>
+            </div>
+
+            <div className={styles.tabsRow}>
+              <button
+                className={`${styles.tabButton} ${selectedMetric === 'ph' ? styles.tabButtonActive : ''}`}
+                onClick={() => setSelectedMetric('ph')}
+              >
+                pH
+              </button>
+              <button
+                className={`${styles.tabButton} ${selectedMetric === 'tds' ? styles.tabButtonActive : ''}`}
+                onClick={() => setSelectedMetric('tds')}
+              >
+                TDS
+              </button>
+              <button
+                className={`${styles.tabButton} ${selectedMetric === 'waterLevel' ? styles.tabButtonActive : ''}`}
+                onClick={() => setSelectedMetric('waterLevel')}
+              >
+                Level
+              </button>
+              <button
+                className={`${styles.tabButton} ${selectedMetric === 'distance' ? styles.tabButtonActive : ''}`}
+                onClick={() => setSelectedMetric('distance')}
+              >
+                Distance
+              </button>
+            </div>
           </div>
 
-          <div className={styles.tabsRow}>
-            <button
-              className={`${styles.tabButton} ${selectedMetric === 'ph' ? styles.tabButtonActive : ''}`}
-              onClick={() => setSelectedMetric('ph')}
-            >
-              pH
-            </button>
-            <button
-              className={`${styles.tabButton} ${selectedMetric === 'tds' ? styles.tabButtonActive : ''}`}
-              onClick={() => setSelectedMetric('tds')}
-            >
-              TDS
-            </button>
-            <button
-              className={`${styles.tabButton} ${selectedMetric === 'waterLevel' ? styles.tabButtonActive : ''}`}
-              onClick={() => setSelectedMetric('waterLevel')}
-            >
-              Level
-            </button>
-            <button
-              className={`${styles.tabButton} ${selectedMetric === 'distance' ? styles.tabButtonActive : ''}`}
-              onClick={() => setSelectedMetric('distance')}
-            >
-              Distance
-            </button>
+          {history.length === 0 ? (
+            <div style={{ height: '180px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', fontSize: '12.5px' }}>
+              Awaiting serial telemetry packets from ESP32...
+            </div>
+          ) : (
+            <LiveLineChart
+              data={chartConfig.data}
+              labels={chartLabels}
+              title={chartConfig.title}
+              color={chartConfig.color}
+              min={chartConfig.min}
+              max={chartConfig.max}
+            />
+          )}
+
+          <div style={{ marginTop: '16px' }}>
+            <ESP32Connection />
           </div>
         </div>
-
-        {history.length === 0 ? (
-          <div style={{ height: '180px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', fontSize: '12.5px' }}>
-            Awaiting serial telemetry packets from ESP32...
-          </div>
-        ) : (
-          <LiveLineChart
-            data={chartConfig.data}
-            labels={chartLabels}
-            title={chartConfig.title}
-            color={chartConfig.color}
-            min={chartConfig.min}
-            max={chartConfig.max}
-          />
-        )}
-
-        <div style={{ marginTop: '16px' }}>
-          <ESP32Connection />
-        </div>
-      </div>
+      )}
 
     </div>
   );

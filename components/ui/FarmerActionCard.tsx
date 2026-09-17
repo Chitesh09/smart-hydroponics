@@ -12,6 +12,7 @@ interface FarmerActionCardProps {
 
 export function FarmerActionCard({ semanticState, recommendations = [] }: FarmerActionCardProps) {
   const { plantStatus, waterStatus, nutrientStatus, cameraStatus, hasSufficientData } = semanticState;
+  const [showAll, setShowAll] = React.useState(false);
 
   // Derive the clear primary action text
   let actionTitle = 'System Stable';
@@ -91,6 +92,8 @@ export function FarmerActionCard({ semanticState, recommendations = [] }: Farmer
     },
   }[cardVariant];
 
+  const hasMultiple = recommendations.length > 1;
+
   return (
     <div
       style={{
@@ -99,44 +102,69 @@ export function FarmerActionCard({ semanticState, recommendations = [] }: Farmer
         borderRadius: 'var(--radius-lg)',
         padding: '18px 22px',
         display: 'flex',
-        alignItems: 'flex-start',
-        gap: '16px',
+        flexDirection: 'column',
+        gap: '12px',
         boxShadow: 'var(--shadow-sm)',
       }}
     >
-      <div
-        style={{
-          width: '38px',
-          height: '38px',
-          borderRadius: 'var(--radius-md)',
-          background: 'rgba(5, 19, 17, 0.5)',
-          border: `1px solid ${variantStyles.border}`,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          color: variantStyles.iconColor,
-          flexShrink: 0,
-        }}
-      >
-        <Icon size={20} />
-      </div>
-
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <ClipboardCheck size={14} style={{ color: 'var(--text-muted)' }} />
-          <span className="section-label" style={{ fontSize: '10px' }}>
-            What should I do now?
-          </span>
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '16px' }}>
+        <div
+          style={{
+            width: '38px',
+            height: '38px',
+            borderRadius: 'var(--radius-md)',
+            background: 'rgba(5, 19, 17, 0.5)',
+            border: `1px solid ${variantStyles.border}`,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: variantStyles.iconColor,
+            flexShrink: 0,
+          }}
+        >
+          <Icon size={20} />
         </div>
 
-        <div style={{ fontSize: '15px', fontWeight: 800, color: variantStyles.titleColor }}>
-          {actionTitle}
-        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <ClipboardCheck size={14} style={{ color: 'var(--text-muted)' }} />
+            <span className="section-label" style={{ fontSize: '10px' }}>
+              What should I do now?
+            </span>
+          </div>
 
-        <p style={{ fontSize: '13.5px', color: 'var(--text-primary)', margin: 0, lineHeight: 1.4, fontWeight: 500 }}>
-          {actionMessage}
-        </p>
+          <div style={{ fontSize: '15px', fontWeight: 800, color: variantStyles.titleColor }}>
+            {actionTitle}
+          </div>
+
+          <p style={{ fontSize: '13.5px', color: 'var(--text-primary)', margin: 0, lineHeight: 1.4, fontWeight: 500 }}>
+            {actionMessage}
+          </p>
+        </div>
       </div>
+
+      {hasMultiple && (
+        <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: '10px' }}>
+          <button
+            type="button"
+            className="btn-ghost"
+            style={{ fontSize: '11px', color: 'var(--color-teal)', padding: '2px 0', cursor: 'pointer' }}
+            onClick={() => setShowAll(!showAll)}
+          >
+            {showAll ? 'Hide additional recommendations' : `View ${recommendations.length - 1} additional recommendation(s)`}
+          </button>
+
+          {showAll && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '8px' }}>
+              {recommendations.slice(1).map((rec) => (
+                <div key={rec.id} style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
+                  • <strong style={{ color: 'var(--text-primary)' }}>{rec.title}</strong>: {rec.action}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
