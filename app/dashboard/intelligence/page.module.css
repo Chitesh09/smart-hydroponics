@@ -230,22 +230,51 @@
   gap: 4px;
 }
 
-/* Compact Optical Station in Lab */
-.opticalLabBox {
-  position: relative;
-  width: 100%;
-  aspect-ratio: 16 / 9;
-  background: #020907;
+/* Visual Evidence Panel Grid */
+.visualEvidenceGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+
+@media (max-width: 640px) {
+  .visualEvidenceGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.evidenceTile {
+  background: var(--bg-surface);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-sm);
-  overflow: hidden;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.evidenceLabel {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+}
+
+.evidenceValue {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+}
+
+.emptyVisualEvidence {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  padding: 24px 16px;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
-.opticalLabVideo {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}

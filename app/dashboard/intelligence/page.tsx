@@ -1,9 +1,8 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useMemo } from 'react';
 import { usePlantIntelligence } from '@/lib/intelligence/PlantIntelligenceContext';
 import { useESP32Serial } from '@/lib/esp32/ESP32SerialContext';
-import { useCamera } from '@/lib/camera/CameraContext';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { DataSourceBadge } from '@/components/ui/DataSourceBadge';
 import { EvidenceChain, EvidenceStep } from '@/components/ui/EvidenceChain';
@@ -11,9 +10,7 @@ import {
   Brain,
   Layers,
   Eye,
-  CameraOff,
   Download,
-  Search,
   Clock,
   TrendingUp,
   TrendingDown,
@@ -26,33 +23,29 @@ export default function IntelligencePage() {
     cropIdentity,
     latestDetection,
     latestVisualHealth,
+    latestObservation,
     multimodalAssessment,
     predictiveAnalytics,
     activeAnomalies,
     activeRecommendations,
-    observations,
-    identifyCurrentPlant,
-    isIdentifying
+    observations
   } = usePlantIntelligence();
 
   const { mode, isStale, latestReading } = useESP32Serial();
-  const { status: cameraStatus, videoRef, startCamera } = useCamera();
-
-  const [identificationError, setIdentificationError] = useState<string | null>(null);
 
   const isPlantIdentified = cropIdentity.cropKey !== 'unknown_plant' && cropIdentity.commonName !== 'Unknown Plant';
   const plantDisplayName = isPlantIdentified ? cropIdentity.commonName : 'Unknown Plant';
   const botanicalScientific = isPlantIdentified ? cropIdentity.scientificName || 'Species Unclassified' : 'Identification pending';
 
   const isTelemetryAvailable = latestReading !== null && !isStale;
-  const isCameraActive = cameraStatus === 'connected';
+  const hasVisualData = Boolean(latestDetection || (latestObservation && latestObservation.isPlantDetected !== undefined));
 
   // Build the dynamic scientific Evidence Chain from real system state
   const evidenceChainSteps = useMemo((): EvidenceStep[] => {
     const steps: EvidenceStep[] = [];
 
     // Step 1: Observation
-    if (isCameraActive && latestDetection?.isPlantDetected) {
+    if (latestDetection?.isPlantDetected) {
       steps.push({
         stage: 'OBSERVATION',
         headline: `Foliage presence confirmed (${latestDetection.canopyCoveragePercent}% canopy coverage)`,
@@ -64,8 +57,8 @@ export default function IntelligencePage() {
     } else {
       steps.push({
         stage: 'OBSERVATION',
-        headline: isCameraActive ? 'Searching for plant foliage structure' : 'Optical camera offline',
-        detail: isCameraActive ? 'Position a plant inside the optical view.' : 'Activate camera for real-time visual inspection.',
+        headline: 'No visual observation available',
+        detail: 'Start the Live Plant Camera from Dashboard to collect a new observation.',
         status: 'neutral',
       });
     }
@@ -118,7 +111,6 @@ export default function IntelligencePage() {
 
     return steps;
   }, [
-    isCameraActive,
     latestDetection,
     latestVisualHealth,
     isTelemetryAvailable,
@@ -128,15 +120,6 @@ export default function IntelligencePage() {
     observations.length,
     activeRecommendations
   ]);
-
-  const handleTriggerIdentification = async () => {
-    setIdentificationError(null);
-    try {
-      await identifyCurrentPlant();
-    } catch (err: unknown) {
-      setIdentificationError(err instanceof Error ? err.message : 'Identification request failed');
-    }
-  };
 
   const handleExportDiagnostics = () => {
     const diagnosticPayload = {
@@ -202,7 +185,7 @@ export default function IntelligencePage() {
           <span className="section-label">Condition</span>
           <div className={styles.bannerValue}>
             <StatusBadge
-              status={isTelemetryAvailable || isCameraActive ? multimodalAssessment.overallHealthState : 'insufficient_data'}
+              status={isTelemetryAvailable || latestDetection?.isPlantDetected ? multimodalAssessment.overallHealthState : 'insufficient_data'}
               size="sm"
             />
             {isTelemetryAvailable && (
@@ -283,16 +266,16 @@ export default function IntelligencePage() {
               <div className={styles.pillarNode}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Visual Foliage</span>
-                  <StatusBadge status={isCameraActive && latestDetection?.isPlantDetected ? (latestVisualHealth?.healthState || 'healthy') : 'unavailable'} size="sm" />
+                  <StatusBadge status={latestDetection?.isPlantDetected ? (latestVisualHealth?.healthState || 'healthy') : 'unavailable'} size="sm" />
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                   <div className={styles.pillarMetricRow}>
                     <span className="text-secondary">Canopy Cover</span>
-                    <span className="font-mono text-primary">{isCameraActive && latestDetection?.isPlantDetected ? `${latestDetection.canopyCoveragePercent}%` : '--'}</span>
+                    <span className="font-mono text-primary">{latestDetection?.isPlantDetected ? `${latestDetection.canopyCoveragePercent}%` : '--'}</span>
                   </div>
                   <div className={styles.pillarMetricRow}>
                     <span className="text-secondary">Foliage State</span>
-                    <span className="text-primary font-medium">{isCameraActive && latestDetection?.isPlantDetected ? 'Uniform' : 'Standby'}</span>
+                    <span className="text-primary font-medium">{latestDetection?.isPlantDetected ? 'Uniform' : 'Standby'}</span>
                   </div>
                 </div>
                 <span className="scientific-meta" style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: 'auto' }}>Weight: 35%</span>
@@ -335,10 +318,10 @@ export default function IntelligencePage() {
                 <div className={styles.barItem}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10.5px' }}>
                     <span className="text-muted">Visual (35%)</span>
-                    <span className="font-mono text-primary">{isCameraActive && latestDetection?.isPlantDetected ? '32%' : '0%'}</span>
+                    <span className="font-mono text-primary">{latestDetection?.isPlantDetected ? '32%' : '0%'}</span>
                   </div>
                   <div className={styles.barTrack}>
-                    <div className={styles.barFill} style={{ width: isCameraActive && latestDetection?.isPlantDetected ? '90%' : '0%', background: 'var(--color-green)' }} />
+                    <div className={styles.barFill} style={{ width: latestDetection?.isPlantDetected ? '90%' : '0%', background: 'var(--color-green)' }} />
                   </div>
                 </div>
 
@@ -429,68 +412,91 @@ export default function IntelligencePage() {
 
         </div>
 
-        {/* Right Column: Optical Station, ML Identification & Observations Timeline */}
+        {/* Right Column: Visual Evidence & Observations Timeline */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
           
-          {/* Optical Analysis & Botanical ML Trigger */}
+          {/* Visual Evidence (Consumed from Dashboard Camera Pipeline) */}
           <div className={styles.reasoningPanel}>
             <div className={styles.panelHeader}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <Eye size={16} style={{ color: 'var(--color-teal)' }} />
-                <span className="section-label">Optical Observation Station</span>
+                <span className="section-label">Visual Evidence</span>
               </div>
-              <StatusBadge status={isCameraActive ? 'live' : 'offline'} size="sm" />
+              <span className="scientific-meta">Dashboard Camera Stream</span>
             </div>
 
-            <div className={styles.opticalLabBox}>
-              <video
-                ref={videoRef}
-                className={styles.opticalLabVideo}
-                autoPlay
-                playsInline
-                muted
-                style={{ display: isCameraActive ? 'block' : 'none' }}
-              />
-
-              {!isCameraActive && (
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', color: 'var(--text-muted)' }}>
-                  <CameraOff size={24} />
-                  <span style={{ fontSize: '11px' }}>Camera Offline</span>
-                  <button className="btn btn-secondary" style={{ fontSize: '11px', padding: '3px 8px' }} onClick={() => startCamera()}>
-                    Start Optical Feed
-                  </button>
-                </div>
-              )}
-            </div>
-
-            {/* Pl@ntNet ML Identification Trigger */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', borderTop: '1px solid var(--border-subtle)', paddingTop: '12px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div>
-                  <div style={{ fontSize: '12.5px', fontWeight: 600, color: 'var(--text-primary)' }}>
-                    Botanical ML Identification
-                  </div>
-                  <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-                    Query Pl@ntNet botanical database using live optical frame
-                  </div>
+            {hasVisualData ? (
+              <div className={styles.visualEvidenceGrid}>
+                <div className={styles.evidenceTile}>
+                  <span className={styles.evidenceLabel}>Plant Presence</span>
+                  <span className={styles.evidenceValue} style={{ color: latestDetection?.isPlantDetected ? 'var(--color-green)' : 'var(--text-muted)' }}>
+                    {latestDetection?.isPlantDetected ? 'Detected' : 'Not detected'}
+                  </span>
                 </div>
 
-                <button
-                  className="btn btn-primary"
-                  style={{ fontSize: '11px', padding: '5px 12px' }}
-                  onClick={handleTriggerIdentification}
-                  disabled={!isCameraActive || isIdentifying}
-                >
-                  <Search size={12} />
-                  <span>{isIdentifying ? 'Analyzing...' : 'Identify Specimen'}</span>
-                </button>
+                <div className={styles.evidenceTile}>
+                  <span className={styles.evidenceLabel}>Plant Species</span>
+                  <span className={styles.evidenceValue}>
+                    {isPlantIdentified ? cropIdentity.commonName : 'Unclassified'}
+                  </span>
+                </div>
+
+                <div className={styles.evidenceTile}>
+                  <span className={styles.evidenceLabel}>Identification Confidence</span>
+                  <span className={styles.evidenceValue}>
+                    {isPlantIdentified && cropIdentity.confidence ? `${cropIdentity.confidence}%` : '--'}
+                  </span>
+                </div>
+
+                <div className={styles.evidenceTile}>
+                  <span className={styles.evidenceLabel}>Canopy Coverage</span>
+                  <span className={styles.evidenceValue}>
+                    {latestDetection ? `${latestDetection.canopyCoveragePercent}%` : '--'}
+                  </span>
+                </div>
+
+                <div className={styles.evidenceTile}>
+                  <span className={styles.evidenceLabel}>Visual Health</span>
+                  <span className={styles.evidenceValue}>
+                    {latestVisualHealth ? latestVisualHealth.healthState.replace('_', ' ').toUpperCase() : '--'}
+                  </span>
+                </div>
+
+                <div className={styles.evidenceTile}>
+                  <span className={styles.evidenceLabel}>Chlorosis</span>
+                  <span className={styles.evidenceValue}>
+                    {latestVisualHealth ? `${latestVisualHealth.chlorosisYellowPercent.toFixed(1)}%` : '--'}
+                  </span>
+                </div>
+
+                <div className={styles.evidenceTile}>
+                  <span className={styles.evidenceLabel}>Necrosis</span>
+                  <span className={styles.evidenceValue}>
+                    {latestVisualHealth ? `${latestVisualHealth.necroticBrownPercent.toFixed(1)}%` : '--'}
+                  </span>
+                </div>
+
+                <div className={styles.evidenceTile}>
+                  <span className={styles.evidenceLabel}>Last Visual Scan</span>
+                  <span className={styles.evidenceValue}>
+                    {latestObservation?.timestamp
+                      ? new Date(latestObservation.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                      : latestDetection
+                      ? 'Live Stream'
+                      : '--'}
+                  </span>
+                </div>
               </div>
+            ) : (
+              <div className={styles.emptyVisualEvidence}>
+                <p style={{ fontSize: '12px', color: 'var(--text-secondary)', margin: 0, textAlign: 'center' }}>
+                  Visual analysis unavailable — start the camera from Dashboard to collect a plant observation.
+                </p>
+              </div>
+            )}
 
-              {identificationError && (
-                <span style={{ fontSize: '11px', color: 'var(--color-red)' }}>
-                  {identificationError}
-                </span>
-              )}
+            <div style={{ fontSize: '11px', color: 'var(--text-muted)', borderTop: '1px solid var(--border-subtle)', paddingTop: '10px' }}>
+              Visual observations are supplied by the Dashboard camera.
             </div>
           </div>
 
@@ -537,3 +543,4 @@ export default function IntelligencePage() {
     </div>
   );
 }
+
