@@ -2,16 +2,18 @@
 
 import React from 'react';
 import { Sprout, Microchip } from 'lucide-react';
-import { AssistantMode } from '@/lib/assistant/assistantConfig';
+import { AssistantMode, SupportedLanguageCode } from '@/lib/assistant/assistantConfig';
 
 interface ModeToggleProps {
   mode: AssistantMode;
   onModeChange: (mode: AssistantMode) => void;
+  language?: SupportedLanguageCode;
   size?: 'sm' | 'md';
 }
 
-export function ModeToggle({ mode, onModeChange, size = 'md' }: ModeToggleProps) {
+export function ModeToggle({ mode, onModeChange, language = 'en', size = 'md' }: ModeToggleProps) {
   const isFarmer = mode === 'farmer';
+  const isKn = language === 'kn';
 
   return (
     <div
@@ -25,7 +27,7 @@ export function ModeToggle({ mode, onModeChange, size = 'md' }: ModeToggleProps)
         gap: '2px',
       }}
       role="radiogroup"
-      aria-label="Application View Mode"
+      aria-label={isKn ? 'ಅಪ್ಲಿಕೇಶನ್ ಮೋಡ್ ಆಯ್ಕೆ' : 'Application View Mode'}
     >
       <button
         type="button"
@@ -49,7 +51,7 @@ export function ModeToggle({ mode, onModeChange, size = 'md' }: ModeToggleProps)
         }}
       >
         <Sprout size={size === 'sm' ? 12 : 14} />
-        <span>Farmer Mode</span>
+        <span>{isKn ? 'ರೈತರ ಮೋಡ್' : 'Farmer Mode'}</span>
       </button>
 
       <button
@@ -74,7 +76,7 @@ export function ModeToggle({ mode, onModeChange, size = 'md' }: ModeToggleProps)
         }}
       >
         <Microchip size={size === 'sm' ? 12 : 14} />
-        <span>Technical Mode</span>
+        <span>{isKn ? 'ತಾಂತ್ರಿಕ ಮೋಡ್' : 'Technical Mode'}</span>
       </button>
     </div>
   );

@@ -51,6 +51,7 @@ export default function Dashboard() {
   const [selectedMetric, setSelectedMetric] = useState<'ph' | 'tds' | 'waterLevel' | 'distance'>('ph');
 
   const copy = getFarmerCopy(language);
+  const isKn = language === 'kn';
   const reading = latestReading || DEFAULT_READING;
   const isTelemetryAvailable = latestReading !== null && !isStale;
   const isCameraActive = cameraStatus === 'connected';
@@ -61,7 +62,7 @@ export default function Dashboard() {
     const now = new Date();
     const hour = now.getHours();
 
-    if (language === 'kn' && userMode === 'farmer') {
+    if (isKn) {
       let knGreeting = 'ಸ್ವಾಗತ';
       if (hour < 12) knGreeting = 'ಶುಭೋದಯ';
       else if (hour < 17) knGreeting = 'ಶುಭ ಮಧ್ಯಾಹ್ನ';
@@ -82,7 +83,7 @@ export default function Dashboard() {
       return `${timeGreeting}, ${resolvedName}`;
     }
     return timeGreeting;
-  }, [currentUser?.displayName, userProfile?.displayName, language, userMode]);
+  }, [currentUser?.displayName, userProfile?.displayName, isKn]);
 
   // Chart timestamps
   const chartLabels = useMemo(() => {
@@ -156,10 +157,10 @@ export default function Dashboard() {
   const isPlantIdentified = cropIdentity.cropKey !== 'unknown_plant' && cropIdentity.commonName !== 'Unknown Plant';
   const plantDisplayName = isPlantIdentified
     ? cropIdentity.commonName
-    : (language === 'kn' && userMode === 'farmer' ? copy.ui.plantNotIdentified : 'Plant type not identified yet');
+    : (isKn ? copy.ui.plantNotIdentified : 'Plant type not identified yet');
   const botanicalScientific = isPlantIdentified
-    ? cropIdentity.scientificName || (language === 'kn' && userMode === 'farmer' ? 'ವರ್ಗೀಕರಿಸದ ಪ್ರಭೇದ' : 'Species Unclassified')
-    : (language === 'kn' && userMode === 'farmer' ? 'ಕ್ಯಾಮೆರಾ ಸ್ಕ್ಯಾನ್‌ಗಾಗಿ ಕಾಯಲಾಗುತ್ತಿದೆ' : 'Awaiting visual identification scan');
+    ? cropIdentity.scientificName || (isKn ? 'ವರ್ಗೀಕರಿಸದ ಪ್ರಭೇದ' : 'Species Unclassified')
+    : (isKn ? 'ಕ್ಯಾಮೆರಾ ಸ್ಕ್ಯಾನ್‌ಗಾಗಿ ಕಾಯಲಾಗುತ್ತಿದೆ' : 'Awaiting visual identification scan');
 
   // Real historical deltas calculation for "WHAT CHANGED TODAY"
   const calculatedDeltas = useMemo((): MetricDelta[] => {
@@ -199,7 +200,6 @@ export default function Dashboard() {
 
   // Optical detection progression label
   const opticalProgression = useMemo(() => {
-    const isKn = language === 'kn' && userMode === 'farmer';
     if (!isCameraActive) return isKn ? copy.ui.cameraOffline : 'Camera View Offline';
     if (!latestDetection?.isPlantDetected) {
       return isKn ? copy.ui.noPlant : 'No plant detected. Place the plant in front of the camera.';
@@ -215,7 +215,7 @@ export default function Dashboard() {
     return isKn
       ? `ಗಿಡ ಪತ್ತೆಯಾಗಿದೆ · ಎಲೆಗಳ ವ್ಯಾಪ್ತಿ ${latestDetection.canopyCoveragePercent}%`
       : `Plant Detected · Canopy ${latestDetection.canopyCoveragePercent}%`;
-  }, [isCameraActive, latestDetection, isPlantIdentified, cropIdentity.commonName, cropIdentity.confidence, language, userMode, copy]);
+  }, [isCameraActive, latestDetection, isPlantIdentified, cropIdentity.commonName, cropIdentity.confidence, isKn, copy]);
 
   const hasActiveAttention = activeAnomalies.length > 0;
 
@@ -226,18 +226,18 @@ export default function Dashboard() {
       <div className={styles.headerRow}>
         <div className={styles.greetingBlock}>
           <span className="section-label">
-            {language === 'kn' && userMode === 'farmer' ? copy.ui.plantCommandCenter : 'Plant Command Center'}
+            {isKn ? copy.ui.plantCommandCenter : 'Plant Command Center'}
           </span>
           <h1 className="display-title">{greeting}</h1>
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-          <ModeToggle mode={userMode} onModeChange={setUserMode} size="sm" />
+          <ModeToggle mode={userMode} onModeChange={setUserMode} size="sm" language={language} />
           <LanguageToggle language={language} onLanguageChange={setLanguage} size="sm" />
           <DataSourceBadge mode={mode} isStale={isStale} hasData={latestReading !== null} />
           {secondsAgo !== null && (
             <span className="scientific-meta">
-              {language === 'kn' && userMode === 'farmer' ? `${secondsAgo}ಸೆ ಹಿಂದೆ ಸಿಂಕ್ ಆಗಿದೆ` : `Synced ${secondsAgo}s ago`}
+              {isKn ? `${secondsAgo}ಸೆ ಹಿಂದೆ ಸಿಂಕ್ ಆಗಿದೆ` : `Synced ${secondsAgo}s ago`}
             </span>
           )}
         </div>
@@ -308,10 +308,10 @@ export default function Dashboard() {
               <CameraOff size={32} style={{ color: 'var(--text-muted)' }} />
               <div>
                 <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)' }}>
-                  {language === 'kn' && userMode === 'farmer' ? copy.ui.cameraOffline : 'Live Plant Camera Offline'}
+                  {isKn ? copy.ui.cameraOffline : 'Live Plant Camera Offline'}
                 </div>
                 <div style={{ fontSize: '11.5px', color: 'var(--text-muted)', marginTop: '2px' }}>
-                  {language === 'kn' && userMode === 'farmer'
+                  {isKn
                     ? 'ಗಿಡದ ಎಲೆಗಳನ್ನು ವೀಕ್ಷಿಸಲು ಕ್ಯಾಮೆರಾ ಆನ್ ಮಾಡಿ.'
                     : 'Activate camera to inspect plant foliage and stream observations.'}
                 </div>
@@ -322,7 +322,7 @@ export default function Dashboard() {
                 onClick={() => startCamera()}
               >
                 <Camera size={13} />
-                <span>{language === 'kn' && userMode === 'farmer' ? copy.ui.startLiveCamera : 'Start Live Plant Camera'}</span>
+                <span>{isKn ? copy.ui.startLiveCamera : 'Start Live Plant Camera'}</span>
               </button>
             </div>
           )}
@@ -332,7 +332,7 @@ export default function Dashboard() {
         <div className={styles.botanicalStateBlock}>
           <div>
             <span className="section-label">
-              {language === 'kn' && userMode === 'farmer' ? 'ಪರಿಶೀಲಿಸುತ್ತಿರುವ ಗಿಡ' : 'Monitored Crop'}
+              {isKn ? 'ಪರಿಶೀಲಿಸುತ್ತಿರುವ ಗಿಡ' : 'Monitored Crop'}
             </span>
             <div className={styles.speciesBlock} style={{ marginTop: '4px' }}>
               <div className={styles.commonName}>{plantDisplayName}</div>
@@ -354,7 +354,7 @@ export default function Dashboard() {
           <div className={styles.twinPillars}>
             <div className={styles.pillarItem}>
               <span className={styles.pillarLabel}>
-                {language === 'kn' && userMode === 'farmer' ? copy.ui.waterLevelLabel : 'Water Level'}
+                {isKn ? copy.ui.waterLevelLabel : 'Water Level'}
               </span>
               <span className={styles.pillarValue} style={{ color: `var(--color-${farmerSemanticState.waterColor})` }}>
                 {farmerSemanticState.waterMessage}
@@ -363,7 +363,7 @@ export default function Dashboard() {
 
             <div className={styles.pillarItem}>
               <span className={styles.pillarLabel}>
-                {language === 'kn' && userMode === 'farmer' ? copy.ui.nutrientLevelLabel : 'Nutrient Level'}
+                {isKn ? copy.ui.nutrientLevelLabel : 'Nutrient Level'}
               </span>
               <span className={styles.pillarValue} style={{ color: `var(--color-${farmerSemanticState.nutrientColor})` }}>
                 {farmerSemanticState.nutrientMessage}
@@ -372,7 +372,7 @@ export default function Dashboard() {
 
             <div className={styles.pillarItem}>
               <span className={styles.pillarLabel}>
-                {language === 'kn' && userMode === 'farmer' ? copy.ui.cameraEvidence : 'Camera View'}
+                {isKn ? copy.ui.cameraEvidence : 'Camera View'}
               </span>
               <span className={styles.pillarValue} style={{ color: `var(--color-${farmerSemanticState.cameraColor})` }}>
                 {farmerSemanticState.cameraMessage}
@@ -396,7 +396,7 @@ export default function Dashboard() {
               borderRadius: 'var(--radius-sm)',
             }}
           >
-            <span>{language === 'kn' && userMode === 'farmer' ? copy.ui.openReasoningLab : 'Open Plant Reasoning Lab'}</span>
+            <span>{isKn ? copy.ui.openReasoningLab : 'Open Plant Reasoning Lab'}</span>
             <ArrowRight size={13} />
           </Link>
         </div>
@@ -425,7 +425,7 @@ export default function Dashboard() {
             </div>
           </div>
           <Link href="/dashboard/intelligence" className="btn btn-secondary" style={{ fontSize: '11.5px', padding: '4px 10px' }}>
-            {language === 'kn' && userMode === 'farmer' ? 'ವಿವರಗಳು' : 'Diagnostic Details'}
+            {isKn ? 'ವಿವರಗಳು' : 'Diagnostic Details'}
           </Link>
         </div>
       ) : (
@@ -433,10 +433,10 @@ export default function Dashboard() {
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <CheckCircle2 size={16} style={{ color: 'var(--color-green)' }} />
             <span style={{ fontSize: '12.5px', fontWeight: 600, color: 'var(--text-primary)' }}>
-              {language === 'kn' && userMode === 'farmer' ? copy.ui.everythingStable : 'Everything Looks Stable'}
+              {isKn ? copy.ui.everythingStable : 'Everything Looks Stable'}
             </span>
             <span style={{ fontSize: '11.5px', color: 'var(--text-muted)' }}>
-              {language === 'kn' && userMode === 'farmer'
+              {isKn
                 ? `— ${copy.ui.allParametersOptimal}`
                 : '— All biological parameters and environmental channels are within optimal ranges.'}
             </span>
@@ -449,7 +449,7 @@ export default function Dashboard() {
       {/* ============================================================ */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
         <span className="section-label">
-          {language === 'kn' && userMode === 'farmer' ? copy.ui.plantEnvironmentSummary : 'Plant Environment Summary'}
+          {isKn ? copy.ui.plantEnvironmentSummary : 'Plant Environment Summary'}
         </span>
         
         <div className={styles.environmentalStrip}>
@@ -458,7 +458,7 @@ export default function Dashboard() {
           <div className={styles.envNode}>
             <div className={styles.envNodeHeader}>
               <span className="section-label" style={{ fontSize: '9.5px' }}>
-                {language === 'kn' && userMode === 'farmer' ? copy.ui.waterLevelLabel : 'Water Level'}
+                {isKn ? copy.ui.waterLevelLabel : 'Water Level'}
               </span>
               <Droplets size={14} style={{ color: 'var(--color-teal)' }} />
             </div>
@@ -477,7 +477,7 @@ export default function Dashboard() {
           <div className={styles.envNode}>
             <div className={styles.envNodeHeader}>
               <span className="section-label" style={{ fontSize: '9.5px' }}>
-                {language === 'kn' && userMode === 'farmer' ? copy.ui.nutrientLevelLabel : 'Nutrient Balance'}
+                {isKn ? copy.ui.nutrientLevelLabel : 'Nutrient Balance'}
               </span>
               <Sparkles size={14} style={{ color: 'var(--color-green)' }} />
             </div>
@@ -496,7 +496,7 @@ export default function Dashboard() {
           <div className={styles.envNode}>
             <div className={styles.envNodeHeader}>
               <span className="section-label" style={{ fontSize: '9.5px' }}>
-                {language === 'kn' && userMode === 'farmer' ? copy.ui.solutionAcidityLabel : 'Solution Acidity'}
+                {isKn ? copy.ui.solutionAcidityLabel : 'Solution Acidity'}
               </span>
               <FlaskConical size={14} style={{ color: 'var(--color-teal)' }} />
             </div>
@@ -506,7 +506,7 @@ export default function Dashboard() {
               </span>
             </div>
             <div className={styles.envFooter}>
-              <span>{userMode === 'technical' ? 'Target: 5.5 - 6.5 pH' : farmerSemanticState.nutrientMessage}</span>
+              <span>{userMode === 'technical' ? (isKn ? 'ಗುರಿ: 5.5 - 6.5 pH' : 'Target: 5.5 - 6.5 pH') : farmerSemanticState.nutrientMessage}</span>
               <StatusBadge status={isTelemetryAvailable ? farmerSemanticState.nutrientStatus.toLowerCase() : 'unavailable'} size="sm" />
             </div>
           </div>
@@ -515,7 +515,7 @@ export default function Dashboard() {
           <div className={styles.envNode}>
             <div className={styles.envNodeHeader}>
               <span className="section-label" style={{ fontSize: '9.5px' }}>
-                {language === 'kn' && userMode === 'farmer' ? copy.ui.growingConditionsLabel : 'Growing Conditions'}
+                {isKn ? copy.ui.growingConditionsLabel : 'Growing Conditions'}
               </span>
               <Ruler size={14} style={{ color: 'var(--color-amber)' }} />
             </div>
@@ -546,7 +546,7 @@ export default function Dashboard() {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', flexWrap: 'wrap', gap: '8px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <Activity size={15} style={{ color: 'var(--color-teal)' }} />
-              <span className="section-label">Technical Telemetry Sparkline & Probe History</span>
+              <span className="section-label">{isKn ? 'ತಾಂತ್ರಿಕ ಟೆಲಿಮೆಟ್ರಿ ಮತ್ತು ಪ್ರೋಬ್ ಇತಿಹಾಸ' : 'Technical Telemetry Sparkline & Probe History'}</span>
             </div>
 
             <div className={styles.tabsRow}>
@@ -579,7 +579,7 @@ export default function Dashboard() {
 
           {history.length === 0 ? (
             <div style={{ height: '180px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', fontSize: '12.5px' }}>
-              Awaiting serial telemetry packets from ESP32...
+              {isKn ? 'ESP32 ನಿಂದ ಸೀರಿಯಲ್ ಟೆಲಿಮೆಟ್ರಿ ಪ್ಯಾಕೆಟ್‌ಗಳಿಗಾಗಿ ಕಾಯಲಾಗುತ್ತಿದೆ...' : 'Awaiting serial telemetry packets from ESP32...'}
             </div>
           ) : (
             <LiveLineChart

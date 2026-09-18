@@ -3,6 +3,7 @@
 import { useMemo } from 'react';
 import { useESP32Serial } from '@/lib/esp32/ESP32SerialContext';
 import { usePlantIntelligence } from '@/lib/intelligence/PlantIntelligenceContext';
+import { getFarmerCopy } from '@/lib/intelligence/farmerSemanticLayer';
 import { LiveLineChart } from '@/components/LiveLineChart';
 import { DataSourceBadge } from '@/components/ui/DataSourceBadge';
 import { StatusBadge } from '@/components/ui/StatusBadge';
@@ -21,15 +22,23 @@ import {
 
 export default function AnalyticsPage() {
   const { history, mode, isStale, latestReading } = useESP32Serial();
-  const { observations, cropIdentity, predictiveAnalytics } = usePlantIntelligence();
+  const { observations, cropIdentity, predictiveAnalytics, userMode, language } = usePlantIntelligence();
+
+  const copy = useMemo(() => getFarmerCopy(language), [language]);
+  const isKn = language === 'kn';
+  const isFarmer = userMode === 'farmer';
 
   const isPlantIdentified = cropIdentity.cropKey !== 'unknown_plant' && cropIdentity.commonName !== 'Unknown Plant';
-  const plantDisplayName = isPlantIdentified ? cropIdentity.commonName : 'Monitored Specimen';
-  const botanicalScientific = isPlantIdentified ? cropIdentity.scientificName || 'Species Unclassified' : 'Baseline Profile';
+  const plantDisplayName = isPlantIdentified
+    ? cropIdentity.commonName
+    : (isKn ? 'ಪರಿಶೀಲಿಸುತ್ತಿರುವ ಗಿಡ' : 'Monitored Specimen');
+  const botanicalScientific = isPlantIdentified
+    ? cropIdentity.scientificName || (isKn ? 'ವರ್ಗೀಕರಿಸದ ಪ್ರಭೇದ' : 'Species Unclassified')
+    : copy.analytics.baselineProfile;
 
-  // Format historical chart labels and datasets across telemetry history
+  // Format historical chart labels across telemetry history
   const labels = history.map((item) =>
-    new Date(item.timestamp).toLocaleTimeString([], {
+    new Date(item.timestamp).toLocaleTimeString(isKn ? 'kn-IN' : 'en-US', {
       hour: '2-digit',
       minute: '2-digit',
     })
@@ -64,24 +73,42 @@ export default function AnalyticsPage() {
     if (observations.length === 0) {
       return [
         {
-          date: 'Day 1 · Baseline',
-          title: 'Cultivation Observation Initialized',
-          description: 'Baseline sensory telemetry active. Optical foliage inspection established.',
+          date: isKn ? 'ದಿನ 1 · ಆರಂಭಿಕ ದಾಖಲೆ' : 'Day 1 · Baseline',
+          title: copy.analytics.milestoneBaselineTitle,
+          description: isFarmer
+            ? copy.analytics.milestoneBaselineDescFarmer
+            : copy.analytics.milestoneBaselineDescTech,
           status: 'stable',
+          statusLabel: copy.analytics.statusStable,
         },
       ];
     }
 
     return observations.slice(0, 6).map((obs, idx) => {
-      const timeStr = new Date(obs.timestamp).toLocaleDateString([], { month: 'short', day: 'numeric' });
+      const timeStr = new Date(obs.timestamp).toLocaleDateString(isKn ? 'kn-IN' : 'en-US', { month: 'short', day: 'numeric' });
+      const cycleText = isKn ? `ಹಂತ #${observations.length - idx}` : `Cycle #${observations.length - idx}`;
+      const title = obs.plantSpecies
+        ? `${obs.plantSpecies} ${copy.analytics.milestoneCheckpointTitle}`
+        : (isKn ? 'ಗಿಡದ ಪರಿಶೀಲನೆ' : 'Foliage Snapshot');
+      
+      const description = isFarmer
+        ? (isKn
+            ? `ಗಿಡ ಪರಿಶೀಲಿಸಲಾಗಿದೆ: ನೀರಿನ ಮಟ್ಟ ${Math.round(obs.waterLevel || 0)}%, ಆರೋಗ್ಯಕರ ಸ್ಥಿತಿ.`
+            : `Plant check recorded: Water level ${Math.round(obs.waterLevel || 0)}%, healthy growth maintained.`)
+        : (isKn
+            ? `ಸಂವೇದಕಗಳು pH ${obs.ph?.toFixed(2) || '--'} ಮತ್ತು TDS ${Math.round(obs.tds || 0)} PPM (${Math.round(obs.waterLevel || 0)}% ನೀರಿನ ಮಟ್ಟ) ದಾಖಲಿಸಿವೆ.`
+            : `Sensors recorded pH ${obs.ph?.toFixed(2) || '--'} and TDS ${Math.round(obs.tds || 0)} PPM with ${obs.waterLevel || 0}% reservoir level.`);
+
+      const isHealthy = obs.overallHealthScore && obs.overallHealthScore >= 80;
       return {
-        date: `${timeStr} · Cycle #${observations.length - idx}`,
-        title: obs.plantSpecies ? `${obs.plantSpecies} Observation Checkpoint` : 'Foliage Snapshot',
-        description: `Sensors recorded pH ${obs.ph?.toFixed(2) || '--'} and TDS ${Math.round(obs.tds || 0)} PPM with ${obs.waterLevel || 0}% reservoir level.`,
-        status: obs.overallHealthScore && obs.overallHealthScore >= 80 ? 'healthy' : 'stable',
+        date: `${timeStr} · ${cycleText}`,
+        title,
+        description,
+        status: isHealthy ? 'healthy' : 'stable',
+        statusLabel: isHealthy ? copy.analytics.statusHealthy : copy.analytics.statusStable,
       };
     });
-  }, [observations]);
+  }, [observations, isKn, isFarmer, copy]);
 
   const exportToCSV = () => {
     if (history.length === 0 && observations.length === 0) return;
@@ -118,14 +145,19 @@ export default function AnalyticsPage() {
       {/* 1. Header Row */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', flexWrap: 'wrap', gap: '12px', paddingBottom: '4px' }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-          <span className="section-label">Historical Plant Journey</span>
-          <h1 className="display-title">Plant Journey & Analytics</h1>
+          <span className="section-label">{copy.analytics.subtitle}</span>
+          <h1 className="display-title">{copy.analytics.title}</h1>
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <button className="btn btn-secondary" onClick={exportToCSV} disabled={history.length === 0 && observations.length === 0} style={{ fontSize: '11.5px' }}>
+          <button
+            className="btn btn-secondary"
+            onClick={exportToCSV}
+            disabled={history.length === 0 && observations.length === 0}
+            style={{ fontSize: '11.5px' }}
+          >
             <Download size={13} />
-            <span>Export Journey CSV</span>
+            <span>{copy.analytics.exportCsv}</span>
           </button>
         </div>
       </div>
@@ -147,9 +179,9 @@ export default function AnalyticsPage() {
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <Compass size={22} style={{ color: 'var(--color-green)' }} />
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
               <span style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text-primary)' }}>
-                Cultivation Lifecycle of {plantDisplayName}
+                {copy.analytics.lifecycleOf} {plantDisplayName}
               </span>
               <span style={{ fontSize: '12px', fontStyle: 'italic', color: 'var(--text-secondary)' }}>
                 ({botanicalScientific})
@@ -157,7 +189,7 @@ export default function AnalyticsPage() {
               <DataSourceBadge mode={mode} isStale={isStale} hasData={history.length > 0} />
             </div>
             <span style={{ fontSize: '11.5px', color: 'var(--text-secondary)' }}>
-              Longitudinal cultivation timeline tracking parameter drift, nutrient consumption, and visual checkpoints.
+              {isFarmer ? copy.analytics.lifecycleDescFarmer : copy.analytics.lifecycleDescTech}
             </span>
           </div>
         </div>
@@ -165,11 +197,11 @@ export default function AnalyticsPage() {
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
             <Calendar size={14} style={{ color: 'var(--text-muted)' }} />
-            <span className="scientific-meta">{observations.length} Checkpoints</span>
+            <span className="scientific-meta">{observations.length} {copy.analytics.checkpointsCount}</span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
             <History size={14} style={{ color: 'var(--text-muted)' }} />
-            <span className="scientific-meta">{history.length} Data Intervals</span>
+            <span className="scientific-meta">{history.length} {copy.analytics.dataIntervalsCount}</span>
           </div>
         </div>
       </div>
@@ -178,7 +210,8 @@ export default function AnalyticsPage() {
       {/* 3. HISTORICAL PARAMETER DRIFT & NET CHANGES                  */}
       {/* ============================================================ */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px' }}>
-        {/* pH Net Change */}
+        
+        {/* Card 1: pH / Water Acidity */}
         <div
           style={{
             background: 'var(--bg-canvas)',
@@ -191,12 +224,20 @@ export default function AnalyticsPage() {
           }}
         >
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span className="section-label" style={{ fontSize: '10px' }}>pH Stability Drift</span>
-            <span className="scientific-meta">Target: 5.5 – 6.5</span>
+            <span className="section-label" style={{ fontSize: '10px' }}>
+              {isFarmer ? copy.analytics.waterAcidityTitleFarmer : copy.analytics.waterAcidityTitleTech}
+            </span>
+            <span className="scientific-meta">
+              {isFarmer ? copy.analytics.waterAcidityTargetFarmer : copy.analytics.waterAcidityTargetTech}
+            </span>
           </div>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
             <span className="font-mono" style={{ fontSize: '22px', fontWeight: 800, color: 'var(--text-primary)' }}>
-              {latestReading ? latestReading.ph.toFixed(2) : '--'}
+              {latestReading
+                ? (isFarmer
+                    ? (Math.abs(latestReading.ph - 6.0) < 0.8 ? copy.analytics.qualitativeBalanced : copy.analytics.qualitativeAttention)
+                    : latestReading.ph.toFixed(2))
+                : '--'}
             </span>
             <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px' }}>
               {historicalDeltas.hasSufficientData ? (
@@ -209,20 +250,22 @@ export default function AnalyticsPage() {
                     <Minus size={13} style={{ color: 'var(--color-green)' }} />
                   )}
                   <span style={{ color: 'var(--text-secondary)' }}>
-                    {historicalDeltas.phChange >= 0 ? '+' : ''}{historicalDeltas.phChange.toFixed(2)} net shift
+                    {historicalDeltas.phChange >= 0 ? '+' : ''}{historicalDeltas.phChange.toFixed(2)} {copy.analytics.netShift}
                   </span>
                 </>
               ) : (
-                <span style={{ color: 'var(--text-muted)' }}>Initial baseline</span>
+                <span style={{ color: 'var(--text-muted)' }}>{copy.analytics.initialBaseline}</span>
               )}
             </div>
           </div>
           <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-            Estimated drift rate: {predictiveAnalytics.predictions.ph.driftPerDay >= 0 ? '+' : ''}{predictiveAnalytics.predictions.ph.driftPerDay.toFixed(2)} pH/day
+            {isFarmer
+              ? copy.analytics.waterAcidityDescFarmer
+              : `${copy.analytics.waterAcidityDescTech} ${predictiveAnalytics.predictions.ph.driftPerDay >= 0 ? '+' : ''}${predictiveAnalytics.predictions.ph.driftPerDay.toFixed(2)} pH/day`}
           </span>
         </div>
 
-        {/* Nutrient TDS Consumption */}
+        {/* Card 2: Nutrient TDS Consumption */}
         <div
           style={{
             background: 'var(--bg-canvas)',
@@ -235,32 +278,42 @@ export default function AnalyticsPage() {
           }}
         >
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span className="section-label" style={{ fontSize: '10px' }}>TDS Nutrient Consumption</span>
-            <span className="scientific-meta">Target: 800 – 1200 PPM</span>
+            <span className="section-label" style={{ fontSize: '10px' }}>
+              {isFarmer ? copy.analytics.nutrientFoodTitleFarmer : copy.analytics.nutrientFoodTitleTech}
+            </span>
+            <span className="scientific-meta">
+              {isFarmer ? copy.analytics.nutrientFoodTargetFarmer : copy.analytics.nutrientFoodTargetTech}
+            </span>
           </div>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
             <span className="font-mono" style={{ fontSize: '22px', fontWeight: 800, color: 'var(--text-primary)' }}>
-              {latestReading ? `${Math.round(latestReading.tds)} PPM` : '--'}
+              {latestReading
+                ? (isFarmer
+                    ? (latestReading.tds >= 700 && latestReading.tds <= 1400 ? copy.analytics.qualitativeNormal : copy.analytics.qualitativeAttention)
+                    : `${Math.round(latestReading.tds)} PPM`)
+                : '--'}
             </span>
             <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px' }}>
               {historicalDeltas.hasSufficientData ? (
                 <>
                   <TrendingDown size={13} style={{ color: 'var(--color-teal)' }} />
                   <span style={{ color: 'var(--text-secondary)' }}>
-                    {historicalDeltas.tdsChange >= 0 ? '+' : ''}{Math.round(historicalDeltas.tdsChange)} PPM net
+                    {historicalDeltas.tdsChange >= 0 ? '+' : ''}{Math.round(historicalDeltas.tdsChange)} PPM {copy.analytics.netShift}
                   </span>
                 </>
               ) : (
-                <span style={{ color: 'var(--text-muted)' }}>Initial baseline</span>
+                <span style={{ color: 'var(--text-muted)' }}>{copy.analytics.initialBaseline}</span>
               )}
             </div>
           </div>
           <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-            Depletion rate: {Math.round(predictiveAnalytics.predictions.tds.driftPerDay)} PPM/day
+            {isFarmer
+              ? copy.analytics.nutrientFoodDescFarmer
+              : `${copy.analytics.nutrientFoodDescTech} ${Math.round(predictiveAnalytics.predictions.tds.driftPerDay)} PPM/day`}
           </span>
         </div>
 
-        {/* Water Level Transpiration */}
+        {/* Card 3: Water Reservoir Depletion */}
         <div
           style={{
             background: 'var(--bg-canvas)',
@@ -273,8 +326,12 @@ export default function AnalyticsPage() {
           }}
         >
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span className="section-label" style={{ fontSize: '10px' }}>Water Reservoir Depletion</span>
-            <span className="scientific-meta">Critical: &lt; 20%</span>
+            <span className="section-label" style={{ fontSize: '10px' }}>
+              {isFarmer ? copy.analytics.reservoirTitleFarmer : copy.analytics.reservoirTitleTech}
+            </span>
+            <span className="scientific-meta">
+              {isFarmer ? copy.analytics.reservoirTargetFarmer : copy.analytics.reservoirTargetTech}
+            </span>
           </div>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
             <span className="font-mono" style={{ fontSize: '22px', fontWeight: 800, color: 'var(--text-primary)' }}>
@@ -285,18 +342,18 @@ export default function AnalyticsPage() {
                 <>
                   <Droplets size={13} style={{ color: 'var(--color-teal)' }} />
                   <span style={{ color: 'var(--text-secondary)' }}>
-                    {historicalDeltas.waterChange >= 0 ? '+' : ''}{historicalDeltas.waterChange.toFixed(1)}% net
+                    {historicalDeltas.waterChange >= 0 ? '+' : ''}{historicalDeltas.waterChange.toFixed(1)}% {copy.analytics.netShift}
                   </span>
                 </>
               ) : (
-                <span style={{ color: 'var(--text-muted)' }}>Initial baseline</span>
+                <span style={{ color: 'var(--text-muted)' }}>{copy.analytics.initialBaseline}</span>
               )}
             </div>
           </div>
           <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
             {predictiveAnalytics.predictions.waterLevel.estimatedDaysToThreshold !== null
-              ? `Estimated refill in ~${predictiveAnalytics.predictions.waterLevel.estimatedDaysToThreshold} days`
-              : 'Within nominal capacity'}
+              ? `${copy.analytics.reservoirDescTech} ~${predictiveAnalytics.predictions.waterLevel.estimatedDaysToThreshold} ${isKn ? 'ದಿನಗಳಲ್ಲಿ' : 'days'}`
+              : copy.analytics.reservoirDescFarmer}
           </span>
         </div>
       </div>
@@ -318,9 +375,9 @@ export default function AnalyticsPage() {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <Calendar size={16} style={{ color: 'var(--color-teal)' }} />
-            <span className="section-label">Chronological Growth Milestones</span>
+            <span className="section-label">{copy.analytics.milestonesTitle}</span>
           </div>
-          <span className="scientific-meta">Historical Timeline</span>
+          <span className="scientific-meta">{copy.analytics.milestonesSubtitle}</span>
         </div>
 
         <div
@@ -348,7 +405,7 @@ export default function AnalyticsPage() {
                 <span className="scientific-meta" style={{ fontSize: '10px', color: 'var(--color-green)' }}>
                   {milestone.date}
                 </span>
-                <StatusBadge status={milestone.status} size="sm" />
+                <StatusBadge status={milestone.status} label={milestone.statusLabel} size="sm" />
               </div>
 
               <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)', marginTop: '2px' }}>
@@ -370,13 +427,17 @@ export default function AnalyticsPage() {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <Layers size={16} style={{ color: 'var(--color-green)' }} />
-            <span className="section-label">Longitudinal Measurement Trajectories</span>
+            <span className="section-label">
+              {isFarmer ? copy.analytics.chartSectionTitleFarmer : copy.analytics.chartSectionTitleTech}
+            </span>
           </div>
-          <span className="scientific-meta">Historical Trends Over Time</span>
+          <span className="scientific-meta">
+            {isFarmer ? copy.analytics.chartSectionSubFarmer : copy.analytics.chartSectionSubTech}
+          </span>
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: '20px' }}>
-          {/* pH Stability */}
+          {/* pH / Water Acidity Chart */}
           <div
             style={{
               background: 'var(--bg-canvas)',
@@ -389,20 +450,24 @@ export default function AnalyticsPage() {
             }}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span className="section-label">pH Acidity Trajectory</span>
-              <span className="scientific-meta">Target: 5.5 - 6.5</span>
+              <span className="section-label">
+                {isFarmer ? copy.analytics.phChartTitleFarmer : copy.analytics.phChartTitleTech}
+              </span>
+              <span className="scientific-meta">
+                {isFarmer ? copy.analytics.waterAcidityTargetFarmer : copy.analytics.waterAcidityTargetTech}
+              </span>
             </div>
             <LiveLineChart 
               data={phData} 
               labels={labels} 
-              title="pH Level" 
+              title={isKn ? 'ನೀರಿನ ಸಮತೋಲನ (pH)' : 'pH Level'} 
               color="#1CA7A0" 
               min={4.0} 
               max={8.0} 
             />
           </div>
 
-          {/* TDS Nutrient Depletion */}
+          {/* TDS / Nutrient Level Chart */}
           <div
             style={{
               background: 'var(--bg-canvas)',
@@ -415,20 +480,24 @@ export default function AnalyticsPage() {
             }}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span className="section-label">Nutrient TDS Consumption (PPM)</span>
-              <span className="scientific-meta">Target: 800 - 1200 PPM</span>
+              <span className="section-label">
+                {isFarmer ? copy.analytics.tdsChartTitleFarmer : copy.analytics.tdsChartTitleTech}
+              </span>
+              <span className="scientific-meta">
+                {isFarmer ? copy.analytics.nutrientFoodTargetFarmer : copy.analytics.nutrientFoodTargetTech}
+              </span>
             </div>
             <LiveLineChart 
               data={tdsData} 
               labels={labels} 
-              title="TDS (PPM)" 
+              title={isKn ? 'ಪೋಷಕಾಂಶಗಳು (PPM)' : 'TDS (PPM)'} 
               color="#2EB872" 
               min={600} 
               max={1400} 
             />
           </div>
 
-          {/* Reservoir Capacity */}
+          {/* Reservoir Capacity Chart */}
           <div
             style={{
               background: 'var(--bg-canvas)',
@@ -441,13 +510,17 @@ export default function AnalyticsPage() {
             }}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span className="section-label">Reservoir Water Level Capacity (%)</span>
-              <span className="scientific-meta">Critical: &lt; 20%</span>
+              <span className="section-label">
+                {isFarmer ? copy.analytics.waterChartTitleFarmer : copy.analytics.waterChartTitleTech}
+              </span>
+              <span className="scientific-meta">
+                {isFarmer ? copy.analytics.reservoirTargetFarmer : copy.analytics.reservoirTargetTech}
+              </span>
             </div>
             <LiveLineChart 
               data={waterLevelData} 
               labels={labels} 
-              title="Water Level (%)" 
+              title={isKn ? 'ನೀರಿನ ಮಟ್ಟ (%)' : 'Water Level (%)'} 
               color="#1CA7A0" 
               min={0} 
               max={100} 
@@ -473,55 +546,78 @@ export default function AnalyticsPage() {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <Sparkles size={16} style={{ color: 'var(--color-green)' }} />
-            <span className="section-label">Historical Observation Archive</span>
+            <span className="section-label">
+              {isFarmer ? copy.analytics.archiveTitleFarmer : copy.analytics.archiveTitleTech}
+            </span>
           </div>
-          <span className="scientific-meta">{observations.length} Recorded Snapshots</span>
+          <span className="scientific-meta">
+            {observations.length} {copy.analytics.archiveSnapshots}
+          </span>
         </div>
 
         {observations.length === 0 ? (
           <div style={{ padding: '32px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '13px' }}>
-            No observation checkpoints logged yet. Checkpoints are recorded during plant scans on the Dashboard.
+            {isFarmer ? copy.analytics.archiveEmptyFarmer : copy.analytics.archiveEmptyTech}
           </div>
         ) : (
           <div style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px', textAlign: 'left' }}>
               <thead>
                 <tr style={{ borderBottom: '1px solid var(--border-default)', color: 'var(--text-muted)' }}>
-                  <th style={{ padding: '10px 12px', fontWeight: 600 }}>Timestamp</th>
-                  <th style={{ padding: '10px 12px', fontWeight: 600 }}>Specimen</th>
-                  <th style={{ padding: '10px 12px', fontWeight: 600 }}>Visual Health</th>
-                  <th style={{ padding: '10px 12px', fontWeight: 600 }}>pH Level</th>
-                  <th style={{ padding: '10px 12px', fontWeight: 600 }}>TDS Salinity</th>
-                  <th style={{ padding: '10px 12px', fontWeight: 600 }}>Reservoir</th>
-                  <th style={{ padding: '10px 12px', fontWeight: 600 }}>Status</th>
+                  <th style={{ padding: '10px 12px', fontWeight: 600 }}>{copy.analytics.thTimestamp}</th>
+                  <th style={{ padding: '10px 12px', fontWeight: 600 }}>{copy.analytics.thSpecimen}</th>
+                  <th style={{ padding: '10px 12px', fontWeight: 600 }}>{copy.analytics.thVisualHealth}</th>
+                  <th style={{ padding: '10px 12px', fontWeight: 600 }}>{copy.analytics.thPh}</th>
+                  <th style={{ padding: '10px 12px', fontWeight: 600 }}>{copy.analytics.thTds}</th>
+                  <th style={{ padding: '10px 12px', fontWeight: 600 }}>{copy.analytics.thWater}</th>
+                  <th style={{ padding: '10px 12px', fontWeight: 600 }}>{copy.analytics.thStatus}</th>
                 </tr>
               </thead>
               <tbody>
-                {observations.slice(0, 20).map((obs) => (
-                  <tr key={obs.id} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
-                    <td style={{ padding: '10px 12px', fontFamily: 'var(--font-mono)', color: 'var(--text-secondary)' }}>
-                      {new Date(obs.timestamp).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                    </td>
-                    <td style={{ padding: '10px 12px', color: 'var(--text-primary)', fontWeight: 600 }}>
-                      {obs.plantSpecies || 'Unknown Plant'}
-                    </td>
-                    <td style={{ padding: '10px 12px', color: 'var(--text-secondary)' }}>
-                      {obs.visualHealthScore ? `${obs.visualHealthScore}/100` : '--'}
-                    </td>
-                    <td style={{ padding: '10px 12px', fontFamily: 'var(--font-mono)', color: 'var(--text-primary)' }}>
-                      {obs.ph !== undefined ? obs.ph.toFixed(2) : '--'}
-                    </td>
-                    <td style={{ padding: '10px 12px', fontFamily: 'var(--font-mono)', color: 'var(--text-primary)' }}>
-                      {obs.tds !== undefined ? `${Math.round(obs.tds)} PPM` : '--'}
-                    </td>
-                    <td style={{ padding: '10px 12px', fontFamily: 'var(--font-mono)', color: 'var(--text-primary)' }}>
-                      {obs.waterLevel !== undefined ? `${Math.round(obs.waterLevel)}%` : '--'}
-                    </td>
-                    <td style={{ padding: '10px 12px' }}>
-                      <StatusBadge status={obs.overallHealthScore && obs.overallHealthScore >= 80 ? 'optimal' : 'warning'} size="sm" />
-                    </td>
-                  </tr>
-                ))}
+                {observations.slice(0, 20).map((obs) => {
+                  const isHealthy = obs.overallHealthScore && obs.overallHealthScore >= 80;
+                  return (
+                    <tr key={obs.id} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+                      <td style={{ padding: '10px 12px', fontFamily: 'var(--font-mono)', color: 'var(--text-secondary)' }}>
+                        {new Date(obs.timestamp).toLocaleString(isKn ? 'kn-IN' : 'en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                      </td>
+                      <td style={{ padding: '10px 12px', color: 'var(--text-primary)', fontWeight: 600 }}>
+                        {obs.plantSpecies || (isKn ? 'ಪರಿಶೀಲಿಸುತ್ತಿರುವ ಗಿಡ' : 'Unknown Plant')}
+                      </td>
+                      <td style={{ padding: '10px 12px', color: 'var(--text-secondary)' }}>
+                        {obs.visualHealthScore
+                          ? (isFarmer
+                              ? (obs.visualHealthScore >= 75 ? copy.analytics.qualitativeGood : copy.analytics.qualitativeAttention)
+                              : `${obs.visualHealthScore}/100`)
+                          : '--'}
+                      </td>
+                      <td style={{ padding: '10px 12px', fontFamily: 'var(--font-mono)', color: 'var(--text-primary)' }}>
+                        {obs.ph !== undefined
+                          ? (isFarmer
+                              ? (Math.abs(obs.ph - 6.0) < 0.8 ? copy.analytics.qualitativeBalanced : copy.analytics.qualitativeAttention)
+                              : obs.ph.toFixed(2))
+                          : '--'}
+                      </td>
+                      <td style={{ padding: '10px 12px', fontFamily: 'var(--font-mono)', color: 'var(--text-primary)' }}>
+                        {obs.tds !== undefined
+                          ? (isFarmer
+                              ? (obs.tds >= 700 && obs.tds <= 1400 ? copy.analytics.qualitativeAdequate : copy.analytics.qualitativeAttention)
+                              : `${Math.round(obs.tds)} PPM`)
+                          : '--'}
+                      </td>
+                      <td style={{ padding: '10px 12px', fontFamily: 'var(--font-mono)', color: 'var(--text-primary)' }}>
+                        {obs.waterLevel !== undefined ? `${Math.round(obs.waterLevel)}%` : '--'}
+                      </td>
+                      <td style={{ padding: '10px 12px' }}>
+                        <StatusBadge
+                          status={isHealthy ? 'optimal' : 'warning'}
+                          label={isHealthy ? copy.analytics.statusHealthy : copy.analytics.statusWarning}
+                          size="sm"
+                        />
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

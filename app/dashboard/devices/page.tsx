@@ -6,7 +6,10 @@
 // ============================================================
 
 import React, { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { useESP32Serial } from '@/lib/esp32/ESP32SerialContext';
+import { usePlantIntelligence } from '@/lib/intelligence/PlantIntelligenceContext';
+import { getFarmerCopy } from '@/lib/intelligence/farmerSemanticLayer';
 import {
   Cpu,
   Activity,
@@ -19,11 +22,17 @@ import {
   Edit3,
   Layers,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  Microchip,
+  ArrowLeft
 } from 'lucide-react';
 import styles from './page.module.css';
 
 export default function DeviceManagementPage() {
+  const router = useRouter();
+  const { userMode, setUserMode, language } = usePlantIntelligence();
+  const copy = getFarmerCopy(language);
+
   const {
     supported,
     mode,
@@ -57,6 +66,70 @@ export default function DeviceManagementPage() {
   // Device Renaming State
   const [isEditingName, setIsEditingName] = useState<boolean>(false);
   const [editedName, setEditedName] = useState<string>(activeDevice.name);
+
+  // Guard: If Farmer Mode is active, display clear Technical Mode Required screen
+  if (userMode === 'farmer') {
+    return (
+      <div style={{
+        maxWidth: '640px',
+        margin: '60px auto',
+        padding: '36px 32px',
+        background: 'var(--bg-canvas)',
+        border: '1px solid var(--border-default)',
+        borderRadius: 'var(--radius-lg)',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        textAlign: 'center',
+        gap: '16px',
+        boxShadow: 'var(--shadow-md)',
+      }}>
+        <div style={{
+          width: '56px',
+          height: '56px',
+          borderRadius: '50%',
+          background: 'rgba(229, 169, 60, 0.15)',
+          border: '1px solid rgba(229, 169, 60, 0.35)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          color: 'var(--color-amber)',
+        }}>
+          <Radio size={28} />
+        </div>
+
+        <h2 style={{ fontSize: '20px', fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>
+          {copy.devices.techModeRequiredTitle}
+        </h2>
+
+        <p style={{ fontSize: '13.5px', color: 'var(--text-secondary)', lineHeight: 1.5, margin: 0, maxWidth: '500px' }}>
+          {copy.devices.techModeRequiredDesc}
+        </p>
+
+        <div style={{ display: 'flex', gap: '12px', marginTop: '12px', flexWrap: 'wrap', justifyContent: 'center' }}>
+          <button
+            type="button"
+            className="btn btn-primary"
+            style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 20px', fontSize: '13px' }}
+            onClick={() => setUserMode('technical')}
+          >
+            <Microchip size={16} />
+            <span>{copy.devices.switchToTechBtn}</span>
+          </button>
+
+          <button
+            type="button"
+            className="btn btn-secondary"
+            style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 20px', fontSize: '13px' }}
+            onClick={() => router.push('/dashboard')}
+          >
+            <ArrowLeft size={16} />
+            <span>{copy.devices.returnDashboardBtn}</span>
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   const handleSaveCalibration = (e: React.FormEvent) => {
     e.preventDefault();
@@ -96,9 +169,9 @@ export default function DeviceManagementPage() {
       {/* 1. Header Row */}
       <div className={styles.headerRow}>
         <div>
-          <h1 className={styles.headerTitle}>IoT Station</h1>
+          <h1 className={styles.headerTitle}>{copy.devices.title}</h1>
           <p className={styles.headerSub}>
-            Hardware device management, ESP32 Web Serial pipeline, sensor health status, simulation mode, and technical diagnostics.
+            {copy.devices.subtitle}
           </p>
         </div>
 
@@ -118,14 +191,14 @@ export default function DeviceManagementPage() {
               className={`btn ${mode === 'simulation' ? 'btn-primary' : 'btn-ghost'}`}
               style={{ padding: '6px 12px', fontSize: '11.5px' }}
             >
-              Simulation Mode
+              {copy.devices.simModeBtn}
             </button>
             <button
               onClick={() => setMode('real')}
               className={`btn ${mode === 'real' ? 'btn-primary' : 'btn-ghost'}`}
               style={{ padding: '6px 12px', fontSize: '11.5px' }}
             >
-              Real ESP32 Serial
+              {copy.devices.realSerialBtn}
             </button>
           </div>
 
@@ -137,7 +210,7 @@ export default function DeviceManagementPage() {
                 style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px' }}
               >
                 <Radio size={16} style={{ color: '#FF6B6B' }} />
-                Disconnect Port
+                {copy.devices.disconnectPort}
               </button>
             ) : (
               <button
@@ -146,7 +219,7 @@ export default function DeviceManagementPage() {
                 style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px' }}
               >
                 <Radio size={16} />
-                Connect ESP32 Serial
+                {copy.devices.connectPort}
               </button>
             )
           )}
@@ -158,11 +231,11 @@ export default function DeviceManagementPage() {
         {/* Node Status */}
         <div className={styles.metricCard} style={{ '--card-accent': isDeviceOnline ? '#B7FF3C' : '#FF6B6B' } as React.CSSProperties}>
           <div className={styles.metricHeader}>
-            <span className={styles.metricLabel}>Hardware Link</span>
+            <span className={styles.metricLabel}>{copy.devices.hardwareLink}</span>
             <Radio size={18} style={{ color: isDeviceOnline ? '#B7FF3C' : '#FF6B6B' }} />
           </div>
           <div className={styles.metricValue}>
-            {isDeviceOnline ? 'ONLINE' : isStale ? 'STALE' : 'OFFLINE'}
+            {isDeviceOnline ? copy.devices.online : isStale ? copy.devices.stale : copy.devices.offline}
           </div>
           <div className={styles.metricSub}>
             <span style={{
@@ -172,14 +245,14 @@ export default function DeviceManagementPage() {
               background: isDeviceOnline ? '#B7FF3C' : '#FF6B6B',
               boxShadow: `0 0 8px ${isDeviceOnline ? '#B7FF3C' : '#FF6B6B'}`
             }} />
-            {mode === 'real' ? 'Direct USB Web Serial (115200 Baud)' : 'Local Simulated Hardware Stream'}
+            {mode === 'real' ? copy.devices.directUsb : copy.devices.simHardware}
           </div>
         </div>
 
         {/* Device Health Score */}
         <div className={styles.metricCard} style={{ '--card-accent': '#00E5FF' } as React.CSSProperties}>
           <div className={styles.metricHeader}>
-            <span className={styles.metricLabel}>Station Health Score</span>
+            <span className={styles.metricLabel}>{copy.devices.deviceHealthScore}</span>
             <Activity size={18} style={{ color: '#00E5FF' }} />
           </div>
           <div className={styles.metricValue} style={{ color: '#00E5FF' }}>
@@ -193,7 +266,7 @@ export default function DeviceManagementPage() {
         {/* Packet Validation Reliability */}
         <div className={styles.metricCard} style={{ '--card-accent': '#FFC857' } as React.CSSProperties}>
           <div className={styles.metricHeader}>
-            <span className={styles.metricLabel}>Telemetry Reliability</span>
+            <span className={styles.metricLabel}>{copy.devices.activeTelemetryMode}</span>
             <CheckCircle2 size={18} style={{ color: '#FFC857' }} />
           </div>
           <div className={styles.metricValue}>
@@ -274,7 +347,7 @@ export default function DeviceManagementPage() {
       {/* 4. Per-Sensor Health Diagnostics Matrix */}
       <div>
         <h2 className={styles.sectionHeading} style={{ marginBottom: '16px' }}>
-          <Activity size={18} style={{ color: '#00E5FF' }} /> Sensor Diagnostic Matrix
+          <Activity size={18} style={{ color: '#00E5FF' }} /> {copy.devices.sensorDiagnostics}
         </h2>
         <div className={styles.sensorGrid}>
           {Object.values(sensorHealth).map((sensor) => {
@@ -310,7 +383,7 @@ export default function DeviceManagementPage() {
       <div className={styles.calibrationSection}>
         <div className={styles.sensorTop}>
           <div className={styles.sectionHeading}>
-            <Sliders size={18} style={{ color: '#00E5FF' }} /> Hardware Calibration & Transducer Offsets
+            <Sliders size={18} style={{ color: '#00E5FF' }} /> {copy.devices.calibrationPanel}
           </div>
           {calibSavedMsg && (
             <span style={{ fontSize: '12px', color: '#B7FF3C', display: 'flex', alignItems: 'center', gap: '4px' }}>
@@ -395,14 +468,14 @@ export default function DeviceManagementPage() {
               className="btn btn-secondary"
               style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px' }}
             >
-              <RotateCcw size={14} /> Reset Defaults
+              <RotateCcw size={14} /> {copy.devices.resetDefaults}
             </button>
             <button
               type="submit"
               className="btn btn-primary"
               style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px' }}
             >
-              <CheckCircle2 size={14} /> Apply Calibration
+              <CheckCircle2 size={14} /> {copy.devices.saveCalibration}
             </button>
           </div>
         </form>
@@ -488,7 +561,7 @@ export default function DeviceManagementPage() {
       <div className={styles.logsContainer}>
         <div className={styles.sensorTop}>
           <div className={styles.sectionHeading}>
-            <FileText size={18} style={{ color: '#00E5FF' }} /> Telemetry & System Event Stream
+            <FileText size={18} style={{ color: '#00E5FF' }} /> {copy.devices.liveTelemetryTerminal}
           </div>
           {telemetryLogs.length > 0 && (
             <button
@@ -496,7 +569,7 @@ export default function DeviceManagementPage() {
               className="btn btn-secondary"
               style={{ padding: '4px 10px', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}
             >
-              <Trash2 size={13} /> Clear Logs
+              <Trash2 size={13} /> {copy.devices.clearLogs}
             </button>
           )}
         </div>

@@ -61,7 +61,7 @@ export default function IntelligencePage() {
   const [showSecondaryActions, setShowSecondaryActions] = useState(false);
 
   const copy = getFarmerCopy(language);
-  const isKn = language === 'kn' && userMode === 'farmer';
+  const isKn = language === 'kn';
 
   const isPlantIdentified = cropIdentity.cropKey !== 'unknown_plant' && cropIdentity.commonName !== 'Unknown Plant';
   const plantDisplayName = isPlantIdentified
@@ -418,12 +418,12 @@ export default function IntelligencePage() {
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-          <ModeToggle mode={userMode} onModeChange={setUserMode} size="sm" />
+          <ModeToggle mode={userMode} onModeChange={setUserMode} size="sm" language={language} />
           <LanguageToggle language={language} onLanguageChange={setLanguage} size="sm" />
           {userMode === 'technical' && (
             <button className="btn btn-secondary" onClick={handleExportDiagnostics} style={{ fontSize: '11.5px' }}>
               <Download size={13} />
-              <span>Export Diagnostic JSON</span>
+              <span>{isKn ? 'ಡಯಾಗ್ನೋಸ್ಟಿಕ್ JSON ರಫ್ತು ಮಾಡಿ' : 'Export Diagnostic JSON'}</span>
             </button>
           )}
         </div>

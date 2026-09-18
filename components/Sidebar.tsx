@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/lib/auth/AuthContext';
 import { usePlantIntelligence } from '@/lib/intelligence/PlantIntelligenceContext';
+import { getFarmerCopy } from '@/lib/intelligence/farmerSemanticLayer';
 import { BrandLogo } from '@/components/ui/BrandLogo';
 import { ModeToggle } from '@/components/ui/ModeToggle';
 import { LanguageToggle } from '@/components/ui/LanguageToggle';
@@ -19,8 +20,6 @@ import {
   LogOut
 } from 'lucide-react';
 import styles from './Sidebar.module.css';
-
-
 
 interface SidebarProps {
   systemStatus?: 'stable' | 'correcting' | 'fault';
@@ -38,51 +37,58 @@ export function Sidebar({
   const { currentUser, userProfile, signOut } = useAuth();
   const { userMode, setUserMode, language, setLanguage } = usePlantIntelligence();
 
-  const isKn = language === 'kn' && userMode === 'farmer';
+  const copy = useMemo(() => getFarmerCopy(language), [language]);
 
   const statusConfig = {
-    stable: { color: 'var(--color-green)', label: isKn ? 'ವ್ಯವಸ್ಥೆ ಸ್ಥಿರವಾಗಿದೆ' : 'Biological Node Stable' },
-    correcting: { color: 'var(--color-amber)', label: isKn ? 'ಪರಿಶೀಲಿಸಲಾಗುತ್ತಿದೆ' : 'Calibrating Telemetry' },
-    fault: { color: 'var(--color-red)', label: isKn ? 'ಕ್ರಮ ಅಗತ್ಯವಿದೆ' : 'Action Required' },
+    stable: { color: 'var(--color-green)', label: copy.nav.nodeStable },
+    correcting: { color: 'var(--color-amber)', label: copy.nav.nodeCalibrating },
+    fault: { color: 'var(--color-red)', label: copy.nav.nodeActionRequired },
   }[systemStatus];
 
   const localizedNavSections = useMemo(() => {
-    return [
+    const sections = [
       {
-        title: isKn ? 'ವೀಕ್ಷಣೆ' : 'Observation',
+        title: copy.nav.observation,
         items: [
-          { href: '/dashboard', icon: LayoutDashboard, label: isKn ? 'ಮುಖ್ಯ ಕೇಂದ್ರ' : 'Plant Command' },
+          { href: '/dashboard', icon: LayoutDashboard, label: copy.nav.plantCommand },
         ],
       },
       {
-        title: isKn ? 'ವಿವರಣೆ' : 'Intelligence',
+        title: copy.nav.intelligence,
         items: [
-          { href: '/dashboard/intelligence', icon: Sparkles, label: isKn ? 'ವಿವರಣಾ ಲ್ಯಾಬ್' : 'Reasoning Lab' },
-          { href: '/dashboard/analytics', icon: BarChart3, label: isKn ? 'ಗಿಡದ ಇತಿಹಾಸ' : 'Plant Journey' },
-        ],
-      },
-      {
-        title: isKn ? 'ವ್ಯವಸ್ಥೆ' : 'System',
-        items: [
-          { href: '/dashboard/devices', icon: Radio, label: isKn ? 'ಸಾಧನ ಕೇಂದ್ರ' : 'IoT Station' },
-          { href: '/dashboard/profile', icon: Settings, label: isKn ? 'ಸೆಟ್ಟಿಂಗ್ಸ್' : 'Settings' },
+          { href: '/dashboard/intelligence', icon: Sparkles, label: copy.nav.reasoningLab },
+          { href: '/dashboard/analytics', icon: BarChart3, label: copy.nav.plantJourney },
         ],
       },
     ];
-  }, [isKn]);
 
-  const displayName = currentUser?.displayName || userProfile?.displayName || (isKn ? 'ರೈತರು' : 'Grower');
+    // IoT Station is strictly TECHNICAL MODE ONLY
+    const systemItems = [];
+    if (userMode === 'technical') {
+      systemItems.push({ href: '/dashboard/devices', icon: Radio, label: copy.nav.iotStation });
+    }
+    systemItems.push({ href: '/dashboard/profile', icon: Settings, label: copy.nav.settings });
+
+    sections.push({
+      title: copy.nav.system,
+      items: systemItems,
+    });
+
+    return sections;
+  }, [copy, userMode]);
+
+  const displayName = currentUser?.displayName || userProfile?.displayName || (userMode === 'farmer' ? copy.nav.grower : copy.nav.operator);
 
   return (
     <aside className={`${styles.sidebar} ${isOpen ? styles.sidebarOpen : ''}`}>
       {/* Brand Header with Official Logo */}
       <div className={styles.brand}>
-        <BrandLogo size={32} showText subtitle={isKn ? 'ಗಿಡದ ಸ್ಮಾರ್ಟ್ ನಿಗಾ' : 'Living Intelligence'} priority />
+        <BrandLogo size={32} showText subtitle={copy.nav.livingIntelligence} priority />
       </div>
 
       {/* Mode & Language Controls */}
       <div style={{ padding: '0 4px', marginBottom: '8px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-        <ModeToggle mode={userMode} onModeChange={setUserMode} size="sm" />
+        <ModeToggle mode={userMode} onModeChange={setUserMode} language={language} size="sm" />
         <LanguageToggle language={language} onLanguageChange={setLanguage} size="sm" showIcon />
       </div>
 
@@ -148,7 +154,9 @@ export function Sidebar({
             <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-primary)' }}>
               {displayName}
             </span>
-            <span style={{ fontSize: '9.5px', color: 'var(--text-muted)' }}>Operator</span>
+            <span style={{ fontSize: '9.5px', color: 'var(--text-muted)' }}>
+              {userMode === 'farmer' ? copy.nav.grower : copy.nav.operator}
+            </span>
           </div>
         </div>
 
@@ -156,8 +164,8 @@ export function Sidebar({
           className="btn-ghost"
           style={{ padding: '6px', color: 'var(--text-muted)' }}
           onClick={signOut}
-          title="Sign out"
-          aria-label="Sign out of account"
+          title={copy.nav.signOut}
+          aria-label={copy.nav.signOut}
         >
           <LogOut size={15} />
         </button>

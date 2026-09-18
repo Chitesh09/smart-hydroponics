@@ -12,11 +12,15 @@ import { useAuth } from '@/lib/auth/AuthContext';
 import { updateProfile } from 'firebase/auth';
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase';
+import { usePlantIntelligence } from '@/lib/intelligence/PlantIntelligenceContext';
+import { getFarmerCopy } from '@/lib/intelligence/farmerSemanticLayer';
 import styles from './page.module.css';
 
 export default function ProfilePage() {
   const router = useRouter();
   const { currentUser, userProfile, signOut } = useAuth();
+  const { language } = usePlantIntelligence();
+  const copy = getFarmerCopy(language);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [userName, setUserName] = useState('Operator');
@@ -73,8 +77,8 @@ export default function ProfilePage() {
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', maxWidth: '900px' }}>
       <Toaster position="top-right" />
       <div>
-        <h1 className="text-3xl font-bold text-primary mb-xs">Station Settings & Profile</h1>
-        <p className="text-secondary">Operator credentials, station authentication, and platform preferences.</p>
+        <h1 className="text-3xl font-bold text-primary mb-xs">{copy.settings.title}</h1>
+        <p className="text-secondary">{copy.settings.subtitle}</p>
       </div>
 
       <div className={styles.profileGrid}>
@@ -97,9 +101,9 @@ export default function ProfilePage() {
               <User size={32} />
             </div>
             <h2 className="text-md font-bold text-primary">{userName}</h2>
-            <p className="text-xs text-secondary mb-md">Farm Station Operator</p>
+            <p className="text-xs text-secondary mb-md">{copy.settings.operatorRole}</p>
             <span className="badge badge-success" style={{ marginBottom: '16px' }}>
-              <CheckCircle size={11}/> Firebase Verified
+              <CheckCircle size={11}/> {copy.settings.verified}
             </span>
             
             <button
@@ -108,13 +112,13 @@ export default function ProfilePage() {
               onClick={handleLogout}
               disabled={loading}
             >
-              <LogOut size={15} /> {loading ? 'Signing out...' : 'Sign Out'}
+              <LogOut size={15} /> {loading ? copy.settings.signingOut : copy.settings.signOut}
             </button>
           </div>
 
           <div className="glass-card" style={{ padding: '20px' }}>
             <h3 className="text-sm font-bold mb-sm" style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-primary)' }}>
-              <Fingerprint size={16} style={{ color: 'var(--color-teal)' }}/> Operator Identity
+              <Fingerprint size={16} style={{ color: 'var(--color-teal)' }}/> {copy.settings.identity}
             </h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '12px' }}>
               <div>
@@ -124,7 +128,7 @@ export default function ProfilePage() {
                 </span>
               </div>
               <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: '8px' }}>
-                <span className="text-muted block text-xs">Auth Provider:</span>
+                <span className="text-muted block text-xs">{copy.settings.authProvider}:</span>
                 <span className="text-primary font-medium">Email / Password</span>
               </div>
             </div>
@@ -135,12 +139,12 @@ export default function ProfilePage() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
           <div className="glass-card" style={{ padding: '24px' }}>
             <h3 className="text-md font-bold mb-md" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <User size={18} style={{ color: 'var(--color-teal)' }}/> Operator Credentials
+              <User size={18} style={{ color: 'var(--color-teal)' }}/> {copy.settings.credentials}
             </h3>
             
             <form onSubmit={handleSave} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <div>
-                <label className="text-xs font-bold uppercase text-secondary block mb-xs">Display Name</label>
+                <label className="text-xs font-bold uppercase text-secondary block mb-xs">{copy.settings.displayName}</label>
                 <input 
                   type="text" 
                   className="input" 
@@ -152,7 +156,7 @@ export default function ProfilePage() {
               </div>
 
               <div>
-                <label className="text-xs font-bold uppercase text-secondary block mb-xs">Email Address</label>
+                <label className="text-xs font-bold uppercase text-secondary block mb-xs">{copy.settings.email}</label>
                 <div style={{ position: 'relative' }}>
                   <input 
                     type="email" 
@@ -164,13 +168,13 @@ export default function ProfilePage() {
                   <Mail size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
                 </div>
                 <span className="text-xs text-muted" style={{ marginTop: '4px', display: 'block' }}>
-                  Email is managed through Firebase Authentication.
+                  {copy.settings.emailManaged}
                 </span>
               </div>
 
               <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '8px' }}>
                 <button type="submit" className="btn btn-primary" disabled={saving}>
-                  <Save size={15} /> {saving ? 'Saving...' : 'Save Changes'}
+                  <Save size={15} /> {saving ? copy.settings.saving : copy.settings.saveChanges}
                 </button>
               </div>
             </form>
@@ -178,22 +182,22 @@ export default function ProfilePage() {
 
           <div className="glass-card" style={{ padding: '24px' }}>
             <h3 className="text-md font-bold mb-md" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Shield size={18} style={{ color: 'var(--color-green)' }}/> System Preferences
+              <Shield size={18} style={{ color: 'var(--color-green)' }}/> {copy.settings.preferences}
             </h3>
             
             <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
-                  <div className="text-sm font-bold text-primary">Autonomous Safety Failsafe</div>
-                  <div className="text-xs text-secondary">Prevent chemical dosing over-correction lockouts</div>
+                  <div className="text-sm font-bold text-primary">{copy.settings.safetyFailsafe}</div>
+                  <div className="text-xs text-secondary">{copy.settings.safetyFailsafeDesc}</div>
                 </div>
-                <span className="badge badge-success">ACTIVE</span>
+                <span className="badge badge-success">{copy.settings.activeBadge}</span>
               </div>
 
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--border-subtle)', paddingTop: '14px' }}>
                 <div>
-                  <div className="text-sm font-bold text-primary">Telemetry Interval</div>
-                  <div className="text-xs text-secondary">ESP32 serial baud rate rate streaming at 115200 bps</div>
+                  <div className="text-sm font-bold text-primary">{copy.settings.telemetryInterval}</div>
+                  <div className="text-xs text-secondary">{copy.settings.telemetryIntervalDesc}</div>
                 </div>
                 <span className="badge badge-teal">1000 MS</span>
               </div>

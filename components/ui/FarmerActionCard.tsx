@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { ClipboardCheck, AlertTriangle, CheckCircle2, HelpCircle } from 'lucide-react';
-import { FarmerSemanticState } from '@/lib/intelligence/farmerSemanticLayer';
+import { FarmerSemanticState, getFarmerCopy } from '@/lib/intelligence/farmerSemanticLayer';
 import { RecommendationItem } from '@/lib/intelligence/types';
 
 interface FarmerActionCardProps {
@@ -14,6 +14,7 @@ export function FarmerActionCard({ semanticState, recommendations = [] }: Farmer
   const { plantStatus, waterStatus, nutrientStatus, cameraStatus, hasSufficientData } = semanticState;
   const [showAll, setShowAll] = React.useState(false);
 
+  const copy = getFarmerCopy(semanticState.language);
   const isKn = semanticState.language === 'kn';
 
   // Derive the clear primary action text
@@ -151,7 +152,7 @@ export function FarmerActionCard({ semanticState, recommendations = [] }: Farmer
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <ClipboardCheck size={14} style={{ color: 'var(--text-muted)' }} />
             <span className="section-label" style={{ fontSize: '10px' }}>
-              What should I do now?
+              {copy.actions.title}
             </span>
           </div>
 
@@ -173,7 +174,7 @@ export function FarmerActionCard({ semanticState, recommendations = [] }: Farmer
             style={{ fontSize: '11px', color: 'var(--color-teal)', padding: '2px 0', cursor: 'pointer' }}
             onClick={() => setShowAll(!showAll)}
           >
-            {showAll ? 'Hide additional recommendations' : `View ${recommendations.length - 1} additional recommendation(s)`}
+            {showAll ? copy.actions.hideMore : `${copy.actions.viewMore} (${recommendations.length - 1})`}
           </button>
 
           {showAll && (
