@@ -419,7 +419,7 @@ export function deriveFarmerSemanticState({
     multimodalAssessment.overallHealthState === 'warning' ||
     environmentStatus === 'ATTENTION' ||
     activeAnomalies.length > 0 ||
-    (latestVisualHealth && latestVisualHealth.healthState !== 'healthy' && latestVisualHealth.healthState !== 'unknown')
+    (latestDetection?.isPlantDetected && latestVisualHealth && latestVisualHealth.healthState !== 'healthy' && latestVisualHealth.healthState !== 'unknown')
   ) {
     plantStatus = 'ATTENTION';
     plantMessage = copy.plant.ATTENTION || fallbackCopy.plant.ATTENTION;

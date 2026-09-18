@@ -135,8 +135,8 @@ export function multimodalHealthEngine(
   const isWaterCritical = hasWater && waterVal < 18;
   const isWaterLow = hasWater && waterVal < 30;
 
-  const hasChlorosis = (camera.chlorosisYellowPercent ?? 0) > 12;
-  const hasNecrosis = (camera.necroticBrownPercent ?? 0) > 4;
+  const hasChlorosis = isCameraActive && (camera.chlorosisYellowPercent ?? 0) > 12;
+  const hasNecrosis = isCameraActive && (camera.necroticBrownPercent ?? 0) > 4;
 
   let environmentalState: 'optimal' | 'warning' | 'critical' = 'optimal';
   if (isWaterCritical || (isPhHigh && isTdsHigh) || (isPhLow && isTdsLow)) {

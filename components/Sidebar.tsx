@@ -1,5 +1,6 @@
 'use client';
 
+import { useMemo } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/lib/auth/AuthContext';
@@ -19,34 +20,7 @@ import {
 } from 'lucide-react';
 import styles from './Sidebar.module.css';
 
-interface NavItemDef {
-  href: string;
-  icon: React.ElementType;
-  label: string;
-}
 
-const navSections: { title: string; items: NavItemDef[] }[] = [
-  {
-    title: 'Observation',
-    items: [
-      { href: '/dashboard', icon: LayoutDashboard, label: 'Plant Command' },
-    ],
-  },
-  {
-    title: 'Intelligence',
-    items: [
-      { href: '/dashboard/intelligence', icon: Sparkles, label: 'Reasoning Lab' },
-      { href: '/dashboard/analytics', icon: BarChart3, label: 'Plant Journey' },
-    ],
-  },
-  {
-    title: 'System',
-    items: [
-      { href: '/dashboard/devices', icon: Radio, label: 'IoT Station' },
-      { href: '/dashboard/profile', icon: Settings, label: 'Settings' },
-    ],
-  },
-];
 
 interface SidebarProps {
   systemStatus?: 'stable' | 'correcting' | 'fault';
@@ -64,19 +38,46 @@ export function Sidebar({
   const { currentUser, userProfile, signOut } = useAuth();
   const { userMode, setUserMode, language, setLanguage } = usePlantIntelligence();
 
+  const isKn = language === 'kn' && userMode === 'farmer';
+
   const statusConfig = {
-    stable: { color: 'var(--color-green)', label: 'Biological Node Stable' },
-    correcting: { color: 'var(--color-amber)', label: 'Calibrating Telemetry' },
-    fault: { color: 'var(--color-red)', label: 'Action Required' },
+    stable: { color: 'var(--color-green)', label: isKn ? 'ವ್ಯವಸ್ಥೆ ಸ್ಥಿರವಾಗಿದೆ' : 'Biological Node Stable' },
+    correcting: { color: 'var(--color-amber)', label: isKn ? 'ಪರಿಶೀಲಿಸಲಾಗುತ್ತಿದೆ' : 'Calibrating Telemetry' },
+    fault: { color: 'var(--color-red)', label: isKn ? 'ಕ್ರಮ ಅಗತ್ಯವಿದೆ' : 'Action Required' },
   }[systemStatus];
 
-  const displayName = currentUser?.displayName || userProfile?.displayName || 'Grower';
+  const localizedNavSections = useMemo(() => {
+    return [
+      {
+        title: isKn ? 'ವೀಕ್ಷಣೆ' : 'Observation',
+        items: [
+          { href: '/dashboard', icon: LayoutDashboard, label: isKn ? 'ಮುಖ್ಯ ಕೇಂದ್ರ' : 'Plant Command' },
+        ],
+      },
+      {
+        title: isKn ? 'ವಿವರಣೆ' : 'Intelligence',
+        items: [
+          { href: '/dashboard/intelligence', icon: Sparkles, label: isKn ? 'ವಿವರಣಾ ಲ್ಯಾಬ್' : 'Reasoning Lab' },
+          { href: '/dashboard/analytics', icon: BarChart3, label: isKn ? 'ಗಿಡದ ಇತಿಹಾಸ' : 'Plant Journey' },
+        ],
+      },
+      {
+        title: isKn ? 'ವ್ಯವಸ್ಥೆ' : 'System',
+        items: [
+          { href: '/dashboard/devices', icon: Radio, label: isKn ? 'ಸಾಧನ ಕೇಂದ್ರ' : 'IoT Station' },
+          { href: '/dashboard/profile', icon: Settings, label: isKn ? 'ಸೆಟ್ಟಿಂಗ್ಸ್' : 'Settings' },
+        ],
+      },
+    ];
+  }, [isKn]);
+
+  const displayName = currentUser?.displayName || userProfile?.displayName || (isKn ? 'ರೈತರು' : 'Grower');
 
   return (
     <aside className={`${styles.sidebar} ${isOpen ? styles.sidebarOpen : ''}`}>
       {/* Brand Header with Official Logo */}
       <div className={styles.brand}>
-        <BrandLogo size={32} showText subtitle="Living Intelligence" priority />
+        <BrandLogo size={32} showText subtitle={isKn ? 'ಗಿಡದ ಸ್ಮಾರ್ಟ್ ನಿಗಾ' : 'Living Intelligence'} priority />
       </div>
 
       {/* Mode & Language Controls */}
@@ -101,7 +102,7 @@ export function Sidebar({
 
       {/* Navigation Sections */}
       <nav style={{ display: 'flex', flexDirection: 'column', gap: '14px', flex: 1 }}>
-        {navSections.map((section) => (
+        {localizedNavSections.map((section) => (
           <div key={section.title} className={styles.navSection}>
             <div className={styles.sectionHeading}>{section.title}</div>
             {section.items.map(({ href, icon: Icon, label }) => {
