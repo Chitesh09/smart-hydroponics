@@ -63,7 +63,12 @@ import {
 import { ensureDefaultHierarchy } from '@/lib/firebase/firestore';
 import { DEMO_SCENARIOS } from './demoScenarios';
 import { deriveFarmerSemanticState, FarmerSemanticState } from './farmerSemanticLayer';
-import { AssistantMode, ASSISTANT_MODE_STORAGE_KEY } from '@/lib/assistant/assistantConfig';
+import {
+  AssistantMode,
+  ASSISTANT_MODE_STORAGE_KEY,
+  SupportedLanguageCode,
+  ASSISTANT_LANGUAGE_STORAGE_KEY
+} from '@/lib/assistant/assistantConfig';
 
 interface PlantIntelligenceContextType {
   cropIdentity: PlantIdentity;
@@ -73,6 +78,8 @@ interface PlantIntelligenceContextType {
   latestDetection: PlantDetectionResult | null;
   latestVisualHealth: VisualHealthAnalysisResult | null;
   farmerSemanticState: FarmerSemanticState;
+  language: SupportedLanguageCode;
+  setLanguage: (lang: SupportedLanguageCode) => void;
   userMode: AssistantMode;
   setUserMode: (mode: AssistantMode) => void;
   isScanning: boolean;
@@ -152,6 +159,25 @@ export function PlantIntelligenceProvider({ children }: { children: React.ReactN
     setUserModeState(newMode);
     if (typeof window !== 'undefined') {
       localStorage.setItem(ASSISTANT_MODE_STORAGE_KEY, newMode);
+    }
+  }, []);
+
+  // Supported Language State ('en' by default, persisted across sessions)
+  const [language, setLanguageState] = useState<SupportedLanguageCode>('en');
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const savedLang = localStorage.getItem(ASSISTANT_LANGUAGE_STORAGE_KEY) as SupportedLanguageCode;
+      if (savedLang === 'en' || savedLang === 'kn') {
+        setLanguageState(savedLang);
+      }
+    }
+  }, []);
+
+  const setLanguage = useCallback((newLang: SupportedLanguageCode) => {
+    setLanguageState(newLang);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(ASSISTANT_LANGUAGE_STORAGE_KEY, newLang);
     }
   }, []);
 
@@ -594,6 +620,7 @@ export function PlantIntelligenceProvider({ children }: { children: React.ReactN
       latestVisualHealth,
       activeAnomalies,
       isCameraActive: cameraStatus === 'connected',
+      language,
     });
   }, [
     latestReading,
@@ -603,7 +630,8 @@ export function PlantIntelligenceProvider({ children }: { children: React.ReactN
     latestDetection,
     latestVisualHealth,
     activeAnomalies,
-    cameraStatus
+    cameraStatus,
+    language
   ]);
 
   const latestObservation = observations.length > 0 ? observations[0] : null;
@@ -618,6 +646,8 @@ export function PlantIntelligenceProvider({ children }: { children: React.ReactN
         latestDetection,
         latestVisualHealth,
         farmerSemanticState,
+        language,
+        setLanguage,
         userMode,
         setUserMode,
         isScanning,

@@ -6,6 +6,7 @@ import { useAuth } from '@/lib/auth/AuthContext';
 import { usePlantIntelligence } from '@/lib/intelligence/PlantIntelligenceContext';
 import { BrandLogo } from '@/components/ui/BrandLogo';
 import { ModeToggle } from '@/components/ui/ModeToggle';
+import { LanguageToggle } from '@/components/ui/LanguageToggle';
 import {
   LayoutDashboard,
   BarChart3,
@@ -61,7 +62,7 @@ export function Sidebar({
 }: SidebarProps) {
   const pathname = usePathname();
   const { currentUser, userProfile, signOut } = useAuth();
-  const { userMode, setUserMode } = usePlantIntelligence();
+  const { userMode, setUserMode, language, setLanguage } = usePlantIntelligence();
 
   const statusConfig = {
     stable: { color: 'var(--color-green)', label: 'Biological Node Stable' },
@@ -78,9 +79,10 @@ export function Sidebar({
         <BrandLogo size={32} showText subtitle="Living Intelligence" priority />
       </div>
 
-      {/* Mode Switch Toggle (Farmer Mode vs Technical Mode) */}
-      <div style={{ padding: '0 4px', marginBottom: '8px' }}>
+      {/* Mode & Language Controls */}
+      <div style={{ padding: '0 4px', marginBottom: '8px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
         <ModeToggle mode={userMode} onModeChange={setUserMode} size="sm" />
+        <LanguageToggle language={language} onLanguageChange={setLanguage} size="sm" showIcon />
       </div>
 
       {/* Hardware Node Status */}

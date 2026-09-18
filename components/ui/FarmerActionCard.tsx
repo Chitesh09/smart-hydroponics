@@ -14,30 +14,42 @@ export function FarmerActionCard({ semanticState, recommendations = [] }: Farmer
   const { plantStatus, waterStatus, nutrientStatus, cameraStatus, hasSufficientData } = semanticState;
   const [showAll, setShowAll] = React.useState(false);
 
+  const isKn = semanticState.language === 'kn';
+
   // Derive the clear primary action text
-  let actionTitle = 'System Stable';
-  let actionMessage = 'Your plant appears to be doing well. No action needed right now.';
+  let actionTitle = isKn ? 'ಎಲ್ಲವೂ ಸರಿಯಾಗಿದೆ' : 'System Stable';
+  let actionMessage = isKn
+    ? 'ನಿಮ್ಮ ಗಿಡ ಚೆನ್ನಾಗಿದೆ. ಈಗ ಯಾವುದೇ ಕ್ರಮದ ಅಗತ್ಯವಿಲ್ಲ.'
+    : 'Your plant appears to be doing well. No action needed right now.';
   let cardVariant: 'good' | 'attention' | 'urgent' | 'unknown' = 'good';
   let Icon = CheckCircle2;
 
   if (!hasSufficientData) {
     cardVariant = 'unknown';
-    actionTitle = 'More Data Needed';
-    actionMessage = 'We need more information before suggesting an action. Connect sensors or start the camera from Dashboard.';
+    actionTitle = isKn ? 'ಇನ್ನಷ್ಟು ಮಾಹಿತಿ ಬೇಕಾಗಿದೆ' : 'More Data Needed';
+    actionMessage = isKn
+      ? 'ಕ್ರಮವನ್ನು ಸೂಚಿಸಲು ಇನ್ನಷ್ಟು ಮಾಹಿತಿ ಬೇಕು. ಸೆನ್ಸರ್ ಸಂಪರ್ಕಿಸಿ ಅಥವಾ ಕ್ಯಾಮೆರಾ ಪ್ರಾರಂಭಿಸಿ.'
+      : 'We need more information before suggesting an action. Connect sensors or start the camera from Dashboard.';
     Icon = HelpCircle;
   } else if (plantStatus === 'URGENT' || waterStatus === 'URGENT' || nutrientStatus === 'URGENT') {
     cardVariant = 'urgent';
-    actionTitle = 'Immediate Action Suggested';
+    actionTitle = isKn ? 'ತಕ್ಷಣದ ಕ್ರಮದ ಅಗತ್ಯವಿದೆ' : 'Immediate Action Suggested';
     Icon = AlertTriangle;
 
     if (waterStatus === 'URGENT') {
-      actionMessage = 'Water level is critically low. Add water to the reservoir immediately.';
+      actionMessage = isKn
+        ? 'ನೀರಿನ ಮಟ್ಟ ತುಂಬಾ ಕಡಿಮೆಯಾಗಿದೆ. ಕೂಡಲೇ ತೊಟ್ಟಿಗೆ ನೀರನ್ನು ಹಾಕಿ.'
+        : 'Water level is critically low. Add water to the reservoir immediately.';
     } else if (nutrientStatus === 'URGENT') {
-      actionMessage = 'Nutrient readings need urgent attention. Check and adjust the nutrient solution.';
+      actionMessage = isKn
+        ? 'ಪೋಷಕಾಂಶಗಳ ಮಟ್ಟ ಸರಿಪಡಿಸಬೇಕಾಗಿದೆ. ಪೋಷಕಾಂಶಗಳ ದ್ರಾವಣವನ್ನು ಸರಿಹೊಂದಿಸಿ.'
+        : 'Nutrient readings need urgent attention. Check and adjust the nutrient solution.';
     } else if (recommendations.length > 0) {
       actionMessage = `${recommendations[0].title}. ${recommendations[0].action}`;
     } else {
-      actionMessage = 'Your plant needs attention right now. Inspect reservoir and probe connections.';
+      actionMessage = semanticState.actionableSummary || (isKn
+        ? 'ನಿಮ್ಮ ಗಿಡಕ್ಕೆ ಈಗಲೇ ಗಮನ ಬೇಕಾಗಿದೆ. ತೊಟ್ಟಿ ಮತ್ತು ಸೆನ್ಸರ್ ಸಂಪರ್ಕ ಪರಿಶೀಲಿಸಿ.'
+        : 'Your plant needs attention right now. Inspect reservoir and probe connections.');
     }
   } else if (
     plantStatus === 'ATTENTION' ||
@@ -47,21 +59,31 @@ export function FarmerActionCard({ semanticState, recommendations = [] }: Farmer
     cameraStatus === 'NO_PLANT'
   ) {
     cardVariant = 'attention';
-    actionTitle = 'Recommended Action';
+    actionTitle = isKn ? 'ಸಲಹೆ ನೀಡಲಾದ ಕ್ರಮ' : 'Recommended Action';
     Icon = AlertTriangle;
 
     if (waterStatus === 'ATTENTION') {
-      actionMessage = 'Water level is getting low. Consider adding fresh water soon.';
+      actionMessage = isKn
+        ? 'ನೀರಿನ ಮಟ್ಟ ಕಡಿಮೆಯಾಗುತ್ತಿದೆ. ಶೀಘ್ರದಲ್ಲೇ ಹೊಸ ನೀರನ್ನು ಸೇರಿಸಿ.'
+        : 'Water level is getting low. Consider adding fresh water soon.';
     } else if (nutrientStatus === 'ATTENTION') {
-      actionMessage = 'Nutrient readings need attention. Check nutrient balance in the tank.';
+      actionMessage = isKn
+        ? 'ಪೋಷಕಾಂಶಗಳ ಮಟ್ಟವನ್ನು ಪರೀಕ್ಷಿಸಿ. ತೊಟ್ಟಿಯಲ್ಲಿ ಪೋಷಕಾಂಶಗಳ ಸಮತೋಲನ ನೋಡಿ.'
+        : 'Nutrient readings need attention. Check nutrient balance in the tank.';
     } else if (cameraStatus === 'LOW_CONFIDENCE') {
-      actionMessage = 'Your plant view is unclear. Move the camera closer and try again.';
+      actionMessage = isKn
+        ? 'ಗಿಡದ ನೋಟ ಸ್ಪಷ್ಟವಾಗಿಲ್ಲ. ಕ್ಯಾಮೆರಾವನ್ನು ಗಿಡದ ಹತ್ತಿರಕ್ಕೆ ತಂದು ನೋಡಿ.'
+        : 'Your plant view is unclear. Move the camera closer and try again.';
     } else if (cameraStatus === 'NO_PLANT') {
-      actionMessage = 'No plant detected in camera frame. Position your plant inside camera view.';
+      actionMessage = isKn
+        ? 'ಕ್ಯಾಮೆರಾ ಮುಂದೆ ಗಿಡ ಕಂಡುಬಂದಿಲ್ಲ. ಗಿಡವನ್ನು ಕ್ಯಾಮೆರಾ ಮುಂದೆ ಇಡಿ.'
+        : 'No plant detected in camera frame. Position your plant inside camera view.';
     } else if (recommendations.length > 0) {
       actionMessage = `${recommendations[0].title}. ${recommendations[0].action}`;
     } else {
-      actionMessage = 'Your plant may need minor attention. Monitor water and nutrient levels.';
+      actionMessage = semanticState.actionableSummary || (isKn
+        ? 'ನಿಮ್ಮ ಗಿಡಕ್ಕೆ ಸ್ವಲ್ಪ ಗಮನ ಬೇಕಾಗಿದೆ. ನೀರು ಮತ್ತು ಪೋಷಕಾಂಶಗಳನ್ನು ಗಮನಿಸಿ.'
+        : 'Your plant may need minor attention. Monitor water and nutrient levels.');
     }
   }
 

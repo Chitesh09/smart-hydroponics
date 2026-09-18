@@ -24,6 +24,7 @@ export type EvidenceStage =
 
 export interface EvidenceStep {
   stage: EvidenceStage;
+  stageLabel?: string;
   headline: string;
   detail: string;
   status?: 'optimal' | 'warning' | 'critical' | 'neutral';
@@ -121,7 +122,7 @@ export function EvidenceChain({ steps, confidenceScore, confidenceText }: Eviden
                       textTransform: 'uppercase',
                     }}
                   >
-                    {step.stage}
+                    {step.stageLabel || step.stage}
                   </span>
                   {idx === 0 && (confidenceText || confidenceScore !== undefined) && (
                     <span className="scientific-meta" style={{ fontSize: '10px', color: 'var(--text-muted)' }}>

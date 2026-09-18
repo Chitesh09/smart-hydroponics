@@ -2,6 +2,8 @@
 
 import React from 'react';
 import { ArrowUpRight, ArrowDownRight, Minus, History } from 'lucide-react';
+import { SupportedLanguageCode } from '@/lib/assistant/assistantConfig';
+import { getFarmerCopy } from '@/lib/intelligence/farmerSemanticLayer';
 
 export interface MetricDelta {
   parameter: string;
@@ -14,9 +16,13 @@ export interface MetricDelta {
 interface WhatChangedProps {
   deltas: MetricDelta[];
   hasHistory: boolean;
+  language?: SupportedLanguageCode;
 }
 
-export function WhatChanged({ deltas, hasHistory }: WhatChangedProps) {
+export function WhatChanged({ deltas, hasHistory, language = 'en' }: WhatChangedProps) {
+  const copy = getFarmerCopy(language);
+  const isKn = language === 'kn';
+
   if (!hasHistory || deltas.length === 0) {
     return (
       <div
@@ -32,9 +38,11 @@ export function WhatChanged({ deltas, hasHistory }: WhatChangedProps) {
       >
         <History size={16} style={{ color: 'var(--text-muted)' }} />
         <div style={{ display: 'flex', flexDirection: 'column' }}>
-          <span className="section-label">What Changed Today</span>
+          <span className="section-label">{copy.ui.whatChangedToday}</span>
           <span style={{ fontSize: '12.5px', color: 'var(--text-secondary)' }}>
-            Building baseline telemetry — historical deltas will appear after multiple observation cycles.
+            {isKn
+              ? 'ಹಿಂದಿನ ದಾಖಲೆಗಳನ್ನು ಸಂಗ್ರಹಿಸಲಾಗುತ್ತಿದೆ — ಕೆಲವು ವೀಕ್ಷಣೆಗಳ ನಂತರ ಬದಲಾವಣೆಗಳು ಕಾಣಿಸುತ್ತವೆ.'
+              : 'Building baseline telemetry — historical deltas will appear after multiple observation cycles.'}
           </span>
         </div>
       </div>
@@ -54,8 +62,12 @@ export function WhatChanged({ deltas, hasHistory }: WhatChangedProps) {
       }}
     >
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <span className="section-label">What Changed Today (24h Trajectory)</span>
-        <span className="scientific-meta">Measured Deltas</span>
+        <span className="section-label">
+          {isKn ? 'ಇಂದು ಆದ ಬದಲಾವಣೆಗಳು (24 ಗಂಟೆಗಳ ವಿವರ)' : 'What Changed Today (24h Trajectory)'}
+        </span>
+        <span className="scientific-meta">
+          {isKn ? 'ಅಳೆಯಲಾದ ಬದಲಾವಣೆಗಳು' : 'Measured Deltas'}
+        </span>
       </div>
 
       <div
@@ -76,22 +88,32 @@ export function WhatChanged({ deltas, hasHistory }: WhatChangedProps) {
             deltaColor = item.isBeneficial ? 'var(--color-green)' : 'var(--color-amber)';
           }
 
-          return (
-            <div
-              key={idx}
-              style={{
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '2px',
-                padding: '8px 12px',
-                background: 'var(--bg-surface)',
-                border: '1px solid var(--border-subtle)',
-                borderRadius: 'var(--radius-xs)',
-              }}
-            >
-              <span style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                {item.parameter}
-              </span>
+              const paramLabel = isKn
+                ? (item.parameter.toLowerCase().includes('ph')
+                    ? 'pH ಮಟ್ಟ'
+                    : item.parameter.toLowerCase().includes('tds') || item.parameter.toLowerCase().includes('nutrient')
+                    ? 'ಪೋಷಕಾಂಶಗಳು'
+                    : item.parameter.toLowerCase().includes('reservoir') || item.parameter.toLowerCase().includes('water')
+                    ? 'ನೀರಿನ ಸಂಗ್ರಹ'
+                    : item.parameter)
+                : item.parameter;
+
+              return (
+                <div
+                  key={idx}
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '2px',
+                    padding: '8px 12px',
+                    background: 'var(--bg-surface)',
+                    border: '1px solid var(--border-subtle)',
+                    borderRadius: 'var(--radius-xs)',
+                  }}
+                >
+                  <span style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                    {paramLabel}
+                  </span>
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                 {isUp ? (
                   <ArrowUpRight size={15} style={{ color: deltaColor }} />
