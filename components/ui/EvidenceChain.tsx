@@ -11,8 +11,19 @@ import {
   AlertCircle
 } from 'lucide-react';
 
+export type EvidenceStage =
+  | 'CAMERA OBSERVATION'
+  | 'SENSOR OBSERVATION'
+  | 'HISTORICAL CHANGE'
+  | 'INTERPRETATION'
+  | 'RECOMMENDATION'
+  | 'OBSERVATION'
+  | 'ENVIRONMENT'
+  | 'HISTORICAL TREND'
+  | 'ACTION';
+
 export interface EvidenceStep {
-  stage: 'OBSERVATION' | 'ENVIRONMENT' | 'HISTORICAL TREND' | 'INTERPRETATION' | 'ACTION';
+  stage: EvidenceStage;
   headline: string;
   detail: string;
   status?: 'optimal' | 'warning' | 'critical' | 'neutral';
@@ -24,16 +35,20 @@ interface EvidenceChainProps {
 }
 
 export function EvidenceChain({ steps, confidenceScore }: EvidenceChainProps) {
-  const getIconForStage = (stage: EvidenceStep['stage']) => {
+  const getIconForStage = (stage: EvidenceStage) => {
     switch (stage) {
+      case 'CAMERA OBSERVATION':
       case 'OBSERVATION':
         return Eye;
+      case 'SENSOR OBSERVATION':
       case 'ENVIRONMENT':
         return Thermometer;
+      case 'HISTORICAL CHANGE':
       case 'HISTORICAL TREND':
         return TrendingUp;
       case 'INTERPRETATION':
         return Brain;
+      case 'RECOMMENDATION':
       case 'ACTION':
         return CheckCircle;
       default:
@@ -41,11 +56,11 @@ export function EvidenceChain({ steps, confidenceScore }: EvidenceChainProps) {
     }
   };
 
-  const getStageColor = (stage: EvidenceStep['stage'], status?: EvidenceStep['status']) => {
+  const getStageColor = (stage: EvidenceStage, status?: EvidenceStep['status']) => {
     if (status === 'critical') return 'var(--color-red)';
     if (status === 'warning') return 'var(--color-amber)';
     if (status === 'optimal') return 'var(--color-green)';
-    if (stage === 'ACTION') return 'var(--color-green)';
+    if (stage === 'RECOMMENDATION' || stage === 'ACTION') return 'var(--color-green)';
     if (stage === 'INTERPRETATION') return 'var(--color-teal)';
     return 'var(--text-secondary)';
   };

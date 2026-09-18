@@ -16,7 +16,10 @@ import {
   Radio,
   FileText,
   Trash2,
-  Edit3
+  Edit3,
+  Layers,
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react';
 import styles from './page.module.css';
 
@@ -24,6 +27,7 @@ export default function DeviceManagementPage() {
   const {
     supported,
     mode,
+    setMode,
     connectionState,
     isStale,
     connect,
@@ -38,6 +42,8 @@ export default function DeviceManagementPage() {
     telemetryLogs,
     clearLogs
   } = useESP32Serial();
+
+  const [showSchematic, setShowSchematic] = useState<boolean>(false);
 
   // Calibration Form State
   const [phOffset, setPhOffset] = useState<number>(calibration.phOffset);
@@ -90,13 +96,39 @@ export default function DeviceManagementPage() {
       {/* 1. Header Row */}
       <div className={styles.headerRow}>
         <div>
-          <h1 className={styles.headerTitle}>IoT Device Management</h1>
+          <h1 className={styles.headerTitle}>IoT Station</h1>
           <p className={styles.headerSub}>
-            Real-time station telemetry pipeline, hardware diagnostic matrices, and sensor calibration.
+            Hardware device management, ESP32 Web Serial pipeline, sensor health status, simulation mode, and technical diagnostics.
           </p>
         </div>
 
         <div className={styles.actionRow}>
+          {/* Simulation vs Real Mode Toggle */}
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            background: 'var(--bg-canvas)',
+            border: '1px solid var(--border-default)',
+            borderRadius: 'var(--radius-sm)',
+            padding: '2px',
+            gap: '2px',
+          }}>
+            <button
+              onClick={() => setMode('simulation')}
+              className={`btn ${mode === 'simulation' ? 'btn-primary' : 'btn-ghost'}`}
+              style={{ padding: '6px 12px', fontSize: '11.5px' }}
+            >
+              Simulation Mode
+            </button>
+            <button
+              onClick={() => setMode('real')}
+              className={`btn ${mode === 'real' ? 'btn-primary' : 'btn-ghost'}`}
+              style={{ padding: '6px 12px', fontSize: '11.5px' }}
+            >
+              Real ESP32 Serial
+            </button>
+          </div>
+
           {supported && (
             connectionState === 'connected' ? (
               <button
@@ -376,7 +408,83 @@ export default function DeviceManagementPage() {
         </form>
       </div>
 
-      {/* 6. Telemetry Event Log Stream */}
+      {/* 6. Hardware Architecture & Schematic Section */}
+      <div className={styles.calibrationContainer}>
+        <div 
+          style={{ 
+            display: 'flex', 
+            justifyContent: 'space-between', 
+            alignItems: 'center', 
+            cursor: 'pointer',
+            userSelect: 'none'
+          }}
+          onClick={() => setShowSchematic(!showSchematic)}
+        >
+          <div className={styles.sectionHeading}>
+            <Layers size={18} style={{ color: '#00E5FF' }} /> Station Hardware Schematic & Channel Pinouts
+          </div>
+          <button
+            type="button"
+            className="btn btn-ghost"
+            style={{ padding: '4px 8px', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '4px' }}
+          >
+            <span>{showSchematic ? 'Hide Schematic' : 'View Schematic'}</span>
+            {showSchematic ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+          </button>
+        </div>
+
+        {showSchematic && (
+          <div style={{ marginTop: '18px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <p className={styles.sectionDesc}>
+              Physical ESP32 channel pinout mapping, analog signal conditioning, and USB Web Serial communication topology.
+            </p>
+
+            <div style={{ position: 'relative', width: '100%', padding: '12px 0', overflowX: 'auto' }}>
+              <svg viewBox="0 0 800 240" style={{ width: '100%', minWidth: '640px', height: 'auto' }}>
+                <defs>
+                  <marker id="arrow" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                    <path d="M 0 0 L 10 5 L 0 10 z" fill="#20B8B0" />
+                  </marker>
+                </defs>
+
+                {/* Sensor Blocks */}
+                <rect x="20" y="20" width="160" height="48" rx="6" fill="#0D2420" stroke="#20473F" />
+                <text x="35" y="48" fill="#F1F7F4" fontSize="12" fontWeight="700">pH Electrode Probe</text>
+                <text x="35" y="60" fill="#9DB4AE" fontSize="9">Analog input (Pin VP / ADC)</text>
+
+                <rect x="20" y="96" width="160" height="48" rx="6" fill="#0D2420" stroke="#20473F" />
+                <text x="35" y="124" fill="#F1F7F4" fontSize="12" fontWeight="700">TDS Conductivity Probe</text>
+                <text x="35" y="136" fill="#9DB4AE" fontSize="9">Analog input (Pin 34 / ADC)</text>
+
+                <rect x="20" y="172" width="160" height="48" rx="6" fill="#0D2420" stroke="#20473F" />
+                <text x="35" y="200" fill="#F1F7F4" fontSize="12" fontWeight="700">HC-SR04 Ultrasonic</text>
+                <text x="35" y="212" fill="#9DB4AE" fontSize="9">Digital (Pins 12 Trig / 13 Echo)</text>
+
+                {/* Central ESP32 Controller */}
+                <rect x="320" y="80" width="180" height="80" rx="8" fill="#13332D" stroke="#20B8B0" strokeWidth="1.5" />
+                <text x="345" y="115" fill="#20B8B0" fontSize="15" fontWeight="800">ESP32 Core</text>
+                <text x="345" y="132" fill="#F1F7F4" fontSize="11" fontWeight="600">32-bit Tensilica MCU</text>
+                <text x="345" y="146" fill="#9DB4AE" fontSize="9">JSON Conversion & Serial Tx</text>
+
+                {/* Dashboard Output Block */}
+                <rect x="620" y="96" width="160" height="48" rx="6" fill="#0D2420" stroke="#39B86F" strokeWidth="1" />
+                <text x="635" y="124" fill="#39B86F" fontSize="12" fontWeight="700">Web Dashboard</text>
+                <text x="635" y="136" fill="#9DB4AE" fontSize="9">Web Serial parser API</text>
+
+                {/* Flow Arrows */}
+                <path d="M 180 44 L 250 44 L 250 100 L 320 100" fill="none" stroke="rgba(255, 255, 255, 0.15)" strokeWidth="1.5" markerEnd="url(#arrow)" />
+                <path d="M 180 120 L 320 120" fill="none" stroke="rgba(255, 255, 255, 0.15)" strokeWidth="1.5" markerEnd="url(#arrow)" />
+                <path d="M 180 196 L 250 196 L 250 140 L 320 140" fill="none" stroke="rgba(255, 255, 255, 0.15)" strokeWidth="1.5" markerEnd="url(#arrow)" />
+                
+                <path d="M 500 120 L 620 120" fill="none" stroke="#20B8B0" strokeWidth="2" strokeDasharray="4 2" markerEnd="url(#arrow)" />
+                <text x="515" y="112" fill="#20B8B0" fontSize="9" fontFamily="var(--font-mono)">115200 Baud</text>
+              </svg>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* 7. Telemetry Event Log Stream */}
       <div className={styles.logsContainer}>
         <div className={styles.sensorTop}>
           <div className={styles.sectionHeading}>

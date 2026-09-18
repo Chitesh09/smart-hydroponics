@@ -48,37 +48,76 @@ export default function IntelligencePage() {
   const evidenceChainSteps = useMemo((): EvidenceStep[] => {
     const steps: EvidenceStep[] = [];
 
-    // Step 1: Observation
+    // Stage 1: Camera Observation
     if (latestDetection?.isPlantDetected) {
-      steps.push({
-        stage: 'OBSERVATION',
-        headline: userMode === 'farmer'
-          ? farmerSemanticState.cameraMessage
-          : `Foliage presence confirmed (${latestDetection.canopyCoveragePercent}% canopy coverage)`,
-        detail: userMode === 'farmer'
-          ? farmerSemanticState.plantMessage
-          : (latestVisualHealth
-              ? `Visual health evaluated at ${latestVisualHealth.visualHealthScore}/100 with ${latestVisualHealth.chlorosisYellowPercent.toFixed(1)}% discoloration ratio.`
-              : 'Foliage canopy detected in optical frame.'),
-        status: latestVisualHealth?.healthState === 'healthy' ? 'optimal' : 'warning',
-      });
+      const isCanopyReduced = latestDetection.canopyCoveragePercent < 15;
+      const isChlorosisPresent = latestVisualHealth && latestVisualHealth.chlorosisYellowPercent > 8;
+
+      if (isCanopyReduced || isChlorosisPresent) {
+        steps.push({
+          stage: 'CAMERA OBSERVATION',
+          headline: userMode === 'farmer'
+            ? 'Camera detected reduced green canopy.'
+            : `Camera detected reduced green canopy (${latestDetection.canopyCoveragePercent}% coverage, ${latestVisualHealth?.chlorosisYellowPercent.toFixed(1)}% chlorosis)`,
+          detail: userMode === 'farmer'
+            ? farmerSemanticState.plantMessage
+            : (latestVisualHealth
+                ? `Visual health evaluated at ${latestVisualHealth.visualHealthScore}/100 with ${latestVisualHealth.chlorosisYellowPercent.toFixed(1)}% discoloration ratio.`
+                : `Foliage presence confirmed with ${latestDetection.canopyCoveragePercent}% canopy coverage.`),
+          status: 'warning',
+        });
+      } else {
+        steps.push({
+          stage: 'CAMERA OBSERVATION',
+          headline: userMode === 'farmer'
+            ? 'Camera detected healthy green canopy.'
+            : `Camera detected uniform green canopy (${latestDetection.canopyCoveragePercent}% canopy coverage)`,
+          detail: userMode === 'farmer'
+            ? farmerSemanticState.plantMessage
+            : (latestVisualHealth
+                ? `Visual health evaluated at ${latestVisualHealth.visualHealthScore}/100 with optimal pigmentation.`
+                : 'Foliage canopy detected and verified in optical frame.'),
+          status: 'optimal',
+        });
+      }
     } else {
       steps.push({
-        stage: 'OBSERVATION',
-        headline: userMode === 'farmer' ? 'Camera view check' : 'No visual observation available',
-        detail: 'Start the Live Plant Camera from Dashboard to collect a new observation.',
+        stage: 'CAMERA OBSERVATION',
+        headline: userMode === 'farmer' ? 'No plant detected in camera frame.' : 'Visual observation standby — No plant detected',
+        detail: 'Position specimen under the Dashboard camera to capture visual foliage observations.',
         status: 'neutral',
       });
     }
 
-    // Step 2: Environment
+    // Stage 2: Sensor Observation
     if (isTelemetryAvailable && latestReading) {
-      const isEnvOptimal = multimodalAssessment.environmentalState === 'optimal';
+      const isWaterLow = latestReading.waterLevel < 25;
+      const isPhOff = latestReading.ph < 5.5 || latestReading.ph > 6.8;
+      const isTdsOff = latestReading.tds < 700 || latestReading.tds > 1400;
+      const isEnvOptimal = !isWaterLow && !isPhOff && !isTdsOff && multimodalAssessment.environmentalState === 'optimal';
+
+      let headline = '';
+      if (isWaterLow) {
+        headline = userMode === 'farmer'
+          ? `Water level is low (${Math.round(latestReading.waterLevel)}% reservoir).`
+          : `Sensory probe telemetry: Low reservoir capacity (${Math.round(latestReading.waterLevel)}%)`;
+      } else if (isPhOff) {
+        headline = userMode === 'farmer'
+          ? `Water pH is outside normal range (${latestReading.ph.toFixed(2)}).`
+          : `Sensory probe telemetry: pH deviation at ${latestReading.ph.toFixed(2)}`;
+      } else if (isTdsOff) {
+        headline = userMode === 'farmer'
+          ? `Nutrient salinity is off target (${Math.round(latestReading.tds)} PPM).`
+          : `Sensory probe telemetry: TDS deviation at ${Math.round(latestReading.tds)} PPM`;
+      } else {
+        headline = userMode === 'farmer'
+          ? 'Sensors indicate balanced water and nutrient solution.'
+          : `Sensory telemetry: pH ${latestReading.ph.toFixed(2)} · TDS ${Math.round(latestReading.tds)} PPM · Reservoir ${Math.round(latestReading.waterLevel)}%`;
+      }
+
       steps.push({
-        stage: 'ENVIRONMENT',
-        headline: userMode === 'farmer'
-          ? farmerSemanticState.environmentMessage
-          : `Sensory telemetry: pH ${latestReading.ph.toFixed(2)} · TDS ${Math.round(latestReading.tds)} PPM · Reservoir ${Math.round(latestReading.waterLevel)}%`,
+        stage: 'SENSOR OBSERVATION',
+        headline,
         detail: userMode === 'farmer'
           ? `${farmerSemanticState.waterMessage}. ${farmerSemanticState.nutrientMessage}.`
           : (isEnvOptimal
@@ -88,38 +127,85 @@ export default function IntelligencePage() {
       });
     } else {
       steps.push({
-        stage: 'ENVIRONMENT',
-        headline: userMode === 'farmer' ? 'Unable to check environment' : 'Environmental telemetry unavailable',
-        detail: 'Connect ESP32 receiver to stream live probe measurements.',
+        stage: 'SENSOR OBSERVATION',
+        headline: userMode === 'farmer' ? 'Sensory telemetry unavailable.' : 'Environmental probe telemetry offline',
+        detail: 'Connect ESP32 receiver or engage simulation mode in IoT Station to stream measurements.',
         status: 'neutral',
       });
     }
 
-    // Step 3: Historical Trend
-    steps.push({
-      stage: 'HISTORICAL TREND',
-      headline: userMode === 'farmer'
-        ? 'Plant condition trajectory'
-        : `pH ${predictiveAnalytics.predictions.ph.trendDirection} · TDS ${predictiveAnalytics.predictions.tds.trendDirection} · Water ${predictiveAnalytics.predictions.waterLevel.trendDirection}`,
-      detail: `Trend direction calculated across ${observations.length} longitudinal observation cycles.`,
-      status: 'neutral',
-    });
+    // Stage 3: Historical Change
+    if (observations.length >= 2) {
+      const oldest = observations[observations.length - 1];
+      const newest = observations[0];
+      const waterDelta = newest.waterLevel !== undefined && oldest.waterLevel !== undefined ? newest.waterLevel - oldest.waterLevel : null;
+      const phDelta = newest.ph !== undefined && oldest.ph !== undefined ? newest.ph - oldest.ph : null;
+      const tdsDelta = newest.tds !== undefined && oldest.tds !== undefined ? newest.tds - oldest.tds : null;
 
-    // Step 4: Interpretation
+      let historyHeadline = '';
+      let historyStatus: EvidenceStep['status'] = 'neutral';
+
+      if (waterDelta !== null && waterDelta < -3) {
+        historyHeadline = userMode === 'farmer'
+          ? `Water level decreased over the last period (${Math.abs(Math.round(waterDelta))}% drop).`
+          : `Historical drift: Water reservoir decreased by ${Math.abs(waterDelta).toFixed(1)}%`;
+        historyStatus = 'warning';
+      } else if (phDelta !== null && Math.abs(phDelta) > 0.25) {
+        historyHeadline = userMode === 'farmer'
+          ? `pH shifted ${phDelta > 0 ? 'upwards' : 'downwards'} (${phDelta > 0 ? '+' : ''}${phDelta.toFixed(2)}) over recent cycles.`
+          : `Historical drift: pH shifted by ${phDelta > 0 ? '+' : ''}${phDelta.toFixed(2)}`;
+        historyStatus = 'warning';
+      } else if (tdsDelta !== null && Math.abs(tdsDelta) > 75) {
+        historyHeadline = userMode === 'farmer'
+          ? `Nutrient TDS changed by ${Math.round(tdsDelta)} PPM over recent cycles.`
+          : `Historical drift: TDS shifted by ${Math.round(tdsDelta)} PPM`;
+        historyStatus = 'warning';
+      } else {
+        historyHeadline = userMode === 'farmer'
+          ? 'Plant parameters have remained stable over observation history.'
+          : `Longitudinal trajectory: Parameters stable across ${observations.length} observation cycles`;
+        historyStatus = 'optimal';
+      }
+
+      steps.push({
+        stage: 'HISTORICAL CHANGE',
+        headline: historyHeadline,
+        detail: userMode === 'farmer'
+          ? `Evaluated across ${observations.length} recorded observation cycles.`
+          : `Trajectory calculated across ${observations.length} checkpoints (pH trend: ${predictiveAnalytics.predictions.ph.trendDirection}, TDS trend: ${predictiveAnalytics.predictions.tds.trendDirection}).`,
+        status: historyStatus,
+      });
+    } else {
+      steps.push({
+        stage: 'HISTORICAL CHANGE',
+        headline: userMode === 'farmer' ? 'Initial baseline observation established.' : 'Initial observation checkpoint logged',
+        detail: `Longitudinal trajectory tracking will expand as further observation cycles accumulate (currently ${observations.length} snapshot).`,
+        status: 'neutral',
+      });
+    }
+
+    // Stage 4: Interpretation
+    const isUnderStress = multimodalAssessment.overallHealthState === 'critical' ||
+      multimodalAssessment.overallHealthState === 'warning' ||
+      farmerSemanticState.plantStatus === 'ATTENTION' ||
+      farmerSemanticState.plantStatus === 'URGENT';
+
     steps.push({
       stage: 'INTERPRETATION',
-      headline: multimodalAssessment.interpretations[0] || 'Biological condition stable',
+      headline: isUnderStress
+        ? (userMode === 'farmer' ? 'Together, these observations indicate plant stress.' : (multimodalAssessment.interpretations[0] || 'Together, these observations indicate biological plant stress.'))
+        : (userMode === 'farmer' ? 'Together, these observations indicate healthy vegetative growth.' : 'Together, sensory telemetry and foliage optics confirm vigorous, healthy growth.'),
       detail: multimodalAssessment.explanations[0] || 'Environmental parameters and foliage condition align with standard growth profile.',
-      status: multimodalAssessment.overallHealthState === 'optimal' ? 'optimal' : 'warning',
+      status: isUnderStress ? 'warning' : 'optimal',
     });
 
-    // Step 5: Action
+    // Stage 5: Recommendation
     steps.push({
-      stage: 'ACTION',
+      stage: 'RECOMMENDATION',
       headline: userMode === 'farmer' ? farmerSemanticState.actionableSummary : (activeRecommendations[0]?.title || 'No urgent action needed'),
       detail: activeRecommendations[0]
         ? `${activeRecommendations[0].action} — Reason: ${activeRecommendations[0].reasoning}`
-        : 'All environmental parameters and plant health indicators are stable.',
+        : 'All environmental parameters and plant health indicators are stable. Maintain standard schedule.',
       status: activeRecommendations[0]?.priority === 'urgent' || activeRecommendations[0]?.priority === 'high' ? 'warning' : 'optimal',
     });
 
@@ -133,7 +219,7 @@ export default function IntelligencePage() {
     latestReading,
     multimodalAssessment,
     predictiveAnalytics,
-    observations.length,
+    observations,
     activeRecommendations
   ]);
 
