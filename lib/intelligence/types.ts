@@ -53,6 +53,7 @@ export interface PlantIdentificationResponse {
 }
 
 export interface PlantIdentity {
+  plantId?: string;
   cropKey: string;
   commonName: string;
   scientificName?: string;
@@ -63,6 +64,22 @@ export interface PlantIdentity {
   plantedTimestamp?: number;
   growthStage?: 'germination' | 'seedling' | 'vegetative' | 'flowering' | 'fruiting' | 'harvest_ready';
   targetProfile: CropTargetProfile;
+}
+
+export interface PlantProfile {
+  plantId: string;
+  species?: string;
+  commonName?: string;
+  scientificName?: string;
+  family?: string;
+  speciesConfidence?: number;
+  createdAt: number;
+  lastObservedAt?: number;
+  monitoringStatus: 'active' | 'archived' | 'completed';
+  currentHealthStatus: 'optimal' | 'warning' | 'critical' | 'unknown';
+  observationCount: number;
+  growthStage?: 'germination' | 'seedling' | 'vegetative' | 'flowering' | 'fruiting' | 'harvest_ready';
+  targetProfile?: CropTargetProfile;
 }
 
 export interface VisualAnomaly {
@@ -377,7 +394,9 @@ export interface AIPlantResponse {
 // Unified Multimodal Observation Model
 export interface PlantObservation {
   id: string;
+  plantId: string; // Foreign key linking to active PlantProfile
   timestamp: number;
+  isBaselineSeed?: boolean; // Indicates calibration baseline vs live hardware telemetry
   
   // Multimodal Data Sources
   imageReference?: string;

@@ -15,6 +15,7 @@ import { VisualHealthAnalysisResult } from '@/lib/vision/plantHealthAnalyzer';
 import {
   PlantObservation,
   PlantIdentity,
+  PlantProfile,
   PlantCandidate,
   PlantIdentificationResponse,
   EnvironmentalAssessment,
@@ -53,6 +54,9 @@ import { runPredictiveAnalytics } from './predictiveAnalytics';
 import { buildStructuredPlantContext } from './aiPlantContext';
 import { askAIPlant } from './aiPlantEngine';
 import {
+  DEFAULT_PRIMARY_PLANT_ID,
+  getStoredPlantProfile,
+  saveStoredPlantProfile,
   getStoredObservations,
   saveObservation,
   clearStoredObservations,
@@ -73,6 +77,8 @@ import {
 interface PlantIntelligenceContextType {
   cropIdentity: PlantIdentity;
   setCropIdentity: React.Dispatch<React.SetStateAction<PlantIdentity>>;
+  plantProfile: PlantProfile;
+  setPlantProfile: React.Dispatch<React.SetStateAction<PlantProfile>>;
   observations: PlantObservation[];
   latestObservation: PlantObservation | null;
   latestDetection: PlantDetectionResult | null;
@@ -122,22 +128,56 @@ export function PlantIntelligenceProvider({ children }: { children: React.ReactN
   const { status: cameraStatus, captureFrame, videoRef } = useCamera();
   const { latestDetection, latestVisualHealth, isScanning, setIsScanning, analyzeNow } = usePlantMonitor();
 
-  // Cloud Station Hierarchy
+  // Persistent Plant Profile State
+  const [plantProfile, setPlantProfileState] = useState<PlantProfile>(() => getStoredPlantProfile());
+
+  const setPlantProfile = useCallback((updater: React.SetStateAction<PlantProfile>) => {
+    setPlantProfileState(prev => {
+      const next = typeof updater === 'function' ? updater(prev) : updater;
+      saveStoredPlantProfile(next);
+      return next;
+    });
+  }, []);
+
   const [farmId, setFarmId] = useState<string>('farm_main');
   const [stationId, setStationId] = useState<string>('station_esp32_1');
-  const [plantId, setPlantId] = useState<string>('plant_crop_1');
+  const [plantId, setPlantIdState] = useState<string>(() => plantProfile.plantId || DEFAULT_PRIMARY_PLANT_ID);
   const [syncStatus, setSyncStatus] = useState<CloudSyncStatus>('offline');
 
-  // Crop Identity State (Initial neutral baseline profile)
-  const [cropIdentity, setCropIdentity] = useState<PlantIdentity>(() => ({
-    cropKey: 'unknown_plant',
-    commonName: 'Unknown Plant',
-    scientificName: 'Identification pending',
-    family: 'Unclassified',
-    plantedTimestamp: undefined,
-    growthStage: 'vegetative',
-    targetProfile: DEFAULT_CROP_PROFILE,
-  }));
+  // Crop Identity State (kept in sync with persistent plantProfile)
+  const [cropIdentity, setCropIdentityState] = useState<PlantIdentity>(() => {
+    const prof = getStoredPlantProfile();
+    const isIdentified = Boolean(prof.commonName || prof.species);
+    return {
+      plantId: prof.plantId,
+      cropKey: isIdentified ? (prof.commonName || prof.species)!.toLowerCase().replace(/\s+/g, '_') : 'unclassified_plant',
+      commonName: isIdentified ? (prof.commonName || prof.species)! : 'Plant',
+      scientificName: prof.scientificName || (isIdentified ? undefined : 'Identification pending'),
+      family: prof.family || (isIdentified ? undefined : 'Unclassified'),
+      confidence: prof.speciesConfidence,
+      plantedTimestamp: prof.createdAt,
+      growthStage: prof.growthStage || 'vegetative',
+      targetProfile: prof.targetProfile || DEFAULT_CROP_PROFILE,
+    };
+  });
+
+  const setCropIdentity = useCallback((updater: React.SetStateAction<PlantIdentity>) => {
+    setCropIdentityState(prev => {
+      const next = typeof updater === 'function' ? updater(prev) : updater;
+      const isIdentified = Boolean(next.commonName && next.commonName !== 'Plant' && next.commonName !== 'Unknown Plant');
+      setPlantProfile(p => ({
+        ...p,
+        commonName: isIdentified ? next.commonName : undefined,
+        species: isIdentified ? next.commonName : undefined,
+        scientificName: next.scientificName,
+        family: next.family,
+        speciesConfidence: next.confidence,
+        targetProfile: next.targetProfile,
+        growthStage: next.growthStage,
+      }));
+      return next;
+    });
+  }, [setPlantProfile]);
 
   // Identification State
   const [identificationResult, setIdentificationResult] = useState<PlantIdentificationResponse | null>(null);
@@ -215,7 +255,8 @@ export function PlantIntelligenceProvider({ children }: { children: React.ReactN
 
         setFarmId(hierarchy.farmId);
         setStationId(hierarchy.stationId);
-        setPlantId(hierarchy.plantId);
+        setPlantIdState(hierarchy.plantId);
+        setPlantProfile(prev => ({ ...prev, plantId: hierarchy.plantId }));
 
         // 2. Perform safe one-time migration of any legacy localStorage observations
         await migrateLegacyLocalStorageObservations(
@@ -250,7 +291,7 @@ export function PlantIntelligenceProvider({ children }: { children: React.ReactN
     return () => {
       isCancelled = true;
     };
-  }, [currentUser?.uid, cropIdentity.commonName]);
+  }, [currentUser?.uid, cropIdentity.commonName, setPlantProfile]);
 
   // Active reading values
   const currentPh = latestReading?.ph;
@@ -496,7 +537,21 @@ export function PlantIntelligenceProvider({ children }: { children: React.ReactN
   // Apply identified candidate as active crop profile
   const applyIdentifiedSpecies = useCallback((candidate: PlantCandidate, imageRef?: string) => {
     const now = Date.now();
-    setCropIdentity({
+    // 1. Update persistent plantProfile while preserving the stable plantId
+    setPlantProfile(prev => ({
+      ...prev,
+      species: candidate.commonName,
+      commonName: candidate.commonName,
+      scientificName: candidate.scientificName,
+      family: candidate.family,
+      speciesConfidence: candidate.confidence,
+      lastObservedAt: now,
+      targetProfile: candidate.targetProfile,
+    }));
+
+    // 2. Update reactive cropIdentity
+    setCropIdentityState({
+      plantId: plantProfile.plantId,
       cropKey: candidate.id,
       commonName: candidate.commonName,
       scientificName: candidate.scientificName,
@@ -504,19 +559,30 @@ export function PlantIntelligenceProvider({ children }: { children: React.ReactN
       confidence: candidate.confidence,
       identificationTimestamp: now,
       imageReference: imageRef || identificationResult?.imageReference,
-      plantedTimestamp: now - 7 * 86400000,
+      plantedTimestamp: plantProfile.createdAt,
       growthStage: 'vegetative',
       targetProfile: candidate.targetProfile,
     });
-  }, [identificationResult]);
+  }, [identificationResult, plantProfile.plantId, plantProfile.createdAt, setPlantProfile]);
 
   // Capture Current Webcam Frame + Telemetry to Save an Observation
   const captureAndObserve = useCallback((): PlantObservation | null => {
-    const snapshot = captureFrame();
     const scan = analyzeNow();
     const detection = scan?.detection;
     const visualHealth = scan?.health;
     const now = Date.now();
+
+    // Gate 1: Check plant presence (TEST 7: NO_PLANT_DETECTED does not create a false plant health observation)
+    if (!detection || !detection.isPlantDetected) {
+      console.warn('[PlantIntelligence] Observation rejected: No plant detected in frame.');
+      return null;
+    }
+
+    // Gate 2: Check confidence (TEST 8: LOW_CONFIDENCE does not create a confident plant conclusion)
+    const isLowConfidence = (detection.confidence !== undefined && detection.confidence < 45) ||
+      (detection.plantPresenceScore !== undefined && detection.plantPresenceScore < 45);
+
+    const snapshot = captureFrame();
 
     const isVisualAnomaly = visualHealth
       ? visualHealth.healthState === 'possible_anomaly' || visualHealth.healthState === 'significant_anomaly'
@@ -524,18 +590,24 @@ export function PlantIntelligenceProvider({ children }: { children: React.ReactN
 
     const source: 'esp32' | 'simulation' = mode === 'real' ? 'esp32' : 'simulation';
 
+    const isSpeciesIdentified = cropIdentity.commonName !== 'Plant' &&
+      cropIdentity.commonName !== 'Unknown Plant' &&
+      cropIdentity.cropKey !== 'unknown_plant' &&
+      cropIdentity.cropKey !== 'unclassified_plant';
+
     const newObservation: PlantObservation = {
       id: `obs_${now}_${Math.random().toString(36).substring(2, 7)}`,
+      plantId: plantProfile.plantId,
       timestamp: now,
       imageReference: snapshot || undefined,
       cameraActive: cameraStatus === 'connected',
-      isPlantDetected: detection?.isPlantDetected,
-      plantDetectionConfidence: detection?.confidence,
-      canopyCoveragePercent: detection?.canopyCoveragePercent,
-      vegetationIndex: detection?.vegetationIndex,
-      visualHealthScore: visualHealth?.visualHealthScore,
-      visualHealthState: visualHealth?.healthState,
-      visualScoreBreakdown: visualHealth?.breakdown,
+      isPlantDetected: true,
+      plantDetectionConfidence: detection.confidence,
+      canopyCoveragePercent: detection.canopyCoveragePercent,
+      vegetationIndex: detection.vegetationIndex,
+      visualHealthScore: isLowConfidence ? undefined : visualHealth?.visualHealthScore,
+      visualHealthState: isLowConfidence ? 'unknown' : visualHealth?.healthState,
+      visualScoreBreakdown: isLowConfidence ? undefined : visualHealth?.breakdown,
       visualIndicators: visualHealth?.indicators.map(i => i.label),
       ph: currentPh,
       tds: currentTds,
@@ -543,22 +615,30 @@ export function PlantIntelligenceProvider({ children }: { children: React.ReactN
       distance: currentDistance,
       telemetryMode: mode,
       isTelemetryStale: isStale,
-      plantSpecies: cropIdentity.commonName,
+      plantSpecies: isSpeciesIdentified ? cropIdentity.commonName : undefined,
       speciesConfidence: cropIdentity.confidence,
       environmentalHealthScore: environmentalAssessment.compositeEnvironmentalScore,
-      overallHealthScore: multimodalAssessment.overallScore,
-      multimodalAssessment,
+      overallHealthScore: isLowConfidence ? 70 : multimodalAssessment.overallScore,
+      multimodalAssessment: isLowConfidence ? undefined : multimodalAssessment,
       anomalyDetected: activeAnomalies.length > 0 || isVisualAnomaly || statisticalAnomalies.some(a => a.isAnomaly),
       activeAnomalies: activeAnomalies.map(a => a.title),
       recommendations: activeRecommendations.map(r => r.title),
     };
+
+    // Update plant profile observation counter and recency
+    setPlantProfile(prev => ({
+      ...prev,
+      observationCount: prev.observationCount + 1,
+      lastObservedAt: now,
+      currentHealthStatus: multimodalAssessment.overallHealthState || 'optimal',
+    }));
 
     if (currentUser?.uid) {
       persistObservationToCloud(
         currentUser.uid,
         farmId,
         stationId,
-        plantId,
+        plantProfile.plantId,
         newObservation,
         source
       ).then(updated => {
@@ -574,8 +654,8 @@ export function PlantIntelligenceProvider({ children }: { children: React.ReactN
 
     return newObservation;
   }, [
-    captureFrame,
     analyzeNow,
+    captureFrame,
     cameraStatus,
     currentPh,
     currentTds,
@@ -584,6 +664,7 @@ export function PlantIntelligenceProvider({ children }: { children: React.ReactN
     mode,
     isStale,
     cropIdentity.commonName,
+    cropIdentity.cropKey,
     cropIdentity.confidence,
     environmentalAssessment.compositeEnvironmentalScore,
     multimodalAssessment,
@@ -593,7 +674,8 @@ export function PlantIntelligenceProvider({ children }: { children: React.ReactN
     currentUser?.uid,
     farmId,
     stationId,
-    plantId
+    plantProfile.plantId,
+    setPlantProfile
   ]);
 
   const clearHistory = useCallback(() => {
@@ -641,6 +723,8 @@ export function PlantIntelligenceProvider({ children }: { children: React.ReactN
       value={{
         cropIdentity,
         setCropIdentity,
+        plantProfile,
+        setPlantProfile,
         observations,
         latestObservation,
         latestDetection,

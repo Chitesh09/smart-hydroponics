@@ -50,6 +50,7 @@ export interface FirestorePlant {
 
 export interface FirestoreObservation {
   id: string;
+  plantId?: string; // Foreign key to plant document
   timestamp: number; // Observation measurement epoch ms
   
   // Chemical & Hardware Telemetry

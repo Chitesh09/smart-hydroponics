@@ -37,6 +37,7 @@ export default function Dashboard() {
   const { status: cameraStatus, videoRef, startCamera } = useCamera();
   const {
     cropIdentity,
+    plantProfile,
     latestDetection,
     multimodalAssessment,
     activeAnomalies,
@@ -154,13 +155,26 @@ export default function Dashboard() {
     return () => clearInterval(interval);
   }, [reading.timestamp]);
 
-  const isPlantIdentified = cropIdentity.cropKey !== 'unknown_plant' && cropIdentity.commonName !== 'Unknown Plant';
+  const isPlantIdentified = Boolean(
+    (plantProfile.species && plantProfile.species !== 'Unknown Plant' && plantProfile.species !== 'unknown_plant') ||
+    (cropIdentity.commonName && cropIdentity.commonName !== 'Plant' && cropIdentity.commonName !== 'Unknown Plant' && cropIdentity.cropKey !== 'unknown_plant' && cropIdentity.cropKey !== 'unclassified_plant')
+  );
   const plantDisplayName = isPlantIdentified
-    ? cropIdentity.commonName
-    : (isKn ? copy.ui.plantNotIdentified : 'Plant type not identified yet');
+    ? (plantProfile.commonName || plantProfile.species || cropIdentity.commonName)
+    : (isKn ? 'ಗಿಡ' : 'Plant');
   const botanicalScientific = isPlantIdentified
-    ? cropIdentity.scientificName || (isKn ? 'ವರ್ಗೀಕರಿಸದ ಪ್ರಭೇದ' : 'Species Unclassified')
-    : (isKn ? 'ಕ್ಯಾಮೆರಾ ಸ್ಕ್ಯಾನ್‌ಗಾಗಿ ಕಾಯಲಾಗುತ್ತಿದೆ' : 'Awaiting visual identification scan');
+    ? (plantProfile.scientificName || cropIdentity.scientificName || (isKn ? 'ವರ್ಗೀಕರಿಸದ ಪ್ರಭೇದ' : 'Species Unclassified'))
+    : (isKn ? copy.ui.plantNotIdentified : 'Plant type not identified yet');
+
+  const [ageDays, setAgeDays] = useState<number>(1);
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (plantProfile.createdAt) {
+        setAgeDays(Math.max(1, Math.round((Date.now() - plantProfile.createdAt) / 86400000) + 1));
+      }
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [plantProfile.createdAt]);
 
   // Real historical deltas calculation for "WHAT CHANGED TODAY"
   const calculatedDeltas = useMemo((): MetricDelta[] => {
@@ -331,9 +345,14 @@ export default function Dashboard() {
         {/* Right: Botanical Identity & Current Plant Status */}
         <div className={styles.botanicalStateBlock}>
           <div>
-            <span className="section-label">
-              {isKn ? 'ಪರಿಶೀಲಿಸುತ್ತಿರುವ ಗಿಡ' : 'Monitored Crop'}
-            </span>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span className="section-label">
+                {isKn ? 'ಪರಿಶೀಲಿಸುತ್ತಿರುವ ಗಿಡ' : 'Monitored Specimen'}
+              </span>
+              <span className="scientific-meta" style={{ color: 'var(--color-green)', fontSize: '10px' }}>
+                {isKn ? `ದಿನ ${ageDays}` : `Day ${ageDays}`} · {plantProfile.observationCount} {isKn ? 'ತಪಾಸಣೆ' : 'checks'}
+              </span>
+            </div>
             <div className={styles.speciesBlock} style={{ marginTop: '4px' }}>
               <div className={styles.commonName}>{plantDisplayName}</div>
               <div className={styles.scientificName}>{botanicalScientific}</div>
@@ -348,6 +367,12 @@ export default function Dashboard() {
                 </div>
               )}
             </div>
+
+            {userMode === 'technical' && (
+              <div style={{ fontSize: '10.5px', fontFamily: 'var(--font-mono)', color: 'var(--text-muted)', marginTop: '4px' }}>
+                plantId: <span style={{ color: 'var(--color-teal)' }}>{plantProfile.plantId}</span>
+              </div>
+            )}
           </div>
 
           {/* Farmer Status Summary Matrix */}

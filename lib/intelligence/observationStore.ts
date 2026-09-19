@@ -3,7 +3,7 @@
 // Primary persistence: Firestore users/{uid}/.../observations
 // ============================================================
 
-import { PlantObservation } from './types';
+import { PlantObservation, PlantProfile } from './types';
 import { FirestoreObservation } from '@/lib/firebase/types';
 import {
   createObservation,
@@ -11,6 +11,9 @@ import {
   validateObservation
 } from '@/lib/firebase/firestore';
 
+export const DEFAULT_PRIMARY_PLANT_ID = 'plant_primary';
+export const LOCAL_PLANT_PROFILE_KEY = 'hydrosmart_active_plant_profile_v2';
+export const LOCAL_OBSERVATIONS_KEY = 'hydrosmart_plant_observations_v2';
 const MIGRATION_FLAG_KEY = 'hydrosmart_firestore_migration_v1';
 const LEGACY_STORAGE_KEY = 'hydrosmart_plant_observations_v1';
 const MAX_OBSERVATIONS_CACHE = 100;
@@ -19,16 +22,83 @@ const MAX_OBSERVATIONS_CACHE = 100;
 let memoryObservationCache: PlantObservation[] = [];
 
 /**
- * Seed baseline observation records for new cultivation journeys
+ * Creates a default PlantProfile for initial onboarding
  */
-export function createDefaultSeedObservations(): PlantObservation[] {
+export function createDefaultPlantProfile(plantId: string = DEFAULT_PRIMARY_PLANT_ID): PlantProfile {
+  const now = Date.now();
+  const dayMs = 86400000;
+
+  return {
+    plantId,
+    species: undefined,
+    commonName: undefined,
+    scientificName: undefined,
+    speciesConfidence: undefined,
+    createdAt: now - 7 * dayMs,
+    lastObservedAt: now - 1 * dayMs,
+    monitoringStatus: 'active',
+    currentHealthStatus: 'optimal',
+    observationCount: 3,
+    growthStage: 'vegetative',
+  };
+}
+
+/**
+ * Retrieve the active PlantProfile from localStorage with fallback
+ */
+export function getStoredPlantProfile(fallbackId: string = DEFAULT_PRIMARY_PLANT_ID): PlantProfile {
+  if (typeof window === 'undefined') {
+    return createDefaultPlantProfile(fallbackId);
+  }
+
+  try {
+    const raw = localStorage.getItem(LOCAL_PLANT_PROFILE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed && parsed.plantId) {
+        // Normalize legacy strings so "Unknown Plant" doesn't pollute the species
+        if (parsed.species === 'Unknown Plant' || parsed.commonName === 'Unknown Plant') {
+          parsed.species = undefined;
+          parsed.commonName = undefined;
+        }
+        return parsed;
+      }
+    }
+  } catch (err) {
+    console.warn('[ObservationStore] Error reading local plant profile:', err);
+  }
+
+  const initial = createDefaultPlantProfile(fallbackId);
+  saveStoredPlantProfile(initial);
+  return initial;
+}
+
+/**
+ * Persist the active PlantProfile to localStorage
+ */
+export function saveStoredPlantProfile(profile: PlantProfile): void {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(LOCAL_PLANT_PROFILE_KEY, JSON.stringify(profile));
+  } catch (err) {
+    console.warn('[ObservationStore] Error saving local plant profile:', err);
+  }
+}
+
+/**
+ * Seed baseline observation records for new cultivation journeys
+ * Associated with a stable plantId and marked as baseline seed data
+ */
+export function createDefaultSeedObservations(plantId: string = DEFAULT_PRIMARY_PLANT_ID): PlantObservation[] {
   const now = Date.now();
   const dayMs = 86400000;
 
   return [
     {
       id: 'obs_seed_day7',
+      plantId,
       timestamp: now - 1 * dayMs,
+      isBaselineSeed: true,
       cameraActive: true,
       isPlantDetected: true,
       plantDetectionConfidence: 94,
@@ -45,9 +115,8 @@ export function createDefaultSeedObservations(): PlantObservation[] {
       tds: 980,
       waterLevel: 82,
       distance: 21.5,
-      telemetryMode: 'real',
+      telemetryMode: 'simulation',
       isTelemetryStale: false,
-      plantSpecies: 'Unknown Plant',
       speciesConfidence: 94,
       environmentalHealthScore: 94,
       overallHealthScore: 93,
@@ -57,7 +126,9 @@ export function createDefaultSeedObservations(): PlantObservation[] {
     },
     {
       id: 'obs_seed_day4',
+      plantId,
       timestamp: now - 4 * dayMs,
+      isBaselineSeed: true,
       cameraActive: true,
       isPlantDetected: true,
       plantDetectionConfidence: 91,
@@ -73,9 +144,8 @@ export function createDefaultSeedObservations(): PlantObservation[] {
       tds: 920,
       waterLevel: 88,
       distance: 18.6,
-      telemetryMode: 'real',
+      telemetryMode: 'simulation',
       isTelemetryStale: false,
-      plantSpecies: 'Unknown Plant',
       speciesConfidence: 91,
       environmentalHealthScore: 91,
       overallHealthScore: 90,
@@ -85,7 +155,9 @@ export function createDefaultSeedObservations(): PlantObservation[] {
     },
     {
       id: 'obs_seed_day1',
+      plantId,
       timestamp: now - 7 * dayMs,
+      isBaselineSeed: true,
       cameraActive: true,
       isPlantDetected: true,
       plantDetectionConfidence: 88,
@@ -101,9 +173,8 @@ export function createDefaultSeedObservations(): PlantObservation[] {
       tds: 850,
       waterLevel: 95,
       distance: 15.3,
-      telemetryMode: 'real',
+      telemetryMode: 'simulation',
       isTelemetryStale: false,
-      plantSpecies: 'Unknown Plant',
       speciesConfidence: 88,
       environmentalHealthScore: 88,
       overallHealthScore: 87,
@@ -117,9 +188,13 @@ export function createDefaultSeedObservations(): PlantObservation[] {
 /**
  * Convert a Firestore observation document into standard PlantObservation
  */
-function mapFirestoreToPlantObservation(fObs: FirestoreObservation): PlantObservation {
+function mapFirestoreToPlantObservation(
+  fObs: FirestoreObservation,
+  fallbackPlantId: string = DEFAULT_PRIMARY_PLANT_ID
+): PlantObservation {
   return {
     id: fObs.id,
+    plantId: fObs.plantId || fallbackPlantId,
     timestamp: fObs.timestamp,
     cameraActive: fObs.cameraActive ?? (fObs.plantDetected || false),
     isPlantDetected: fObs.plantDetected,
@@ -136,7 +211,7 @@ function mapFirestoreToPlantObservation(fObs: FirestoreObservation): PlantObserv
     distance: fObs.distance,
     telemetryMode: fObs.telemetryMode || (fObs.source === 'simulation' ? 'simulation' : 'real'),
     isTelemetryStale: fObs.isTelemetryStale ?? false,
-    plantSpecies: fObs.plantSpecies,
+    plantSpecies: (fObs.plantSpecies === 'Unknown Plant' || fObs.plantSpecies === 'unknown_plant') ? undefined : fObs.plantSpecies,
     speciesConfidence: fObs.speciesConfidence,
     environmentalHealthScore: fObs.environmentalHealthScore,
     overallHealthScore: fObs.overallHealthScore,
@@ -157,6 +232,7 @@ function mapPlantObservationToFirestore(
 ): FirestoreObservation {
   return {
     id: obs.id,
+    plantId: obs.plantId,
     timestamp: obs.timestamp,
     ph: obs.ph,
     tds: obs.tds,
@@ -187,7 +263,7 @@ function mapPlantObservationToFirestore(
 }
 
 /**
- * Fetch observations from cloud Firestore with memory cache fallback
+ * Fetch observations from cloud Firestore with local cache fallback
  */
 export async function fetchObservationsFromCloud(
   uid: string,
@@ -199,26 +275,20 @@ export async function fetchObservationsFromCloud(
   try {
     const cloudDocs = await getFirestoreObservations(uid, farmId, stationId, plantId, limitCount);
     if (cloudDocs && cloudDocs.length > 0) {
-      const mapped = cloudDocs.map(mapFirestoreToPlantObservation);
-      memoryObservationCache = mapped;
+      const mapped = cloudDocs.map(doc => mapFirestoreToPlantObservation(doc, plantId));
+      saveStoredObservations(mapped);
       return mapped;
     }
   } catch (err) {
     console.warn('[ObservationStore] Cloud fetch error (using cache fallback):', err);
   }
 
-  // Fallback to cache or initial seed
-  if (memoryObservationCache.length > 0) {
-    return memoryObservationCache;
-  }
-
-  const seed = createDefaultSeedObservations();
-  memoryObservationCache = seed;
-  return seed;
+  // Fallback to local storage or initial seed
+  return getStoredObservations(plantId);
 }
 
 /**
- * Persist an observation to cloud Firestore
+ * Persist an observation to cloud Firestore and local storage
  */
 export async function persistObservationToCloud(
   uid: string,
@@ -228,8 +298,8 @@ export async function persistObservationToCloud(
   observation: PlantObservation,
   source?: 'esp32' | 'simulation' | 'manual'
 ): Promise<PlantObservation[]> {
-  // Update memory cache immediately
-  memoryObservationCache = [observation, ...memoryObservationCache].slice(0, MAX_OBSERVATIONS_CACHE);
+  // Update local persistent storage immediately
+  const updated = saveObservation(observation);
 
   try {
     const firestorePayload = mapPlantObservationToFirestore(observation, source);
@@ -240,7 +310,7 @@ export async function persistObservationToCloud(
     console.warn('[ObservationStore] Cloud persist error (observation retained in local cache):', err);
   }
 
-  return memoryObservationCache;
+  return updated;
 }
 
 /**
@@ -276,7 +346,16 @@ export async function migrateLegacyLocalStorageObservations(
 
     let count = 0;
     for (const item of legacyList) {
-      const payload = mapPlantObservationToFirestore(item);
+      // Ensure legacy observation is associated with plantId
+      const normalizedObs: PlantObservation = {
+        ...item,
+        plantId: item.plantId || plantId,
+        plantSpecies: (item.plantSpecies === 'Unknown Plant' || item.plantSpecies === 'unknown_plant')
+          ? undefined
+          : item.plantSpecies,
+      };
+
+      const payload = mapPlantObservationToFirestore(normalizedObs);
       if (validateObservation(payload)) {
         try {
           await createObservation(uid, farmId, stationId, plantId, payload);
@@ -298,21 +377,75 @@ export async function migrateLegacyLocalStorageObservations(
 
 /**
  * Synchronous local memory/cache reader for initial SSR/client mounts
+ * Pulls from persistent localStorage if present, or initializes with seed
  */
-export function getStoredObservations(): PlantObservation[] {
+export function getStoredObservations(plantId: string = DEFAULT_PRIMARY_PLANT_ID): PlantObservation[] {
   if (memoryObservationCache.length > 0) {
     return memoryObservationCache;
   }
-  const seed = createDefaultSeedObservations();
+
+  if (typeof window !== 'undefined') {
+    try {
+      const raw = localStorage.getItem(LOCAL_OBSERVATIONS_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          // Normalize legacy observations lacking plantId or containing "Unknown Plant"
+          const normalized: PlantObservation[] = (parsed as Record<string, unknown>[]).map((item) => ({
+            ...(item as unknown as PlantObservation),
+            plantId: (typeof item.plantId === 'string' && item.plantId) ? item.plantId : plantId,
+            plantSpecies: (item.plantSpecies === 'Unknown Plant' || item.plantSpecies === 'unknown_plant')
+              ? undefined
+              : (item.plantSpecies as string | undefined),
+          }));
+          memoryObservationCache = normalized;
+          return normalized;
+        }
+      }
+    } catch (err) {
+      console.warn('[ObservationStore] Error reading local observations:', err);
+    }
+  }
+
+  const seed = createDefaultSeedObservations(plantId);
   memoryObservationCache = seed;
+  saveStoredObservations(seed);
   return seed;
 }
 
-export function saveObservation(observation: PlantObservation): PlantObservation[] {
-  memoryObservationCache = [observation, ...memoryObservationCache].slice(0, MAX_OBSERVATIONS_CACHE);
-  return memoryObservationCache;
+/**
+ * Save an observation array to both in-memory cache and localStorage
+ */
+export function saveStoredObservations(observations: PlantObservation[]): void {
+  memoryObservationCache = observations.slice(0, MAX_OBSERVATIONS_CACHE);
+  if (typeof window !== 'undefined') {
+    try {
+      localStorage.setItem(LOCAL_OBSERVATIONS_KEY, JSON.stringify(memoryObservationCache));
+    } catch (err) {
+      console.warn('[ObservationStore] Error writing local observations:', err);
+    }
+  }
 }
 
+/**
+ * Prepend a new observation and persist to both RAM and localStorage
+ */
+export function saveObservation(observation: PlantObservation): PlantObservation[] {
+  const updated = [observation, ...memoryObservationCache.filter(o => o.id !== observation.id)].slice(0, MAX_OBSERVATIONS_CACHE);
+  saveStoredObservations(updated);
+  return updated;
+}
+
+/**
+ * Clear stored observations across RAM and localStorage
+ */
 export function clearStoredObservations(): void {
   memoryObservationCache = [];
+  if (typeof window !== 'undefined') {
+    try {
+      localStorage.removeItem(LOCAL_OBSERVATIONS_KEY);
+    } catch (err) {
+      console.warn('[ObservationStore] Error clearing local observations:', err);
+    }
+  }
 }

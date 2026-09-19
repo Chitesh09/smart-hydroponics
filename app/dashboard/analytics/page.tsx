@@ -9,6 +9,7 @@ import { DataSourceBadge } from '@/components/ui/DataSourceBadge';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { ModeToggle } from '@/components/ui/ModeToggle';
 import { LanguageToggle } from '@/components/ui/LanguageToggle';
+import { PlantProfileCard } from '@/components/ui/PlantProfileCard';
 import {
   Compass,
   Download,
@@ -24,19 +25,22 @@ import {
 
 export default function AnalyticsPage() {
   const { history, mode, isStale, latestReading } = useESP32Serial();
-  const { observations, cropIdentity, predictiveAnalytics, userMode, setUserMode, language, setLanguage } = usePlantIntelligence();
+  const { observations, cropIdentity, plantProfile, predictiveAnalytics, userMode, setUserMode, language, setLanguage } = usePlantIntelligence();
 
   const copy = useMemo(() => getFarmerCopy(language), [language]);
   const isKn = language === 'kn';
   const isFarmer = userMode === 'farmer';
 
-  const isPlantIdentified = cropIdentity.cropKey !== 'unknown_plant' && cropIdentity.commonName !== 'Unknown Plant';
+  const isPlantIdentified = Boolean(
+    (plantProfile.species && plantProfile.species !== 'Unknown Plant' && plantProfile.species !== 'unknown_plant') ||
+    (cropIdentity.commonName && cropIdentity.commonName !== 'Plant' && cropIdentity.commonName !== 'Unknown Plant' && cropIdentity.cropKey !== 'unknown_plant' && cropIdentity.cropKey !== 'unclassified_plant')
+  );
   const plantDisplayName = isPlantIdentified
-    ? cropIdentity.commonName
+    ? (plantProfile.commonName || plantProfile.species || cropIdentity.commonName)
     : (isKn ? 'ಪರಿಶೀಲಿಸುತ್ತಿರುವ ಗಿಡ' : 'Monitored Specimen');
   const botanicalScientific = isPlantIdentified
-    ? cropIdentity.scientificName || (isKn ? 'ವರ್ಗೀಕರಿಸದ ಪ್ರಭೇದ' : 'Species Unclassified')
-    : copy.analytics.baselineProfile;
+    ? (plantProfile.scientificName || cropIdentity.scientificName || (isKn ? 'ವರ್ಗೀಕರಿಸದ ಪ್ರಭೇದ' : 'Species Unclassified'))
+    : (isKn ? copy.ui.plantNotIdentified : 'Plant type not identified yet');
 
   // Format historical chart labels across telemetry history
   const labels = history.map((item) =>
@@ -88,18 +92,19 @@ export default function AnalyticsPage() {
 
     return observations.slice(0, 6).map((obs, idx) => {
       const timeStr = new Date(obs.timestamp).toLocaleDateString(isKn ? 'kn-IN' : 'en-US', { month: 'short', day: 'numeric' });
-      const cycleText = isKn ? `ಹಂತ #${observations.length - idx}` : `Cycle #${observations.length - idx}`;
-      const title = obs.plantSpecies
-        ? `${obs.plantSpecies} ${copy.analytics.milestoneCheckpointTitle}`
-        : (isKn ? 'ಗಿಡದ ಪರಿಶೀಲನೆ' : 'Foliage Snapshot');
+      const checkpointNumber = observations.length - idx;
+      const cycleText = isKn ? `ಹಂತ #${checkpointNumber}` : `Cycle #${checkpointNumber}`;
+      const title = isPlantIdentified
+        ? `${plantDisplayName} · ${copy.analytics.milestoneCheckpointTitle}`
+        : `${copy.analytics.milestoneCheckpointTitle} #${checkpointNumber}`;
       
       const description = isFarmer
         ? (isKn
             ? `ಗಿಡ ಪರಿಶೀಲಿಸಲಾಗಿದೆ: ನೀರಿನ ಮಟ್ಟ ${Math.round(obs.waterLevel || 0)}%, ಆರೋಗ್ಯಕರ ಸ್ಥಿತಿ.`
             : `Plant check recorded: Water level ${Math.round(obs.waterLevel || 0)}%, healthy growth maintained.`)
         : (isKn
-            ? `ಸಂವೇದಕಗಳು pH ${obs.ph?.toFixed(2) || '--'} ಮತ್ತು TDS ${Math.round(obs.tds || 0)} PPM (${Math.round(obs.waterLevel || 0)}% ನೀರಿನ ಮಟ್ಟ) ದಾಖಲಿಸಿವೆ.`
-            : `Sensors recorded pH ${obs.ph?.toFixed(2) || '--'} and TDS ${Math.round(obs.tds || 0)} PPM with ${obs.waterLevel || 0}% reservoir level.`);
+            ? `ಸಂವೇದಕಗಳು [${obs.plantId || plantProfile.plantId}] pH ${obs.ph?.toFixed(2) || '--'} ಮತ್ತು TDS ${Math.round(obs.tds || 0)} PPM (${Math.round(obs.waterLevel || 0)}% ನೀರಿನ ಮಟ್ಟ) ದಾಖಲಿಸಿವೆ.`
+            : `Sensors [${obs.plantId || plantProfile.plantId}] recorded pH ${obs.ph?.toFixed(2) || '--'} and TDS ${Math.round(obs.tds || 0)} PPM with ${obs.waterLevel || 0}% reservoir level.`);
 
       const isHealthy = obs.overallHealthScore && obs.overallHealthScore >= 80;
       return {
@@ -110,25 +115,25 @@ export default function AnalyticsPage() {
         statusLabel: isHealthy ? copy.analytics.statusHealthy : copy.analytics.statusStable,
       };
     });
-  }, [observations, isKn, isFarmer, copy]);
+  }, [observations, isKn, isFarmer, copy, isPlantIdentified, plantDisplayName, plantProfile.plantId]);
 
   const exportToCSV = () => {
     if (history.length === 0 && observations.length === 0) return;
 
     let csvContent = 'data:text/csv;charset=utf-8,';
-    csvContent += 'Timestamp,Observation Type,pH Level,TDS (PPM),Water Level (%),Plant Species,Visual Health Score\n';
+    csvContent += 'Timestamp,Plant ID,Observation Type,pH Level,TDS (PPM),Water Level (%),Plant Species,Visual Health Score\n';
 
     // Export observations first
     observations.forEach((obs) => {
       const timeStr = new Date(obs.timestamp).toLocaleString();
-      const row = `"${timeStr}","Observation Checkpoint",${obs.ph?.toFixed(2) || ''},${obs.tds?.toFixed(1) || ''},${obs.waterLevel?.toFixed(1) || ''},"${obs.plantSpecies || 'Unknown'}",${obs.visualHealthScore || ''}`;
+      const row = `"${timeStr}","${obs.plantId || plantProfile.plantId}","Observation Checkpoint",${obs.ph?.toFixed(2) || ''},${obs.tds?.toFixed(1) || ''},${obs.waterLevel?.toFixed(1) || ''},"${obs.plantSpecies || plantDisplayName}",${obs.visualHealthScore || ''}`;
       csvContent += row + '\n';
     });
 
     // Export history intervals
     history.forEach((item) => {
       const timeStr = new Date(item.timestamp).toLocaleString();
-      const row = `"${timeStr}","Telemetry Interval",${item.ph.toFixed(2)},${item.tds.toFixed(1)},${item.waterLevel.toFixed(1)},"",`;
+      const row = `"${timeStr}","${plantProfile.plantId}","Telemetry Interval",${item.ph.toFixed(2)},${item.tds.toFixed(1)},${item.waterLevel.toFixed(1)},"${plantDisplayName}",`;
       csvContent += row + '\n';
     });
 
@@ -166,7 +171,15 @@ export default function AnalyticsPage() {
         </div>
       </div>
 
-      {/* 2. Narrative Overview Banner */}
+      {/* 2. Primary Plant Profile */}
+      <PlantProfileCard
+        profile={plantProfile}
+        observationsCount={observations.length}
+        language={language}
+        userMode={userMode}
+      />
+
+      {/* 2.5 Narrative Overview Banner */}
       <div
         style={{
           display: 'flex',
@@ -569,6 +582,7 @@ export default function AnalyticsPage() {
               <thead>
                 <tr style={{ borderBottom: '1px solid var(--border-default)', color: 'var(--text-muted)' }}>
                   <th style={{ padding: '10px 12px', fontWeight: 600 }}>{copy.analytics.thTimestamp}</th>
+                  {!isFarmer && <th style={{ padding: '10px 12px', fontWeight: 600 }}>Plant ID</th>}
                   <th style={{ padding: '10px 12px', fontWeight: 600 }}>{copy.analytics.thSpecimen}</th>
                   <th style={{ padding: '10px 12px', fontWeight: 600 }}>{copy.analytics.thVisualHealth}</th>
                   <th style={{ padding: '10px 12px', fontWeight: 600 }}>{copy.analytics.thPh}</th>
@@ -585,8 +599,13 @@ export default function AnalyticsPage() {
                       <td style={{ padding: '10px 12px', fontFamily: 'var(--font-mono)', color: 'var(--text-secondary)' }}>
                         {new Date(obs.timestamp).toLocaleString(isKn ? 'kn-IN' : 'en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                       </td>
+                      {!isFarmer && (
+                        <td style={{ padding: '10px 12px', fontFamily: 'var(--font-mono)', color: 'var(--color-teal)' }}>
+                          {obs.plantId || plantProfile.plantId}
+                        </td>
+                      )}
                       <td style={{ padding: '10px 12px', color: 'var(--text-primary)', fontWeight: 600 }}>
-                        {obs.plantSpecies || (isKn ? 'ಪರಿಶೀಲಿಸುತ್ತಿರುವ ಗಿಡ' : 'Unknown Plant')}
+                        {obs.plantSpecies || plantDisplayName}
                       </td>
                       <td style={{ padding: '10px 12px', color: 'var(--text-secondary)' }}>
                         {obs.visualHealthScore

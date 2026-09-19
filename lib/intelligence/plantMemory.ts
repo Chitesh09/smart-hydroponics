@@ -136,11 +136,15 @@ export function answerPlantMemoryQueries(
   observations: PlantObservation[],
   cropName: string
 ): PlantMemoryAnswers {
+  const safeName = (!cropName || cropName === 'Unknown Plant' || cropName === 'Plant')
+    ? 'your plant'
+    : cropName;
+
   if (!observations || observations.length < 2) {
     return {
-      howHasPlantChanged: `Initial observation recorded for ${cropName}. Continuous multimodal monitoring will track optical leaf expansion, chlorophyll density shifts, and chemical consumption rates over time.`,
+      howHasPlantChanged: `Initial observation recorded for ${safeName}. Continuous multimodal monitoring will track optical leaf expansion, chlorophyll density shifts, and chemical consumption rates over time.`,
       isPlantHealthier: `Baseline health index established. Log subsequent snapshots to calculate longitudinal health score improvement trajectories.`,
-      whatChangedRecently: `Currently operating under the initial ${cropName} calibration profile. Real-time ESP32 sensors and camera monitors are active.`,
+      whatChangedRecently: `Currently operating under the initial ${safeName} calibration profile. Real-time ESP32 sensors and camera monitors are active.`,
       confidenceScore: 60,
     };
   }
@@ -159,10 +163,10 @@ export function answerPlantMemoryQueries(
   const daysMonitored = Math.max(1, Math.round((newest.timestamp - oldest.timestamp) / 86400000) + 1);
 
   const howHasPlantChanged = canopyDelta > 2
-    ? `Over ${daysMonitored} days of monitoring, ${cropName} canopy has expanded by ${canopySign} in 2D camera coverage (from ${initialCanopy}% to ${currentCanopy}%). Foliage coloration shows active chlorophyll reflectance with sustained vegetative leaf cluster expansion.`
+    ? `Over ${daysMonitored} days of monitoring, ${safeName} canopy has expanded by ${canopySign} in 2D camera coverage (from ${initialCanopy}% to ${currentCanopy}%). Foliage coloration shows active chlorophyll reflectance with sustained vegetative leaf cluster expansion.`
     : canopyDelta < -2
       ? `Over ${daysMonitored} days, detected canopy coverage contracted by ${canopySign} (from ${initialCanopy}% to ${currentCanopy}%). Inspect for physical drooping, trimming, or optical camera angle shifts.`
-      : `Over ${daysMonitored} days, ${cropName} canopy surface area has remained steady around ${currentCanopy}% coverage (${canopySign} change) with consistent structural density.`;
+      : `Over ${daysMonitored} days, ${safeName} canopy surface area has remained steady around ${currentCanopy}% coverage (${canopySign} change) with consistent structural density.`;
 
   // 2. Is the plant healthier than last week / earlier?
   const initialScore = oldest.overallHealthScore ?? 80;
