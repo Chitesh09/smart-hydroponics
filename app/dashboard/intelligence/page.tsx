@@ -587,6 +587,7 @@ export default function IntelligencePage() {
           steps={evidenceChainSteps}
           confidenceScore={userMode === 'technical' ? cropIdentity.confidence : undefined}
           confidenceText={userMode === 'farmer' ? naturalConfidence : undefined}
+          confidenceLabel={isKn ? 'ವಿಶ್ವಾಸಾರ್ಹತೆ' : 'Confidence'}
         />
       </div>
 

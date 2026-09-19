@@ -10,6 +10,8 @@ import { useRouter } from 'next/navigation';
 import { useESP32Serial } from '@/lib/esp32/ESP32SerialContext';
 import { usePlantIntelligence } from '@/lib/intelligence/PlantIntelligenceContext';
 import { getFarmerCopy } from '@/lib/intelligence/farmerSemanticLayer';
+import { ModeToggle } from '@/components/ui/ModeToggle';
+import { LanguageToggle } from '@/components/ui/LanguageToggle';
 import {
   Cpu,
   Activity,
@@ -30,7 +32,7 @@ import styles from './page.module.css';
 
 export default function DeviceManagementPage() {
   const router = useRouter();
-  const { userMode, setUserMode, language } = usePlantIntelligence();
+  const { userMode, setUserMode, language, setLanguage } = usePlantIntelligence();
   const copy = getFarmerCopy(language);
 
   const {
@@ -176,6 +178,9 @@ export default function DeviceManagementPage() {
         </div>
 
         <div className={styles.actionRow}>
+          <ModeToggle mode={userMode} onModeChange={setUserMode} language={language} size="sm" />
+          <LanguageToggle language={language} onLanguageChange={setLanguage} size="sm" />
+
           {/* Simulation vs Real Mode Toggle */}
           <div style={{
             display: 'flex',

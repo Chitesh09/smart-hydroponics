@@ -7,6 +7,8 @@ import { getFarmerCopy } from '@/lib/intelligence/farmerSemanticLayer';
 import { LiveLineChart } from '@/components/LiveLineChart';
 import { DataSourceBadge } from '@/components/ui/DataSourceBadge';
 import { StatusBadge } from '@/components/ui/StatusBadge';
+import { ModeToggle } from '@/components/ui/ModeToggle';
+import { LanguageToggle } from '@/components/ui/LanguageToggle';
 import {
   Compass,
   Download,
@@ -22,7 +24,7 @@ import {
 
 export default function AnalyticsPage() {
   const { history, mode, isStale, latestReading } = useESP32Serial();
-  const { observations, cropIdentity, predictiveAnalytics, userMode, language } = usePlantIntelligence();
+  const { observations, cropIdentity, predictiveAnalytics, userMode, setUserMode, language, setLanguage } = usePlantIntelligence();
 
   const copy = useMemo(() => getFarmerCopy(language), [language]);
   const isKn = language === 'kn';
@@ -149,7 +151,9 @@ export default function AnalyticsPage() {
           <h1 className="display-title">{copy.analytics.title}</h1>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+          <ModeToggle mode={userMode} onModeChange={setUserMode} language={language} size="sm" />
+          <LanguageToggle language={language} onLanguageChange={setLanguage} size="sm" />
           <button
             className="btn btn-secondary"
             onClick={exportToCSV}

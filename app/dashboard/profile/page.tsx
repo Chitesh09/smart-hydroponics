@@ -14,12 +14,14 @@ import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase';
 import { usePlantIntelligence } from '@/lib/intelligence/PlantIntelligenceContext';
 import { getFarmerCopy } from '@/lib/intelligence/farmerSemanticLayer';
+import { ModeToggle } from '@/components/ui/ModeToggle';
+import { LanguageToggle } from '@/components/ui/LanguageToggle';
 import styles from './page.module.css';
 
 export default function ProfilePage() {
   const router = useRouter();
   const { currentUser, userProfile, signOut } = useAuth();
-  const { language } = usePlantIntelligence();
+  const { userMode, setUserMode, language, setLanguage } = usePlantIntelligence();
   const copy = getFarmerCopy(language);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -187,6 +189,26 @@ export default function ProfilePage() {
             
             <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                  <div className="text-sm font-bold text-primary">{copy.settings.activeMode}</div>
+                  <div className="text-xs text-secondary">
+                    {userMode === 'farmer' ? (language === 'kn' ? 'ಸರಳ ಕೃಷಿಕ ಇಂಟರ್‌ಫೇಸ್' : 'Simplified farmer experience') : (language === 'kn' ? 'ಪೂರ್ಣ ಎಂಜಿನಿಯರಿಂಗ್ ನಿಯಂತ್ರಣಗಳು' : 'Full engineering console')}
+                  </div>
+                </div>
+                <ModeToggle mode={userMode} onModeChange={setUserMode} language={language} size="sm" />
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--border-subtle)', paddingTop: '14px' }}>
+                <div>
+                  <div className="text-sm font-bold text-primary">{copy.settings.activeLanguage}</div>
+                  <div className="text-xs text-secondary">
+                    {language === 'kn' ? 'ಕನ್ನಡ (Kannada)' : 'English (en)'}
+                  </div>
+                </div>
+                <LanguageToggle language={language} onLanguageChange={setLanguage} size="sm" showIcon />
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--border-subtle)', paddingTop: '14px' }}>
                 <div>
                   <div className="text-sm font-bold text-primary">{copy.settings.safetyFailsafe}</div>
                   <div className="text-xs text-secondary">{copy.settings.safetyFailsafeDesc}</div>

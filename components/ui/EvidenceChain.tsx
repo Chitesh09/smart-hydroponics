@@ -34,9 +34,10 @@ interface EvidenceChainProps {
   steps: EvidenceStep[];
   confidenceScore?: number;
   confidenceText?: string;
+  confidenceLabel?: string;
 }
 
-export function EvidenceChain({ steps, confidenceScore, confidenceText }: EvidenceChainProps) {
+export function EvidenceChain({ steps, confidenceScore, confidenceText, confidenceLabel = 'Confidence' }: EvidenceChainProps) {
   const getIconForStage = (stage: EvidenceStage) => {
     switch (stage) {
       case 'CAMERA OBSERVATION':
@@ -126,7 +127,7 @@ export function EvidenceChain({ steps, confidenceScore, confidenceText }: Eviden
                   </span>
                   {idx === 0 && (confidenceText || confidenceScore !== undefined) && (
                     <span className="scientific-meta" style={{ fontSize: '10px', color: 'var(--text-muted)' }}>
-                      Confidence: {confidenceText || `${confidenceScore}%`}
+                      {confidenceLabel}: {confidenceText || `${confidenceScore}%`}
                     </span>
                   )}
                 </div>
