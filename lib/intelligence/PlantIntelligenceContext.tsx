@@ -489,14 +489,15 @@ export function PlantIntelligenceProvider({ children }: { children: React.ReactN
 
   // Identify plant from current camera frame
   const identifyCurrentPlant = useCallback(async (): Promise<PlantIdentificationResponse | null> => {
-    // Gate: Require plant presence before identifying
-    if (!latestDetection?.isPlantDetected) {
+    // Gate: Require confirmed plant presence before identifying
+    if (!latestDetection?.isPlantDetected || latestDetection.state !== 'PLANT_DETECTED') {
+      const guidanceMessage = latestDetection?.userMessage || 'No plant detected in camera frame. Position a plant clearly within the camera view before identifying.';
       const noPlantResp: PlantIdentificationResponse = {
         status: 'no_plant_detected',
         rankedCandidates: [],
         overallConfidence: 0,
         confidenceLevel: 'uncertain',
-        guidanceMessage: 'No plant detected in camera frame. Position a plant clearly within the camera view before identifying.',
+        guidanceMessage,
         timestamp: Date.now(),
       };
       setIdentificationResult(noPlantResp);
@@ -572,14 +573,21 @@ export function PlantIntelligenceProvider({ children }: { children: React.ReactN
     const visualHealth = scan?.health;
     const now = Date.now();
 
-    // Gate 1: Check plant presence (TEST 7: NO_PLANT_DETECTED does not create a false plant health observation)
-    if (!detection || !detection.isPlantDetected) {
-      console.warn('[PlantIntelligence] Observation rejected: No plant detected in frame.');
+    // Gate 1: Check plant presence and scan readiness
+    if (
+      !detection ||
+      !detection.isPlantDetected ||
+      detection.state === 'NO_PLANT_DETECTED' ||
+      detection.state === 'SCAN_NOT_READY'
+    ) {
+      console.warn('[PlantIntelligence] Observation rejected: No plant detected or scan not ready in frame.');
       return null;
     }
 
-    // Gate 2: Check confidence (TEST 8: LOW_CONFIDENCE does not create a confident plant conclusion)
-    const isLowConfidence = (detection.confidence !== undefined && detection.confidence < 45) ||
+    // Gate 2: Check confidence (LOW_CONFIDENCE flags tentative observation without confident health score)
+    const isLowConfidence =
+      detection.state === 'LOW_CONFIDENCE' ||
+      (detection.confidence !== undefined && detection.confidence < 45) ||
       (detection.plantPresenceScore !== undefined && detection.plantPresenceScore < 45);
 
     const snapshot = captureFrame();

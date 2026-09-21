@@ -215,12 +215,20 @@ export default function Dashboard() {
   // Optical detection progression label
   const opticalProgression = useMemo(() => {
     if (!isCameraActive) return isKn ? copy.ui.cameraOffline : 'Camera View Offline';
-    if (!latestDetection?.isPlantDetected) {
-      return isKn ? copy.ui.noPlant : 'No plant detected. Place the plant in front of the camera.';
+    if (!latestDetection) return isKn ? copy.camera.SCAN_NOT_READY : 'Camera is starting...';
+
+    if (latestDetection.state === 'SCAN_NOT_READY') {
+      return isKn ? copy.camera.SCAN_NOT_READY : latestDetection.userMessage;
     }
-    if (latestDetection.confidence && latestDetection.confidence < 45) {
-      return isKn ? copy.ui.cameraUnclear : 'Camera view is unclear. Move closer or improve lighting.';
+
+    if (latestDetection.state === 'NO_PLANT_DETECTED' || !latestDetection.isPlantDetected) {
+      return isKn ? copy.camera.NO_PLANT : (latestDetection.userMessage || copy.ui.noPlant);
     }
+
+    if (latestDetection.state === 'LOW_CONFIDENCE') {
+      return isKn ? copy.camera.LOW_CONFIDENCE : latestDetection.userMessage;
+    }
+
     if (isPlantIdentified) {
       return isKn
         ? `ಗಿಡ ಪತ್ತೆಯಾಗಿದೆ · ${cropIdentity.commonName} (${cropIdentity.confidence}% ಹೊಂದಾಣಿಕೆ)`
@@ -316,6 +324,48 @@ export default function Dashboard() {
                   </span>
                 )}
               </div>
+
+              {/* Technical Mode Diagnostics Banner */}
+              {userMode === 'technical' && latestDetection && (
+                <div
+                  style={{
+                    position: 'absolute',
+                    bottom: '8px',
+                    left: '8px',
+                    right: '8px',
+                    padding: '6px 8px',
+                    background: 'rgba(5, 19, 17, 0.92)',
+                    borderRadius: 'var(--radius-xs)',
+                    border: '1px solid var(--border-default)',
+                    fontFamily: 'var(--font-mono)',
+                    fontSize: '9.5px',
+                    color: 'var(--text-secondary)',
+                    display: 'flex',
+                    flexWrap: 'wrap',
+                    gap: '6px',
+                    zIndex: 10,
+                  }}
+                >
+                  <span>
+                    STATE: <strong style={{ color: latestDetection.state === 'PLANT_DETECTED' ? 'var(--color-green)' : latestDetection.state === 'LOW_CONFIDENCE' ? 'var(--color-amber)' : 'var(--color-red)' }}>{latestDetection.state}</strong>
+                  </span>
+                  <span>·</span>
+                  <span>SCORE: <strong style={{ color: 'var(--text-primary)' }}>{latestDetection.plantPresenceScore}/100</strong> ({latestDetection.confidenceLevel})</span>
+                  <span>·</span>
+                  <span>EDGE: <strong style={{ color: 'var(--text-primary)' }}>{latestDetection.diagnostics?.internalEdgeDensity ?? '--'}</strong></span>
+                  <span>·</span>
+                  <span>COH: <strong style={{ color: 'var(--text-primary)' }}>{latestDetection.diagnostics?.spatialCoherence ?? '--'}</strong></span>
+                  <span>·</span>
+                  <span>SKIN: <strong style={{ color: (latestDetection.diagnostics?.skinPercent ?? 0) > 3 ? 'var(--color-amber)' : 'var(--text-primary)' }}>{latestDetection.diagnostics?.skinPercent ?? 0}%</strong></span>
+                  <span>·</span>
+                  <span>LAT: <strong style={{ color: 'var(--color-teal)' }}>{latestDetection.inferenceTimeMs}ms</strong></span>
+                  {latestDetection.nonPlantRejectionReason && (
+                    <div style={{ width: '100%', color: 'var(--color-amber)', marginTop: '2px', fontSize: '9px' }}>
+                      REASON: {latestDetection.nonPlantRejectionReason}
+                    </div>
+                  )}
+                </div>
+              )}
             </>
           ) : (
             <div className={styles.cameraOfflinePlaceholder}>

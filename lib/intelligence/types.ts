@@ -164,7 +164,13 @@ export type DemoScenario =
   | 'water_depletion'
   | 'sensor_anomaly';
 
-import { PlantDetectionResult } from '@/lib/vision/plantDetector';
+import {
+  PlantDetectionResult,
+  PlantPresenceState,
+  PlantDetectorConfig,
+  PLANT_DETECTOR_CONFIG,
+  PlantDetectorDiagnostics,
+} from '@/lib/vision/plantDetector';
 import {
   VisualHealthAnalysisResult,
   VisualHealthState,
@@ -174,11 +180,15 @@ import {
 
 export type {
   PlantDetectionResult,
+  PlantPresenceState,
+  PlantDetectorConfig,
+  PlantDetectorDiagnostics,
   VisualHealthAnalysisResult,
   VisualHealthState,
   VisualScoreBreakdown,
   VisualStressIndicator
 };
+export { PLANT_DETECTOR_CONFIG };
 
 // ============================================================
 // Phase 5: Multimodal Health Engine Types

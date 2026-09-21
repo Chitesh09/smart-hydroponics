@@ -2,8 +2,15 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useCamera } from './CameraContext';
-import { detectPlantPresence, PlantDetectionResult } from '@/lib/vision/plantDetector';
-import { analyzeVisualPlantHealth, VisualHealthAnalysisResult } from '@/lib/vision/plantHealthAnalyzer';
+import {
+  detectPlantPresence,
+  PlantDetectionResult,
+  PlantPresenceState,
+} from '@/lib/vision/plantDetector';
+import {
+  analyzeVisualPlantHealth,
+  VisualHealthAnalysisResult,
+} from '@/lib/vision/plantHealthAnalyzer';
 
 interface UsePlantMonitorOptions {
   sampleIntervalMs?: number;
@@ -21,9 +28,10 @@ export function usePlantMonitor({
   const [isScanning, setIsScanning] = useState<boolean>(autoScanDefault);
   const [lastScanTime, setLastScanTime] = useState<number | null>(null);
 
-  // Temporal smoothing window (5 frames) to prevent single-frame glitches/flickering
-  const historyWindowRef = useRef<boolean[]>([]);
+  // Multi-frame temporal smoothing window (5 frames)
+  const stateHistoryRef = useRef<PlantPresenceState[]>([]);
   const presenceScoresRef = useRef<number[]>([]);
+  const stabilizedStateRef = useRef<PlantPresenceState>('NO_PLANT_DETECTED');
 
   // Analyze single current frame immediately
   const analyzeNow = useCallback((): {
@@ -35,41 +43,98 @@ export function usePlantMonitor({
     }
 
     const rawDetection = detectPlantPresence(videoRef.current);
-    
-    // Apply temporal smoothing (rolling window of 5 frames)
-    historyWindowRef.current.push(rawDetection.isPlantDetected);
+
+    // Update temporal sliding window (max 5 frames)
+    stateHistoryRef.current.push(rawDetection.state);
     presenceScoresRef.current.push(rawDetection.plantPresenceScore);
-    if (historyWindowRef.current.length > 5) {
-      historyWindowRef.current.shift();
+    if (stateHistoryRef.current.length > 5) {
+      stateHistoryRef.current.shift();
       presenceScoresRef.current.shift();
     }
 
-    // Stabilized detection decision (At least 3 positive frames out of 5)
-    const positiveVotes = historyWindowRef.current.filter(Boolean).length;
-    const stabilizedDetected = positiveVotes >= 3;
+    const history = stateHistoryRef.current;
+    const scores = presenceScoresRef.current;
 
     // Smoothed average presence score
-    const avgScore = Math.round(
-      presenceScoresRef.current.reduce((a, b) => a + b, 0) / presenceScoresRef.current.length
-    );
+    const avgScore = Math.round(scores.reduce((a, b) => a + b, 0) / scores.length);
+
+    // Count votes in window
+    const plantVotes = history.filter((s) => s === 'PLANT_DETECTED').length;
+    const scanNotReadyVotes = history.filter((s) => s === 'SCAN_NOT_READY').length;
+    const lowConfVotes = history.filter((s) => s === 'LOW_CONFIDENCE' || s === 'PLANT_DETECTED').length;
+
+    let stabilizedState: PlantPresenceState = stabilizedStateRef.current;
+
+    // 1. Scan Not Ready priority (if 2+ consecutive frames indicate optical issue)
+    if (scanNotReadyVotes >= 2 && rawDetection.state === 'SCAN_NOT_READY') {
+      stabilizedState = 'SCAN_NOT_READY';
+    }
+    // 2. Currently in PLANT_DETECTED state: require hysteresis to exit
+    else if (stabilizedStateRef.current === 'PLANT_DETECTED') {
+      // Need 3 or more negative frames to fall back
+      const nonPlantConsecutive = history.slice(-3).every((s) => s !== 'PLANT_DETECTED');
+      if (nonPlantConsecutive) {
+        stabilizedState = lowConfVotes >= 2 ? 'LOW_CONFIDENCE' : 'NO_PLANT_DETECTED';
+      } else {
+        stabilizedState = 'PLANT_DETECTED';
+      }
+    }
+    // 3. Not in PLANT_DETECTED state: require at least 3 positive frames to enter
+    else {
+      if (plantVotes >= 3) {
+        stabilizedState = 'PLANT_DETECTED';
+      } else if (lowConfVotes >= 2 || rawDetection.state === 'LOW_CONFIDENCE') {
+        stabilizedState = 'LOW_CONFIDENCE';
+      } else {
+        stabilizedState = 'NO_PLANT_DETECTED';
+      }
+    }
+
+    stabilizedStateRef.current = stabilizedState;
+    const isPlantDetected = stabilizedState === 'PLANT_DETECTED';
+
+    let userMessage = rawDetection.userMessage;
+    let statusText = rawDetection.statusText;
+
+    if (stabilizedState === 'PLANT_DETECTED') {
+      userMessage = 'Plant detected 🌱';
+      statusText = `Plant detected (${avgScore}% presence score, ${rawDetection.canopyCoveragePercent}% canopy)`;
+    } else if (stabilizedState === 'SCAN_NOT_READY') {
+      userMessage = rawDetection.userMessage;
+      statusText = rawDetection.statusText;
+    } else if (stabilizedState === 'LOW_CONFIDENCE') {
+      userMessage = rawDetection.userMessage || 'We can see something that may be a plant. Try moving closer.';
+      statusText = `Low confidence plant detection (${avgScore}% presence score)`;
+    } else {
+      userMessage = rawDetection.isHumanPresent && !rawDetection.diagnostics?.independentPlantClusterFound
+        ? 'No plant detected. Move clear of camera view or place plant in front.'
+        : 'No plant detected. Place the plant in front of the camera.';
+      statusText = rawDetection.statusText;
+    }
 
     const smoothedDetection: PlantDetectionResult = {
       ...rawDetection,
-      isPlantDetected: stabilizedDetected,
-      plantPresenceScore: stabilizedDetected ? Math.max(50, avgScore) : Math.min(45, avgScore),
-      confidence: stabilizedDetected ? Math.max(50, avgScore) : Math.min(45, avgScore),
-      statusText: stabilizedDetected
-        ? `Plant detected (${avgScore}% presence score, ${rawDetection.canopyCoveragePercent}% canopy)`
-        : rawDetection.isHumanPresent
-          ? 'No plant detected — Human subject present'
-          : rawDetection.nonPlantRejectionReason
-            ? `No plant detected — ${rawDetection.nonPlantRejectionReason}`
-            : 'No plant detected in camera frame',
+      state: stabilizedState,
+      isPlantDetected,
+      plantPresenceScore: isPlantDetected ? Math.max(50, avgScore) : Math.min(48, avgScore),
+      confidence: isPlantDetected ? Math.max(50, avgScore) : Math.min(48, avgScore),
+      confidenceLevel:
+        stabilizedState === 'PLANT_DETECTED'
+          ? avgScore >= 75
+            ? 'high'
+            : 'medium'
+          : stabilizedState === 'LOW_CONFIDENCE'
+            ? 'low'
+            : 'none',
+      statusText,
+      userMessage,
+      // Suppress bounding box if not stably confirmed plant
+      boundingBox: isPlantDetected ? rawDetection.boundingBox : undefined,
     };
 
     // Gate Visual Health Analysis: ONLY run on confirmed plant presence
     let health: VisualHealthAnalysisResult;
-    if (stabilizedDetected) {
+    if (isPlantDetected) {
       health = analyzeVisualPlantHealth(videoRef.current);
     } else {
       health = {
@@ -124,8 +189,9 @@ export function usePlantMonitor({
       const timer = setTimeout(() => {
         setLatestDetection(null);
         setLatestVisualHealth(null);
-        historyWindowRef.current = [];
+        stateHistoryRef.current = [];
         presenceScoresRef.current = [];
+        stabilizedStateRef.current = 'NO_PLANT_DETECTED';
       }, 0);
       return () => clearTimeout(timer);
     }

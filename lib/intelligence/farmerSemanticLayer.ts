@@ -272,9 +272,9 @@ export const FARMER_COPY: Record<SupportedLanguageCode, FarmerCopyGroup> = {
     },
     camera: {
       PLANT_DETECTED: 'Plant detected',
-      NO_PLANT: 'No plant detected',
-      LOW_CONFIDENCE: 'Move the camera closer to the plant',
-      SCAN_NOT_READY: 'Camera feed is offline',
+      NO_PLANT: 'No plant detected. Place the plant in front of the camera.',
+      LOW_CONFIDENCE: 'We can see something that may be a plant. Try moving closer.',
+      SCAN_NOT_READY: "Camera view isn't ready yet.",
     },
     environment: {
       GOOD: 'Growing conditions are good',
@@ -498,9 +498,9 @@ export const FARMER_COPY: Record<SupportedLanguageCode, FarmerCopyGroup> = {
     },
     camera: {
       PLANT_DETECTED: 'ಗಿಡ ಪತ್ತೆಯಾಗಿದೆ.',
-      NO_PLANT: 'ಗಿಡ ಕಂಡುಬಂದಿಲ್ಲ.',
-      LOW_CONFIDENCE: 'ಕ್ಯಾಮೆರಾವನ್ನು ಗಿಡದ ಹತ್ತಿರಕ್ಕೆ ತಂದು ನೋಡಿ.',
-      SCAN_NOT_READY: 'ಕ್ಯಾಮೆರಾ ಸಂಪರ್ಕ ಕಡಿತಗೊಂಡಿದೆ.',
+      NO_PLANT: 'ಗಿಡ ಕಂಡುಬಂದಿಲ್ಲ. ಕ್ಯಾಮೆರಾ ಮುಂದೆ ಗಿಡವನ್ನು ಇರಿಸಿ.',
+      LOW_CONFIDENCE: 'ಗಿಡವಿರುವಂತೆ ಕಾಣುತ್ತಿದೆ. ಕ್ಯಾಮೆರಾವನ್ನು ಹತ್ತಿರಕ್ಕೆ ತನ್ನಿ.',
+      SCAN_NOT_READY: 'ಕ್ಯಾಮೆರಾ ಸಿದ್ಧವಾಗಿಲ್ಲ.',
     },
     environment: {
       GOOD: 'ಬೆಳವಣಿಗೆಯ ವಾತಾವರಣ ಉತ್ತಮವಾಗಿದೆ.',
@@ -808,16 +808,18 @@ export function deriveFarmerSemanticState({
   let cameraColor: 'teal' | 'amber' | 'red' | 'gray' = 'gray';
 
   if (isCameraActive) {
-    if (latestDetection?.isPlantDetected) {
-      if (latestDetection.confidence && latestDetection.confidence < 45) {
-        cameraStatus = 'LOW_CONFIDENCE';
-        cameraMessage = copy.camera.LOW_CONFIDENCE || fallbackCopy.camera.LOW_CONFIDENCE;
-        cameraColor = 'amber';
-      } else {
-        cameraStatus = 'PLANT_DETECTED';
-        cameraMessage = copy.camera.PLANT_DETECTED || fallbackCopy.camera.PLANT_DETECTED;
-        cameraColor = 'teal';
-      }
+    if (latestDetection?.state === 'PLANT_DETECTED' || (latestDetection?.isPlantDetected && (latestDetection?.confidence ?? 0) >= 45)) {
+      cameraStatus = 'PLANT_DETECTED';
+      cameraMessage = copy.camera.PLANT_DETECTED || fallbackCopy.camera.PLANT_DETECTED;
+      cameraColor = 'teal';
+    } else if (latestDetection?.state === 'SCAN_NOT_READY') {
+      cameraStatus = 'SCAN_NOT_READY';
+      cameraMessage = copy.camera.SCAN_NOT_READY || fallbackCopy.camera.SCAN_NOT_READY;
+      cameraColor = 'gray';
+    } else if (latestDetection?.state === 'LOW_CONFIDENCE' || ((latestDetection?.confidence ?? 0) < 45 && (latestDetection?.confidence ?? 0) >= 25)) {
+      cameraStatus = 'LOW_CONFIDENCE';
+      cameraMessage = copy.camera.LOW_CONFIDENCE || fallbackCopy.camera.LOW_CONFIDENCE;
+      cameraColor = 'amber';
     } else {
       cameraStatus = 'NO_PLANT';
       cameraMessage = copy.camera.NO_PLANT || fallbackCopy.camera.NO_PLANT;
