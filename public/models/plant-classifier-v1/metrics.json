@@ -1,0 +1,146 @@
+{
+  "modelId": "hydrosmart-plant-classifier-v1",
+  "version": "1.0.0",
+  "trainedAt": 1790095327891,
+  "architecture": "DepthwiseSeparableCNN-Lite",
+  "inputDimensions": [
+    160,
+    160,
+    3
+  ],
+  "parameterCount": 22246,
+  "weightSizeBytes": 88984,
+  "weightSizeKB": 86.9,
+  "dataset": {
+    "name": "HydroSmart Curated Agricultural Botanical Dataset",
+    "sources": [
+      "PlantVillage Dataset (Hughes & Salath\u00e9, Frontiers in Plant Science, CC BY 4.0)",
+      "Wikimedia Commons Open Botanical Leaf Repository (CC BY-SA 4.0 / CC0)",
+      "Mendeley Local Spinach & Leaf Dataset (CC BY 4.0)"
+    ],
+    "totalImages": 720,
+    "trainSamples": 503,
+    "valSamples": 109,
+    "testSamples": 108,
+    "classesCount": 6
+  },
+  "training": {
+    "epochs": 20,
+    "batchSize": 16,
+    "optimizer": "Adam (lr=0.001)",
+    "loss": "categorical_crossentropy",
+    "durationSeconds": 91.9,
+    "finalTrainAccuracy": 0.8728,
+    "finalValAccuracy": 0.8349
+  },
+  "evaluation": {
+    "testAccuracy": 0.8519,
+    "testLoss": 0.4225,
+    "perClassMetrics": {
+      "Butterhead Lettuce": {
+        "classIndex": 0,
+        "cropKey": "butterhead_lettuce",
+        "support": 20,
+        "precision": 1.0,
+        "recall": 0.9,
+        "f1Score": 0.947
+      },
+      "Sweet Basil": {
+        "classIndex": 1,
+        "cropKey": "sweet_basil",
+        "support": 21,
+        "precision": 0.769,
+        "recall": 0.952,
+        "f1Score": 0.851
+      },
+      "Spinach": {
+        "classIndex": 2,
+        "cropKey": "spinach",
+        "support": 17,
+        "precision": 0.846,
+        "recall": 0.647,
+        "f1Score": 0.733
+      },
+      "Curly Kale": {
+        "classIndex": 3,
+        "cropKey": "curly_kale",
+        "support": 17,
+        "precision": 1.0,
+        "recall": 0.882,
+        "f1Score": 0.938
+      },
+      "Spearmint": {
+        "classIndex": 4,
+        "cropKey": "spearmint",
+        "support": 11,
+        "precision": 0.562,
+        "recall": 0.818,
+        "f1Score": 0.667
+      },
+      "Cherry Tomato": {
+        "classIndex": 5,
+        "cropKey": "cherry_tomato",
+        "support": 22,
+        "precision": 0.95,
+        "recall": 0.864,
+        "f1Score": 0.905
+      }
+    },
+    "confusionMatrix": [
+      [
+        18,
+        1,
+        0,
+        0,
+        1,
+        0
+      ],
+      [
+        0,
+        20,
+        0,
+        0,
+        1,
+        0
+      ],
+      [
+        0,
+        4,
+        11,
+        0,
+        2,
+        0
+      ],
+      [
+        0,
+        0,
+        1,
+        15,
+        0,
+        1
+      ],
+      [
+        0,
+        1,
+        1,
+        0,
+        9,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        3,
+        19
+      ]
+    ]
+  },
+  "inferenceThresholds": {
+    "confidenceIdentifiedMin": 0.65,
+    "confidenceLowConfMin": 0.4,
+    "minMarginTop1Top2": 0.12,
+    "maxEntropy": 1.45
+  }
+}

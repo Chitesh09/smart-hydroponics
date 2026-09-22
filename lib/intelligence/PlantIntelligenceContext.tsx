@@ -5,7 +5,7 @@
 // Integrated with Cloud Firestore Persistence & Scoped User Identity
 // ============================================================
 
-import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useAuth } from '@/lib/auth/AuthContext';
 import { useESP32Serial } from '@/lib/esp32/ESP32SerialContext';
 import { useCamera } from '@/lib/camera/CameraContext';
@@ -43,7 +43,6 @@ import {
 } from './healthScore';
 import { detectEnvironmentalAnomalies } from './anomalyDetection';
 import { identifyPlant } from './plantIdentification';
-import { cropPlantRegion } from '@/lib/vision/plantIdentifier';
 import { multimodalHealthEngine } from './multimodalEngine';
 import {
   computeGrowthEstimates,
@@ -182,6 +181,7 @@ export function PlantIntelligenceProvider({ children }: { children: React.ReactN
   // Identification State
   const [identificationResult, setIdentificationResult] = useState<PlantIdentificationResponse | null>(null);
   const [isIdentifying, setIsIdentifying] = useState<boolean>(false);
+  const recentSpeciesScansRef = useRef<Array<{ cropKey: string; commonName: string; confidence: number; timestamp: number }>>([]);
 
   // User Experience Mode State ('farmer' by default)
   const [userMode, setUserModeState] = useState<AssistantMode>('farmer');
@@ -487,58 +487,10 @@ export function PlantIntelligenceProvider({ children }: { children: React.ReactN
     ]);
   }, [cropIdentity.commonName]);
 
-  // Identify plant from current camera frame
-  const identifyCurrentPlant = useCallback(async (): Promise<PlantIdentificationResponse | null> => {
-    // Gate: Require confirmed plant presence before identifying
-    if (!latestDetection?.isPlantDetected || latestDetection.state !== 'PLANT_DETECTED') {
-      const guidanceMessage = latestDetection?.userMessage || 'No plant detected in camera frame. Position a plant clearly within the camera view before identifying.';
-      const noPlantResp: PlantIdentificationResponse = {
-        status: 'no_plant_detected',
-        rankedCandidates: [],
-        overallConfidence: 0,
-        confidenceLevel: 'uncertain',
-        guidanceMessage,
-        timestamp: Date.now(),
-      };
-      setIdentificationResult(noPlantResp);
-      return noPlantResp;
-    }
-
-    let snapshot: string | null = null;
-    if (videoRef?.current && latestDetection?.boundingBox) {
-      snapshot = cropPlantRegion(videoRef.current, { boundingBox: latestDetection.boundingBox, targetMaxDimension: 800 });
-    }
-    if (!snapshot) {
-      snapshot = captureFrame();
-    }
-    if (!snapshot) return null;
-
-    setIsIdentifying(true);
-    try {
-      const response = await identifyPlant(snapshot);
-      setIdentificationResult(response);
-      return response;
-    } catch (err) {
-      console.error('[PlantIntelligence] Identification error:', err);
-      const errorResp: PlantIdentificationResponse = {
-        status: 'error',
-        rankedCandidates: [],
-        overallConfidence: 0,
-        confidenceLevel: 'uncertain',
-        guidanceMessage: 'An error occurred during botanical identification.',
-        timestamp: Date.now(),
-      };
-      setIdentificationResult(errorResp);
-      return errorResp;
-    } finally {
-      setIsIdentifying(false);
-    }
-  }, [captureFrame, latestDetection, videoRef]);
-
   // Apply identified candidate as active crop profile
   const applyIdentifiedSpecies = useCallback((candidate: PlantCandidate, imageRef?: string) => {
     const now = Date.now();
-    // 1. Update persistent plantProfile while preserving the stable plantId
+    // 1. Update persistent plantProfile while strictly preserving the stable plantId
     setPlantProfile(prev => ({
       ...prev,
       species: candidate.commonName,
@@ -546,6 +498,8 @@ export function PlantIntelligenceProvider({ children }: { children: React.ReactN
       scientificName: candidate.scientificName,
       family: candidate.family,
       speciesConfidence: candidate.confidence,
+      identifiedAt: now,
+      modelVersion: 'hydrosmart-plant-classifier-v1',
       lastObservedAt: now,
       targetProfile: candidate.targetProfile,
     }));
@@ -565,6 +519,114 @@ export function PlantIntelligenceProvider({ children }: { children: React.ReactN
       targetProfile: candidate.targetProfile,
     });
   }, [identificationResult, plantProfile.plantId, plantProfile.createdAt, setPlantProfile]);
+
+  // Identify plant from current camera frame
+  const identifyCurrentPlant = useCallback(async (): Promise<PlantIdentificationResponse | null> => {
+    // Gate 1: Check plant presence
+    if (!latestDetection || !latestDetection.isPlantDetected || latestDetection.state === 'NO_PLANT_DETECTED') {
+      const guidanceMessage = latestDetection?.userMessage || 'No plant detected in camera frame. Position a plant clearly within the camera view before identifying.';
+      const noPlantResp: PlantIdentificationResponse = {
+        status: 'no_plant_detected',
+        rankedCandidates: [],
+        overallConfidence: 0,
+        confidenceLevel: 'uncertain',
+        guidanceMessage,
+        timestamp: Date.now(),
+      };
+      setIdentificationResult(noPlantResp);
+      return noPlantResp;
+    }
+
+    // Gate 2: Optical scan readiness
+    if (latestDetection.state === 'SCAN_NOT_READY') {
+      const guidanceMessage = latestDetection.userMessage || 'Camera view is blurry or lighting is poor. Adjust camera before identifying.';
+      const notReadyResp: PlantIdentificationResponse = {
+        status: 'scan_not_ready',
+        rankedCandidates: [],
+        overallConfidence: 0,
+        confidenceLevel: 'uncertain',
+        guidanceMessage,
+        timestamp: Date.now(),
+      };
+      setIdentificationResult(notReadyResp);
+      return notReadyResp;
+    }
+
+    // Gate 3: Low confidence presence
+    if (latestDetection.state === 'LOW_CONFIDENCE') {
+      const guidanceMessage = latestDetection.userMessage || 'Plant appears small or distant. Move camera closer before identifying.';
+      const lowConfResp: PlantIdentificationResponse = {
+        status: 'low_confidence',
+        rankedCandidates: [],
+        overallConfidence: 0,
+        confidenceLevel: 'uncertain',
+        guidanceMessage,
+        timestamp: Date.now(),
+      };
+      setIdentificationResult(lowConfResp);
+      return lowConfResp;
+    }
+
+    let sourceInput: HTMLVideoElement | string | null = null;
+    if (videoRef?.current) {
+      sourceInput = videoRef.current;
+    } else {
+      sourceInput = captureFrame();
+    }
+    if (!sourceInput) return null;
+
+    setIsIdentifying(true);
+    try {
+      const response = await identifyPlant(sourceInput, {
+        boundingBox: latestDetection?.boundingBox
+      });
+      setIdentificationResult(response);
+
+      // Temporal voting consistency
+      if (response.status === 'success' && response.primaryCandidate) {
+        const now = Date.now();
+        const candidate = response.primaryCandidate;
+
+        recentSpeciesScansRef.current.push({
+          cropKey: candidate.id,
+          commonName: candidate.commonName,
+          confidence: candidate.confidence,
+          timestamp: now
+        });
+        recentSpeciesScansRef.current = recentSpeciesScansRef.current
+          .filter((s: { timestamp: number }) => now - s.timestamp < 300000)
+          .slice(-5);
+
+        const recent = recentSpeciesScansRef.current;
+        const matchingVotes = recent.filter((s: { cropKey: string }) => s.cropKey === candidate.id).length;
+
+        const isCurrentlyUnclassified =
+          !plantProfile.species ||
+          plantProfile.species === 'Unknown Plant' ||
+          plantProfile.species === 'Plant';
+
+        if (matchingVotes >= 2 || candidate.confidence >= 80 || isCurrentlyUnclassified) {
+          applyIdentifiedSpecies(candidate, response.imageReference);
+        }
+      }
+
+      return response;
+    } catch (err) {
+      console.error('[PlantIntelligence] Identification error:', err);
+      const errorResp: PlantIdentificationResponse = {
+        status: 'error',
+        rankedCandidates: [],
+        overallConfidence: 0,
+        confidenceLevel: 'uncertain',
+        guidanceMessage: 'An error occurred during botanical identification.',
+        timestamp: Date.now(),
+      };
+      setIdentificationResult(errorResp);
+      return errorResp;
+    } finally {
+      setIsIdentifying(false);
+    }
+  }, [captureFrame, latestDetection, videoRef, plantProfile.species, applyIdentifiedSpecies]);
 
   // Capture Current Webcam Frame + Telemetry to Save an Observation
   const captureAndObserve = useCallback((): PlantObservation | null => {

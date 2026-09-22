@@ -35,7 +35,7 @@ export interface PlantCandidate {
 }
 
 export interface PlantIdentificationResponse {
-  status: 'success' | 'low_confidence' | 'no_plant_detected' | 'error';
+  status: 'success' | 'low_confidence' | 'no_plant_detected' | 'unknown_plant' | 'model_unavailable' | 'scan_not_ready' | 'error';
   primaryCandidate?: PlantCandidate;
   rankedCandidates: PlantCandidate[];
   overallConfidence: number; // 0 - 100%
@@ -43,6 +43,9 @@ export interface PlantIdentificationResponse {
   guidanceMessage: string;
   timestamp: number;
   imageReference?: string;
+  modelId?: string;
+  modelVersion?: string;
+  inferenceLatencyMs?: number;
   extractedFeatures?: {
     aspectRatio: number;
     meanExG: number;
@@ -73,6 +76,8 @@ export interface PlantProfile {
   scientificName?: string;
   family?: string;
   speciesConfidence?: number;
+  identifiedAt?: number;
+  modelVersion?: string;
   createdAt: number;
   lastObservedAt?: number;
   monitoringStatus: 'active' | 'archived' | 'completed';

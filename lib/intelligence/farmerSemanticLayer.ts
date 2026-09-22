@@ -108,6 +108,13 @@ export interface FarmerCopyGroup {
     nutrientLevelLabel: string;
     solutionAcidityLabel: string;
     growingConditionsLabel: string;
+    plantIdentified: string;
+    identifying: string;
+    identifySpeciesBtn: string;
+    identificationReliable: string;
+    identificationUncertain: string;
+    unknownPlantType: string;
+    modelUnavailable: string;
   };
   nav: {
     observation: string;
@@ -336,6 +343,13 @@ export const FARMER_COPY: Record<SupportedLanguageCode, FarmerCopyGroup> = {
       nutrientLevelLabel: 'Nutrient Balance',
       solutionAcidityLabel: 'Solution Acidity',
       growingConditionsLabel: 'Growing Conditions',
+      plantIdentified: 'Plant identified',
+      identifying: 'Identifying plant species...',
+      identifySpeciesBtn: 'Identify Plant Species',
+      identificationReliable: 'Identification looks reliable.',
+      identificationUncertain: "We're not fully sure yet. Try another scan.",
+      unknownPlantType: 'Plant type could not be identified.',
+      modelUnavailable: 'Plant identification is temporarily unavailable.',
     },
     nav: {
       observation: 'Observation',
@@ -562,6 +576,13 @@ export const FARMER_COPY: Record<SupportedLanguageCode, FarmerCopyGroup> = {
       nutrientLevelLabel: 'ಪೋಷಕಾಂಶಗಳ ಸಮತೋಲನ',
       solutionAcidityLabel: 'ನೀರಿನ ಆಮ್ಲೀಯತೆ (pH)',
       growingConditionsLabel: 'ಬೆಳವಣಿಗೆಯ ಪರಿಸ್ಥಿತಿ',
+      plantIdentified: 'ಗಿಡ ಪತ್ತೆಯಾಗಿದೆ',
+      identifying: 'ಗಿಡದ ಪ್ರಭೇದವನ್ನು ಗುರುತಿಸಲಾಗುತ್ತಿದೆ...',
+      identifySpeciesBtn: 'ಗಿಡದ ಪ್ರಭೇದ ಗುರುತಿಸಿ',
+      identificationReliable: 'ಗುರುತಿಸುವಿಕೆ ವಿಶ್ವಾಸಾರ್ಹವಾಗಿದೆ.',
+      identificationUncertain: 'ಇನ್ನೂ ಸಂಪೂರ್ಣವಾಗಿ ಖಚಿತವಾಗಿಲ್ಲ. ಇನ್ನೊಮ್ಮೆ ಸ್ಕ್ಯಾನ್ ಮಾಡಿ.',
+      unknownPlantType: 'ಗಿಡದ ಪ್ರಕಾರವನ್ನು ಗುರುತಿಸಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ.',
+      modelUnavailable: 'ಗಿಡ ಗುರುತಿಸುವಿಕೆ ತಾತ್ಕಾಲಿಕವಾಗಿ ಲಭ್ಯವಿಲ್ಲ.',
     },
     nav: {
       observation: 'ವೀಕ್ಷಣೆ',

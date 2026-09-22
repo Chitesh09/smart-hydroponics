@@ -7,6 +7,24 @@ import { VisionModelInfo } from './types';
 
 export const REGISTERED_VISION_MODELS: VisionModelInfo[] = [
   {
+    id: 'hydrosmart-plant-classifier-v1',
+    name: 'HydroSmart Depthwise-Separable CNN Species Classifier',
+    version: '1.0.0',
+    type: 'tfjs',
+    classes: [
+      'Butterhead Lettuce',
+      'Sweet Basil',
+      'Spinach',
+      'Curly Kale',
+      'Spearmint',
+      'Cherry Tomato',
+      'Unknown Plant',
+    ],
+    inputSize: [160, 160],
+    enabled: true,
+    statusText: 'Active — In-Browser Depthwise Separable CNN (TensorFlow.js / WebGL)',
+  },
+  {
     id: 'heuristic-v2-production',
     name: 'HydroSmart Classical Agronomic Vision Engine',
     version: '2.0-prod',
@@ -22,18 +40,8 @@ export const REGISTERED_VISION_MODELS: VisionModelInfo[] = [
       'Unknown Plant',
     ],
     inputSize: [320, 240],
-    enabled: true,
-    statusText: 'Active — Classical ExG/HSV Chlorophyll Segmentation & Morphological Matching',
-  },
-  {
-    id: 'onnx-plant-classifier-v1',
-    name: 'Lightweight Plant Species ONNX Classifier',
-    version: '1.0-preview',
-    type: 'onnx',
-    classes: ['Lettuce', 'Basil', 'Spinach', 'Kale', 'Unknown'],
-    inputSize: [224, 224],
     enabled: false,
-    statusText: 'ML model integration not yet activated (Awaiting validated weights bundle)',
+    statusText: 'Standby — Classical ExG/HSV Morphological Engine (ML Fallback)',
   },
 ];
 

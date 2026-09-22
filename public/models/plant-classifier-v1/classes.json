@@ -1,0 +1,85 @@
+[
+  {
+    "id": "lettuce_butterhead",
+    "classIndex": 0,
+    "cropKey": "butterhead_lettuce",
+    "commonName": "Butterhead Lettuce",
+    "scientificName": "Lactuca sativa var. capitata",
+    "family": "Asteraceae",
+    "searchQueries": [
+      "Lactuca sativa leaf",
+      "Butterhead lettuce leaf",
+      "Lettuce leaf isolated"
+    ],
+    "plantVillageSubdir": null
+  },
+  {
+    "id": "basil_sweet",
+    "classIndex": 1,
+    "cropKey": "sweet_basil",
+    "commonName": "Sweet Basil",
+    "scientificName": "Ocimum basilicum",
+    "family": "Lamiaceae",
+    "searchQueries": [
+      "Ocimum basilicum leaf",
+      "Sweet basil leaf",
+      "Basil leaf foliage"
+    ],
+    "plantVillageSubdir": null
+  },
+  {
+    "id": "spinach_bloomsdale",
+    "classIndex": 2,
+    "cropKey": "spinach",
+    "commonName": "Spinach",
+    "scientificName": "Spinacia oleracea",
+    "family": "Amaranthaceae",
+    "searchQueries": [
+      "Spinacia oleracea leaf",
+      "Spinach leaf foliage",
+      "Spinach leaf"
+    ],
+    "plantVillageSubdir": null
+  },
+  {
+    "id": "kale_curly",
+    "classIndex": 3,
+    "cropKey": "curly_kale",
+    "commonName": "Curly Kale",
+    "scientificName": "Brassica oleracea var. sabellica",
+    "family": "Brassicaceae",
+    "searchQueries": [
+      "Brassica oleracea leaf",
+      "Curly kale leaf",
+      "Kale foliage leaf"
+    ],
+    "plantVillageSubdir": null
+  },
+  {
+    "id": "mint_spearmint",
+    "classIndex": 4,
+    "cropKey": "spearmint",
+    "commonName": "Spearmint",
+    "scientificName": "Mentha spicata",
+    "family": "Lamiaceae",
+    "searchQueries": [
+      "Mentha spicata leaf",
+      "Spearmint leaf foliage",
+      "Mint leaf green"
+    ],
+    "plantVillageSubdir": null
+  },
+  {
+    "id": "tomato_cherry",
+    "classIndex": 5,
+    "cropKey": "cherry_tomato",
+    "commonName": "Cherry Tomato",
+    "scientificName": "Solanum lycopersicum",
+    "family": "Solanaceae",
+    "searchQueries": [
+      "Tomato leaf healthy",
+      "Solanum lycopersicum leaf"
+    ],
+    "plantVillageSubdir": "Tomato___healthy"
+  }
+]

@@ -1,9 +1,15 @@
 // ============================================================
 // HydroSmart — Botanical Species Identification Service
-// Real ML Species Identification backed by Pl@ntNet / PlantCLEF
+// Real ML Species Identification backed by In-Browser TFJS CNN
+// Model: hydrosmart-plant-classifier-v1
 // ============================================================
 
 import { PlantCandidate, PlantIdentificationResponse, CropTargetProfile } from './types';
+import {
+  classifyPlantWithML,
+  MLPlantClassificationResult,
+  ClassifierOptions
+} from '@/lib/vision/mlPlantClassifier';
 import { BOTANICAL_DATABASE } from './botanicalDatabase';
 
 const DEFAULT_AGRONOMIC_PROFILE: CropTargetProfile = {
@@ -18,7 +24,7 @@ const DEFAULT_AGRONOMIC_PROFILE: CropTargetProfile = {
 /**
  * Match a recognized botanical name with registered agronomic target profiles
  */
-function resolveAgronomicProfile(commonName: string, scientificName: string): CropTargetProfile {
+export function resolveAgronomicProfile(commonName: string, scientificName: string): CropTargetProfile {
   const normCommon = commonName.toLowerCase();
   const normSci = scientificName.toLowerCase();
 
@@ -42,14 +48,37 @@ function resolveAgronomicProfile(commonName: string, scientificName: string): Cr
 }
 
 /**
- * Primary Modular Plant Identification Service
+ * Convert HTMLImageElement, HTMLCanvasElement, HTMLVideoElement, or Base64 into drawable target
+ */
+async function resolveDrawableSource(
+  source: HTMLVideoElement | HTMLCanvasElement | HTMLImageElement | string
+): Promise<HTMLVideoElement | HTMLCanvasElement | HTMLImageElement | null> {
+  if (typeof window === 'undefined') return null;
+
+  if (typeof source !== 'string') {
+    return source;
+  }
+
+  // If Base64/DataURL string, load into HTMLImageElement
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => resolve(img);
+    img.onerror = () => resolve(null);
+    img.src = source;
+  });
+}
+
+/**
+ * Primary Modular Plant Identification Service using In-Browser Deep Learning
  */
 export async function identifyPlant(
-  imageBase64: string
+  sourceInput: HTMLVideoElement | HTMLCanvasElement | HTMLImageElement | string,
+  options: ClassifierOptions = {}
 ): Promise<PlantIdentificationResponse> {
   const timestamp = Date.now();
 
-  if (typeof window === 'undefined' || !imageBase64) {
+  if (typeof window === 'undefined' || !sourceInput) {
     return {
       status: 'error',
       rankedCandidates: [],
@@ -60,102 +89,100 @@ export async function identifyPlant(
     };
   }
 
-  try {
-    const res = await fetch('/api/plant-identification', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ image: imageBase64, organ: 'leaf' }),
-    });
-
-    if (!res.ok) {
-      return {
-        status: 'error',
-        rankedCandidates: [],
-        overallConfidence: 0,
-        confidenceLevel: 'uncertain',
-        guidanceMessage: `Botanical identification service returned error (${res.status}).`,
-        timestamp,
-        imageReference: imageBase64,
-      };
-    }
-
-    const data = await res.json();
-
-    if (data.status === 'unconfigured_api') {
-      return {
-        status: 'low_confidence',
-        primaryCandidate: undefined,
-        rankedCandidates: [],
-        overallConfidence: 0,
-        confidenceLevel: 'uncertain',
-        guidanceMessage:
-          'Pl@ntNet API Key is not set in server environment. Set PLANTNET_API_KEY in .env.local to enable live model identification.',
-        timestamp,
-        imageReference: imageBase64,
-      };
-    }
-
-    const candidates: PlantCandidate[] = (data.rankedCandidates || []).map(
-      (c: {
-        id: string;
-        commonName: string;
-        scientificName: string;
-        family: string;
-        confidence: number;
-        similarityScore: number;
-      }) => {
-        const targetProfile = resolveAgronomicProfile(c.commonName, c.scientificName);
-        return {
-          id: c.id,
-          commonName: c.commonName,
-          scientificName: c.scientificName,
-          family: c.family,
-          confidence: c.confidence,
-          description: `${c.commonName} (${c.scientificName}) — Family: ${c.family}. Pl@ntNet ML confidence: ${c.confidence}%.`,
-          targetProfile,
-        };
-      }
-    );
-
-    const top1 = candidates[0];
-    const overallConfidence = data.overallConfidence || 0;
-
-    if (data.status === 'success' && top1 && overallConfidence >= 70) {
-      return {
-        status: 'success',
-        primaryCandidate: top1,
-        rankedCandidates: candidates.slice(0, 3),
-        overallConfidence,
-        confidenceLevel: overallConfidence >= 80 ? 'high' : 'moderate',
-        guidanceMessage: `Confirmed identification as ${top1.commonName} (${top1.scientificName}) · ${overallConfidence}% ML confidence.`,
-        timestamp,
-        imageReference: imageBase64,
-      };
-    }
-
-    return {
-      status: 'low_confidence',
-      primaryCandidate: undefined, // Reject declaring a forced species
-      rankedCandidates: candidates.slice(0, 3),
-      overallConfidence,
-      confidenceLevel: overallConfidence >= 45 ? 'moderate' : 'uncertain',
-      guidanceMessage:
-        top1
-          ? `Plant detected, but species could not be identified confidently (${top1.commonName} ~${overallConfidence}%).`
-          : 'Unknown or unsupported botanical species.',
-      timestamp,
-      imageReference: imageBase64,
-    };
-  } catch (err) {
-    console.error('[identifyPlant] Network or processing error:', err);
+  const drawable = await resolveDrawableSource(sourceInput);
+  if (!drawable) {
     return {
       status: 'error',
       rankedCandidates: [],
       overallConfidence: 0,
       confidenceLevel: 'uncertain',
-      guidanceMessage: 'Failed to connect to the botanical identification service.',
+      guidanceMessage: 'Failed to process image buffer for ML inference.',
       timestamp,
-      imageReference: imageBase64,
+    };
+  }
+
+  try {
+    // 1. Run real in-browser ML inference
+    const mlResult: MLPlantClassificationResult = await classifyPlantWithML(drawable, options);
+
+    // 2. Map ML candidates to PlantCandidate format
+    const candidates: PlantCandidate[] = mlResult.rankedCandidates.map((c) => ({
+      id: c.cropKey,
+      commonName: c.commonName,
+      scientificName: c.scientificName,
+      family: c.family,
+      confidence: c.confidencePercent,
+      description: `${c.commonName} (${c.scientificName}) — Family: ${c.family}. ML Model: ${mlResult.modelVersion}.`,
+      targetProfile: c.targetProfile,
+    }));
+
+    const top1 = mlResult.primaryCandidate ? candidates.find(c => c.id === mlResult.primaryCandidate?.cropKey) : undefined;
+    const overallConfidence = mlResult.topConfidencePercent;
+
+    const baseResponse: Omit<PlantIdentificationResponse, 'status' | 'guidanceMessage' | 'primaryCandidate'> = {
+      rankedCandidates: candidates.slice(0, 4),
+      overallConfidence,
+      confidenceLevel:
+        overallConfidence >= 80 ? 'high' : overallConfidence >= 55 ? 'moderate' : overallConfidence >= 35 ? 'low' : 'uncertain',
+      timestamp,
+      modelId: mlResult.modelId,
+      modelVersion: mlResult.modelVersion,
+      inferenceLatencyMs: mlResult.inferenceLatencyMs,
+      imageReference: typeof sourceInput === 'string' ? sourceInput : undefined,
+    };
+
+    if (mlResult.state === 'IDENTIFIED' && top1) {
+      return {
+        ...baseResponse,
+        status: 'success',
+        primaryCandidate: top1,
+        guidanceMessage: `Confirmed identification as ${top1.commonName} (${top1.scientificName}) · ${overallConfidence}% ML confidence.`,
+      };
+    }
+
+    if (mlResult.state === 'LOW_CONFIDENCE') {
+      return {
+        ...baseResponse,
+        status: 'low_confidence',
+        primaryCandidate: undefined,
+        guidanceMessage: mlResult.guidanceMessage,
+      };
+    }
+
+    if (mlResult.state === 'UNKNOWN_PLANT') {
+      return {
+        ...baseResponse,
+        status: 'unknown_plant',
+        primaryCandidate: undefined,
+        guidanceMessage: mlResult.guidanceMessage,
+      };
+    }
+
+    if (mlResult.state === 'MODEL_UNAVAILABLE') {
+      return {
+        ...baseResponse,
+        status: 'model_unavailable',
+        primaryCandidate: undefined,
+        guidanceMessage: mlResult.guidanceMessage,
+      };
+    }
+
+    return {
+      ...baseResponse,
+      status: 'error',
+      primaryCandidate: undefined,
+      guidanceMessage: 'Botanical classification could not be completed.',
+    };
+  } catch (err) {
+    console.error('[identifyPlant] In-browser ML classification error:', err);
+    return {
+      status: 'error',
+      rankedCandidates: [],
+      overallConfidence: 0,
+      confidenceLevel: 'uncertain',
+      guidanceMessage: 'An error occurred during botanical species inference.',
+      timestamp,
+      imageReference: typeof sourceInput === 'string' ? sourceInput : undefined,
     };
   }
 }

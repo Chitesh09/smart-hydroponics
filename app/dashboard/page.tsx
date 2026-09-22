@@ -46,7 +46,10 @@ export default function Dashboard() {
     userMode,
     setUserMode,
     language,
-    setLanguage
+    setLanguage,
+    identifyCurrentPlant,
+    isIdentifying,
+    identificationResult,
   } = usePlantIntelligence();
 
   const [selectedMetric, setSelectedMetric] = useState<'ph' | 'tds' | 'waterLevel' | 'distance'>('ph');
@@ -323,6 +326,33 @@ export default function Dashboard() {
                     Canopy: {latestDetection.canopyCoveragePercent}%
                   </span>
                 )}
+
+                {latestDetection?.isPlantDetected && latestDetection.state === 'PLANT_DETECTED' && (
+                  <button
+                    onClick={() => identifyCurrentPlant()}
+                    disabled={isIdentifying}
+                    style={{
+                      fontSize: '11px',
+                      fontWeight: 700,
+                      padding: '4px 10px',
+                      borderRadius: 'var(--radius-xs)',
+                      background: isIdentifying ? 'rgba(234, 179, 8, 0.25)' : 'rgba(16, 185, 129, 0.25)',
+                      color: isIdentifying ? 'var(--color-amber)' : 'var(--color-green)',
+                      border: '1px solid var(--border-default)',
+                      cursor: isIdentifying ? 'wait' : 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      fontFamily: 'var(--font-sans)',
+                    }}
+                  >
+                    {isIdentifying
+                      ? (isKn ? copy.ui.identifying : 'Identifying...')
+                      : isPlantIdentified
+                      ? `🌿 ${cropIdentity.commonName}`
+                      : (isKn ? `🔍 ${copy.ui.identifySpeciesBtn}` : '🔍 Identify Species')}
+                  </button>
+                )}
               </div>
 
               {/* Technical Mode Diagnostics Banner */}
@@ -350,7 +380,7 @@ export default function Dashboard() {
                     STATE: <strong style={{ color: latestDetection.state === 'PLANT_DETECTED' ? 'var(--color-green)' : latestDetection.state === 'LOW_CONFIDENCE' ? 'var(--color-amber)' : 'var(--color-red)' }}>{latestDetection.state}</strong>
                   </span>
                   <span>·</span>
-                  <span>SCORE: <strong style={{ color: 'var(--text-primary)' }}>{latestDetection.plantPresenceScore}/100</strong> ({latestDetection.confidenceLevel})</span>
+                  <span>SCORE: <strong style={{ color: 'var(--text-primary)' }}>{latestDetection.plantPresenceScore}/100</strong></span>
                   <span>·</span>
                   <span>EDGE: <strong style={{ color: 'var(--text-primary)' }}>{latestDetection.diagnostics?.internalEdgeDensity ?? '--'}</strong></span>
                   <span>·</span>
@@ -358,7 +388,15 @@ export default function Dashboard() {
                   <span>·</span>
                   <span>SKIN: <strong style={{ color: (latestDetection.diagnostics?.skinPercent ?? 0) > 3 ? 'var(--color-amber)' : 'var(--text-primary)' }}>{latestDetection.diagnostics?.skinPercent ?? 0}%</strong></span>
                   <span>·</span>
-                  <span>LAT: <strong style={{ color: 'var(--color-teal)' }}>{latestDetection.inferenceTimeMs}ms</strong></span>
+                  <span>ML-MODEL: <strong style={{ color: 'var(--color-teal)' }}>hydrosmart-v1</strong></span>
+                  <span>·</span>
+                  <span>SPECIES: <strong style={{ color: cropIdentity.confidence ? 'var(--color-green)' : 'var(--text-muted)' }}>{isPlantIdentified ? `${cropIdentity.commonName} (${cropIdentity.confidence}%)` : 'Pending'}</strong></span>
+                  {identificationResult?.inferenceLatencyMs !== undefined && (
+                    <>
+                      <span>·</span>
+                      <span>ML-LAT: <strong style={{ color: 'var(--color-teal)' }}>{identificationResult.inferenceLatencyMs}ms</strong></span>
+                    </>
+                  )}
                   {latestDetection.nonPlantRejectionReason && (
                     <div style={{ width: '100%', color: 'var(--color-amber)', marginTop: '2px', fontSize: '9px' }}>
                       REASON: {latestDetection.nonPlantRejectionReason}
