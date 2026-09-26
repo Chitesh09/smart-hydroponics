@@ -201,6 +201,114 @@ export function evaluatePlantAlerts(inputs: EvaluateAlertsInputs): PlantAlertSum
     resolvedAlertIds.add(alertIdNoPlant);
   }
 
+  // Rule 1C: Sensor Quality & Boundary Checks (Phase 11)
+  const sensorQuality = (latestReading as { quality?: Record<string, string> } | null)?.quality;
+  const isPhQualityInvalid = sensorQuality?.ph === 'INVALID' || sensorQuality?.ph === 'OUT_OF_RANGE';
+  const isTdsQualityInvalid = sensorQuality?.tds === 'INVALID' || sensorQuality?.tds === 'OUT_OF_RANGE';
+  const isWaterQualityInvalid = sensorQuality?.waterLevel === 'INVALID' || sensorQuality?.waterLevel === 'OUT_OF_RANGE';
+
+  const alertIdInvalidPh = buildAlertId(plantId, 'DATA_QUALITY', 'sensor_out_of_range', 'ph_invalid');
+  if (isPhQualityInvalid && !isSensorStale) {
+    candidateAlerts.push({
+      id: alertIdInvalidPh,
+      plantId,
+      createdAt: now,
+      updatedAt: now,
+      status: 'ACTIVE',
+      severity: 'ATTENTION',
+      category: 'DATA_QUALITY',
+      triggerType: 'sensor_out_of_range',
+      metric: 'ph',
+      confidence: 'HIGH',
+      confidenceReason: 'pH sensor reading exceeds physical boundary [0.0, 14.0] or failed validation.',
+      title: 'pH Sensor Reading Invalid',
+      farmerMessage: 'The pH sensor reading appears out of the normal range. The sensor may need cleaning or checking.',
+      farmerWhy: 'The probe reported values outside realistic hydroponic limits.',
+      farmerAction: 'Inspect the pH electrode, ensure it is submerged, and verify cable connection.',
+      technicalMessage: `pH sensor telemetry reported physical boundary violation (quality: ${sensorQuality?.ph}).`,
+      limitation: 'Biological pH drift evaluations are suspended while sensor quality is invalid.',
+      evidenceIds: [],
+      changeEventIds: [],
+      environmentAssociationIds: [],
+      occurrenceCount: 1,
+      firstDetectedAt: now,
+      lastDetectedAt: now,
+      persistenceWindowMs: 0,
+      recommendedAction: 'Clean electrode with deionized water and perform 2-point buffer calibration.',
+      source: 'sensor',
+    });
+  } else if (storedAlertMap.has(alertIdInvalidPh)) {
+    resolvedAlertIds.add(alertIdInvalidPh);
+  }
+
+  const alertIdInvalidTds = buildAlertId(plantId, 'DATA_QUALITY', 'sensor_out_of_range', 'tds_invalid');
+  if (isTdsQualityInvalid && !isSensorStale) {
+    candidateAlerts.push({
+      id: alertIdInvalidTds,
+      plantId,
+      createdAt: now,
+      updatedAt: now,
+      status: 'ACTIVE',
+      severity: 'ATTENTION',
+      category: 'DATA_QUALITY',
+      triggerType: 'sensor_out_of_range',
+      metric: 'tds',
+      confidence: 'HIGH',
+      confidenceReason: 'TDS conductivity probe reading exceeds physical envelope [0, 5000 PPM].',
+      title: 'TDS Sensor Reading Invalid',
+      farmerMessage: 'The nutrient TDS sensor is reporting unexpected readings.',
+      farmerWhy: 'Conductivity measurements are outside physical operating bounds.',
+      farmerAction: 'Inspect the TDS probe for debris, bubbles, or disconnection.',
+      technicalMessage: `TDS sensor telemetry reported boundary violation (quality: ${sensorQuality?.tds}).`,
+      limitation: 'Nutrient evaluations are suspended while sensor quality is invalid.',
+      evidenceIds: [],
+      changeEventIds: [],
+      environmentAssociationIds: [],
+      occurrenceCount: 1,
+      firstDetectedAt: now,
+      lastDetectedAt: now,
+      persistenceWindowMs: 0,
+      recommendedAction: 'Inspect probe electrodes and calibrate with standard reference solution.',
+      source: 'sensor',
+    });
+  } else if (storedAlertMap.has(alertIdInvalidTds)) {
+    resolvedAlertIds.add(alertIdInvalidTds);
+  }
+
+  const alertIdInvalidWater = buildAlertId(plantId, 'DATA_QUALITY', 'sensor_out_of_range', 'water_invalid');
+  if (isWaterQualityInvalid && !isSensorStale) {
+    candidateAlerts.push({
+      id: alertIdInvalidWater,
+      plantId,
+      createdAt: now,
+      updatedAt: now,
+      status: 'ACTIVE',
+      severity: 'ATTENTION',
+      category: 'DATA_QUALITY',
+      triggerType: 'sensor_out_of_range',
+      metric: 'waterLevel',
+      confidence: 'HIGH',
+      confidenceReason: 'Ultrasonic echo return is outside physical reservoir boundaries (blind zone or echo loss).',
+      title: 'Ultrasonic Water Level Sensor Invalid',
+      farmerMessage: 'The water level sensor cannot determine reservoir depth accurately.',
+      farmerWhy: 'The ultrasonic sensor may be placed too close to the water or obscured.',
+      farmerAction: 'Ensure the sensor has a clear line of sight to the water surface and is above the minimum distance.',
+      technicalMessage: `Ultrasonic telemetry out of bounds (quality: ${sensorQuality?.waterLevel}).`,
+      limitation: 'Water volume tracking suspended while ultrasonic reading is invalid.',
+      evidenceIds: [],
+      changeEventIds: [],
+      environmentAssociationIds: [],
+      occurrenceCount: 1,
+      firstDetectedAt: now,
+      lastDetectedAt: now,
+      persistenceWindowMs: 0,
+      recommendedAction: 'Inspect HC-SR04 placement and re-calibrate empty/full reference distances.',
+      source: 'sensor',
+    });
+  } else if (storedAlertMap.has(alertIdInvalidWater)) {
+    resolvedAlertIds.add(alertIdInvalidWater);
+  }
+
   // =========================================================================
   // 2. SENSOR ENVIRONMENT RULES (pH, TDS, Water Level)
   // Gated: Telemetry must be active and not stale; missing data is NOT zero.
@@ -212,7 +320,7 @@ export function evaluatePlantAlerts(inputs: EvaluateAlertsInputs): PlantAlertSum
     // --- 2A. WATER LEVEL ALERTS ---
     const alertIdWater = buildAlertId(plantId, 'WATER_LEVEL', 'sensor_out_of_range', 'water_level');
 
-    if (typeof waterLevel === 'number' && !isNaN(waterLevel) && waterLevel >= 0 && waterLevel <= 100) {
+    if (!isWaterQualityInvalid && typeof waterLevel === 'number' && !isNaN(waterLevel) && waterLevel >= 0 && waterLevel <= 100) {
       const isCritical = waterLevel < config.waterLevel.criticalPercent;
       const isWarning = waterLevel < config.waterLevel.warningPercent;
 
@@ -271,7 +379,7 @@ export function evaluatePlantAlerts(inputs: EvaluateAlertsInputs): PlantAlertSum
     // --- 2B. pH DRIFT ALERTS ---
     const alertIdPh = buildAlertId(plantId, 'PH', 'sensor_out_of_range', 'ph');
 
-    if (typeof ph === 'number' && !isNaN(ph) && ph > 0 && ph <= 14) {
+    if (!isPhQualityInvalid && typeof ph === 'number' && !isNaN(ph) && ph > 0 && ph <= 14) {
       const phMin = cropProfile.phMin;
       const phMax = cropProfile.phMax;
       const isLow = ph < phMin;
@@ -343,7 +451,7 @@ export function evaluatePlantAlerts(inputs: EvaluateAlertsInputs): PlantAlertSum
     // --- 2C. TDS CONCENTRATION ALERTS ---
     const alertIdTds = buildAlertId(plantId, 'TDS', 'sensor_out_of_range', 'tds');
 
-    if (typeof tds === 'number' && !isNaN(tds) && tds >= 0 && tds <= 5000) {
+    if (!isTdsQualityInvalid && typeof tds === 'number' && !isNaN(tds) && tds >= 0 && tds <= 5000) {
       const tdsMin = cropProfile.tdsMin;
       const tdsMax = cropProfile.tdsMax;
       const isLow = tds < tdsMin;

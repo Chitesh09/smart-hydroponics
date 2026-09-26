@@ -40,6 +40,8 @@ export interface CorrelationTelemetryReading {
   waterLevel?: number;
   temperature?: number;
   distance?: number;
+  quality?: Record<string, string>;
+  source?: string;
 }
 
 export interface EvaluateCorrelationInputs {
@@ -179,6 +181,13 @@ function alignTelemetryPairs(
     let tds = typeof obs.tds === 'number' && !isNaN(obs.tds) ? obs.tds : undefined;
     let waterLevel = typeof obs.waterLevel === 'number' && !isNaN(obs.waterLevel) ? obs.waterLevel : undefined;
 
+    const isMetricUsable = (r: CorrelationTelemetryReading | null | undefined, metric: 'ph' | 'tds' | 'waterLevel'): boolean => {
+      if (!r) return false;
+      const q = r.quality?.[metric];
+      if (q === 'INVALID' || q === 'OUT_OF_RANGE' || q === 'DISCONNECTED') return false;
+      return true;
+    };
+
     // If observation lacked embedded sensors, align with nearest sensorHistory entry within window
     if ((ph === undefined || tds === undefined || waterLevel === undefined) && sensorHistory.length > 0) {
       let closestReading: CorrelationTelemetryReading | null = null;
@@ -193,9 +202,9 @@ function alignTelemetryPairs(
       }
 
       if (closestReading) {
-        if (ph === undefined && typeof closestReading.ph === 'number') ph = closestReading.ph;
-        if (tds === undefined && typeof closestReading.tds === 'number') tds = closestReading.tds;
-        if (waterLevel === undefined && typeof closestReading.waterLevel === 'number') waterLevel = closestReading.waterLevel;
+        if (ph === undefined && typeof closestReading.ph === 'number' && isMetricUsable(closestReading, 'ph')) ph = closestReading.ph;
+        if (tds === undefined && typeof closestReading.tds === 'number' && isMetricUsable(closestReading, 'tds')) tds = closestReading.tds;
+        if (waterLevel === undefined && typeof closestReading.waterLevel === 'number' && isMetricUsable(closestReading, 'waterLevel')) waterLevel = closestReading.waterLevel;
       }
     }
 
@@ -203,9 +212,9 @@ function alignTelemetryPairs(
     if ((ph === undefined || tds === undefined || waterLevel === undefined) && latestReading) {
       const delta = Math.abs(latestReading.timestamp - obs.timestamp);
       if (delta <= config.timeWindows.immediateMaxDeltaMs) {
-        if (ph === undefined && typeof latestReading.ph === 'number') ph = latestReading.ph;
-        if (tds === undefined && typeof latestReading.tds === 'number') tds = latestReading.tds;
-        if (waterLevel === undefined && typeof latestReading.waterLevel === 'number') waterLevel = latestReading.waterLevel;
+        if (ph === undefined && typeof latestReading.ph === 'number' && isMetricUsable(latestReading, 'ph')) ph = latestReading.ph;
+        if (tds === undefined && typeof latestReading.tds === 'number' && isMetricUsable(latestReading, 'tds')) tds = latestReading.tds;
+        if (waterLevel === undefined && typeof latestReading.waterLevel === 'number' && isMetricUsable(latestReading, 'waterLevel')) waterLevel = latestReading.waterLevel;
       }
     }
 

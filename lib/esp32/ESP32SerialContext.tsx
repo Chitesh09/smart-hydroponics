@@ -3,6 +3,7 @@
 // ============================================================
 // HydroSmart — ESP32 Serial & IoT Device Management Context
 // Production Telemetry Pipeline, Heartbeat & Calibration Engine
+// Phase 11: Sensor Calibration, Data Quality & Noise Filtering
 // ============================================================
 
 import React, { createContext, useContext, useState, useEffect, useRef, useMemo, useCallback } from 'react';
@@ -10,22 +11,58 @@ import {
   IoTDevice,
   SensorHealthStatus,
   DeviceCalibrationConfig,
-  TelemetryLogEvent
+  TelemetryLogEvent,
+  SensorQualityStatus,
+  SensorDataSource,
 } from '@/lib/device/types';
 import {
-  DEFAULT_CALIBRATION,
   validateAndSanitizePacket,
   evaluateSensorHealth,
-  calculateDeviceHealthScore
+  calculateDeviceHealthScore,
 } from '@/lib/device/telemetryValidator';
+import {
+  SensorCalibrationProfile,
+  DEFAULT_SENSOR_CALIBRATION_PROFILE,
+  loadSensorCalibrationProfile,
+  saveSensorCalibrationProfile,
+  calibratePhTwoPoint,
+  calibratePhSinglePoint,
+  calibrateTdsReference,
+  calibrateUltrasonic,
+  CalibrationPoint,
+  applyMovingMedianFilter,
+  detectSensorNoise,
+} from '@/lib/device/sensorCalibration';
 
-// Unified Sensor Reading Interface
+// Unified Sensor Reading Interface with Raw vs Calibrated Separation
+export interface MetricTelemetry {
+  raw: number;
+  calibrated: number;
+  filtered: number;
+  quality: SensorQualityStatus;
+}
+
 export interface SensorReading {
   waterLevel: number;
   distance: number;
   ph: number;
   tds: number;
   timestamp: number;
+
+  // Phase 11 Enhancements:
+  source?: SensorDataSource;
+  rawPh?: number;
+  rawTds?: number;
+  rawDistance?: number;
+  rawWaterLevel?: number;
+  quality?: Record<'ph' | 'tds' | 'waterLevel' | 'distance', SensorQualityStatus>;
+  overallQuality?: SensorQualityStatus;
+  metrics?: {
+    ph: MetricTelemetry;
+    tds: MetricTelemetry;
+    waterLevel: MetricTelemetry;
+    distance: MetricTelemetry;
+  };
 }
 
 export type ConnectionState = 'disconnected' | 'connecting' | 'connected' | 'reconnecting' | 'error';
@@ -38,8 +75,6 @@ interface SerialPort {
   close(): Promise<void>;
   getInfo?(): { usbVendorId?: number; usbProductId?: number };
 }
-
-const CALIBRATION_STORAGE_KEY = 'hydrosmart_device_calibration_v1';
 
 interface ESP32SerialContextType {
   supported: boolean;
@@ -54,15 +89,26 @@ interface ESP32SerialContextType {
   disconnect: () => Promise<void>;
   setMode: (mode: 'real' | 'simulation') => void;
 
-  // Phase 1C IoT Device Management Extensions
+  // IoT Device Management
   devices: IoTDevice[];
   activeDeviceId: string;
   activeDevice: IoTDevice;
   sensorHealth: Record<'ph' | 'tds' | 'ultrasonic' | 'temperature', SensorHealthStatus>;
   deviceHealthScore: number;
+
+  // Legacy Calibration Compatibility
   calibration: DeviceCalibrationConfig;
   updateCalibration: (newConfig: Partial<DeviceCalibrationConfig>) => void;
   resetCalibration: () => void;
+
+  // Phase 11 Calibration & Quality Actions
+  calibrationProfile: SensorCalibrationProfile;
+  calibratePh2Point: (p1: CalibrationPoint, p2: CalibrationPoint) => { success: boolean; error?: string };
+  calibratePh1Point: (p: CalibrationPoint) => { success: boolean; error?: string };
+  calibrateTds: (rawTds: number, refTds: number) => { success: boolean; error?: string };
+  calibrateUltrasonicReservoir: (fullCm: number, emptyCm: number, minCm?: number, maxCm?: number) => { success: boolean; error?: string };
+  resetSensorCalibration: (sensorKey?: 'ph' | 'tds' | 'ultrasonic' | 'all') => void;
+
   renameDevice: (deviceId: string, newName: string) => void;
   telemetryLogs: TelemetryLogEvent[];
   addTelemetryLog: (type: 'info' | 'warning' | 'error' | 'success', event: string, details?: string) => void;
@@ -80,34 +126,60 @@ export function ESP32SerialProvider({ children }: { children: React.ReactNode })
   const [latestReading, setLatestReading] = useState<SensorReading | null>(null);
   const [lastUpdateTime, setLastUpdateTime] = useState<number | null>(null);
   const [isStale, setIsStale] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Modern Calibration Profile State
+  const [calibrationProfile, setCalibrationProfile] = useState<SensorCalibrationProfile>(() => {
+    return loadSensorCalibrationProfile();
+  });
+  const calibrationProfileRef = useRef<SensorCalibrationProfile>(calibrationProfile);
+
+  // Keep ref in sync
+  useEffect(() => {
+    calibrationProfileRef.current = calibrationProfile;
+    saveSensorCalibrationProfile(calibrationProfile);
+  }, [calibrationProfile]);
+
+  // Rolling sample buffers for noise detection & filtering (window size = 5)
+  const phWindowRef = useRef<number[]>([]);
+  const tdsWindowRef = useRef<number[]>([]);
+  const distWindowRef = useRef<number[]>([]);
+
+  // Synthesize legacy DeviceCalibrationConfig for backward compatibility
+  const calibration = useMemo<DeviceCalibrationConfig>(() => ({
+    phOffset: calibrationProfile.ph.offset,
+    phSlopeMultiplier: calibrationProfile.ph.slope,
+    tdsCalibrationFactor: calibrationProfile.tds.factor,
+    ultrasonicEmptyDistanceCm: calibrationProfile.ultrasonic.emptyDistanceCm,
+    ultrasonicFullDistanceCm: calibrationProfile.ultrasonic.fullDistanceCm,
+    heartbeatTimeoutMs: calibrationProfile.heartbeatTimeoutMs,
+  }), [calibrationProfile]);
+
   const [history, setHistory] = useState<SensorReading[]>(() => {
     const initialHistory: SensorReading[] = [];
     const now = Date.now();
     for (let i = 59; i >= 0; i--) {
       const time = now - i * 2000;
+      const phVal = parseFloat((6.0 + Math.sin(i * 0.2) * 0.1 + (i % 5) * 0.01).toFixed(2));
+      const tdsVal = parseFloat((1000 - i * 2 + (i % 10)).toFixed(1));
+      const wlVal = parseFloat((85.0 - i * 0.05).toFixed(1));
+      const distVal = parseFloat((100.0 - (85.0 - i * 0.05) * 0.9).toFixed(2));
       initialHistory.push({
-        ph: parseFloat((6.0 + Math.sin(i * 0.2) * 0.1 + (i % 5) * 0.01).toFixed(2)),
-        tds: parseFloat((1000 - i * 2 + (i % 10)).toFixed(1)),
-        waterLevel: parseFloat((85.0 - i * 0.05).toFixed(1)),
-        distance: parseFloat((100.0 - (85.0 - i * 0.05) * 0.9).toFixed(2)),
+        ph: phVal,
+        tds: tdsVal,
+        waterLevel: wlVal,
+        distance: distVal,
         timestamp: time,
+        source: 'simulated',
+        rawPh: phVal,
+        rawTds: tdsVal,
+        rawDistance: distVal,
+        rawWaterLevel: wlVal,
+        quality: { ph: 'UNCALIBRATED', tds: 'UNCALIBRATED', waterLevel: 'UNCALIBRATED', distance: 'UNCALIBRATED' },
+        overallQuality: 'UNCALIBRATED',
       });
     }
     return initialHistory;
-  });
-  const [error, setError] = useState<string | null>(null);
-
-  // Calibration State
-  const [calibration, setCalibration] = useState<DeviceCalibrationConfig>(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        const saved = localStorage.getItem(CALIBRATION_STORAGE_KEY);
-        if (saved) return { ...DEFAULT_CALIBRATION, ...JSON.parse(saved) };
-      } catch {
-        // Ignore parse errors
-      }
-    }
-    return DEFAULT_CALIBRATION;
   });
 
   // IoT Devices Registry
@@ -136,7 +208,7 @@ export function ESP32SerialProvider({ children }: { children: React.ReactNode })
       timestamp: Date.now(),
       type: 'info',
       event: 'IoT Telemetry Pipeline Initialized',
-      details: 'Strict physical boundary checking and heartbeat watcher active.',
+      details: 'Strict physical boundary checking, noise filtering, and heartbeat watcher active.',
       deviceId: 'HS-ESP32-001',
     },
   ]);
@@ -147,12 +219,6 @@ export function ESP32SerialProvider({ children }: { children: React.ReactNode })
   const keepReadingRef = useRef(false);
   const lastUpdateRef = useRef<number | null>(null);
   const lastHeartbeatRef = useRef<number>(0);
-  const calibrationRef = useRef<DeviceCalibrationConfig>(calibration);
-
-  // Synchronize calibration ref
-  useEffect(() => {
-    calibrationRef.current = calibration;
-  }, [calibration]);
 
   // Add Log Entry Helper
   const addTelemetryLog = useCallback((
@@ -177,22 +243,176 @@ export function ESP32SerialProvider({ children }: { children: React.ReactNode })
 
   // Update Calibration & Persist
   const updateCalibration = useCallback((newConfig: Partial<DeviceCalibrationConfig>) => {
-    setCalibration((prev) => {
-      const merged = { ...prev, ...newConfig };
-      if (typeof window !== 'undefined') {
-        localStorage.setItem(CALIBRATION_STORAGE_KEY, JSON.stringify(merged));
-      }
-      return merged;
+    setCalibrationProfile((prev) => {
+      const next: SensorCalibrationProfile = {
+        ...prev,
+        ph: {
+          ...prev.ph,
+          offset: newConfig.phOffset !== undefined ? newConfig.phOffset : prev.ph.offset,
+          slope: newConfig.phSlopeMultiplier !== undefined ? newConfig.phSlopeMultiplier : prev.ph.slope,
+          status: 'CALIBRATED',
+        },
+        tds: {
+          ...prev.tds,
+          factor: newConfig.tdsCalibrationFactor !== undefined ? newConfig.tdsCalibrationFactor : prev.tds.factor,
+          status: 'CALIBRATED',
+        },
+        ultrasonic: {
+          ...prev.ultrasonic,
+          emptyDistanceCm: newConfig.ultrasonicEmptyDistanceCm !== undefined ? newConfig.ultrasonicEmptyDistanceCm : prev.ultrasonic.emptyDistanceCm,
+          fullDistanceCm: newConfig.ultrasonicFullDistanceCm !== undefined ? newConfig.ultrasonicFullDistanceCm : prev.ultrasonic.fullDistanceCm,
+          status: 'CALIBRATED',
+        },
+        heartbeatTimeoutMs: newConfig.heartbeatTimeoutMs !== undefined ? newConfig.heartbeatTimeoutMs : prev.heartbeatTimeoutMs,
+        updatedAt: Date.now(),
+      };
+      saveSensorCalibrationProfile(next);
+      return next;
     });
     addTelemetryLog('info', 'Calibration Parameters Updated', 'Sensor slope and offset coefficients persisted.');
   }, [addTelemetryLog]);
 
   const resetCalibration = useCallback(() => {
-    setCalibration(DEFAULT_CALIBRATION);
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem(CALIBRATION_STORAGE_KEY);
-    }
+    setCalibrationProfile(DEFAULT_SENSOR_CALIBRATION_PROFILE);
+    saveSensorCalibrationProfile(DEFAULT_SENSOR_CALIBRATION_PROFILE);
     addTelemetryLog('info', 'Calibration Reset to Factory Defaults');
+  }, [addTelemetryLog]);
+
+  // Phase 11 Explicit Calibration Functions
+  const calibratePh2Point = useCallback((p1: CalibrationPoint, p2: CalibrationPoint) => {
+    const res = calibratePhTwoPoint(p1, p2);
+    if (res.status === 'CALIBRATION_INVALID') {
+      addTelemetryLog('error', 'pH 2-Point Calibration Failed', res.error);
+      return { success: false, error: res.error };
+    }
+    setCalibrationProfile((prev) => {
+      const next: SensorCalibrationProfile = {
+        ...prev,
+        ph: {
+          ...prev.ph,
+          status: 'CALIBRATED',
+          method: 'two_point',
+          slope: res.slope,
+          offset: res.offset,
+          point1: p1,
+          point2: p2,
+          lastCalibratedAt: Date.now(),
+          version: (prev.ph.version || 1) + 1,
+        },
+        updatedAt: Date.now(),
+      };
+      saveSensorCalibrationProfile(next);
+      return next;
+    });
+    addTelemetryLog('success', 'pH 2-Point Calibrated', `Slope: ${res.slope}, Offset: ${res.offset}`);
+    return { success: true };
+  }, [addTelemetryLog]);
+
+  const calibratePh1Point = useCallback((p: CalibrationPoint) => {
+    const res = calibratePhSinglePoint(p);
+    if (res.status === 'CALIBRATION_INVALID') {
+      addTelemetryLog('error', 'pH 1-Point Calibration Failed', res.error);
+      return { success: false, error: res.error };
+    }
+    setCalibrationProfile((prev) => {
+      const next: SensorCalibrationProfile = {
+        ...prev,
+        ph: {
+          ...prev.ph,
+          status: 'CALIBRATED',
+          method: 'single_point',
+          slope: res.slope,
+          offset: res.offset,
+          point1: p,
+          lastCalibratedAt: Date.now(),
+          version: (prev.ph.version || 1) + 1,
+        },
+        updatedAt: Date.now(),
+      };
+      saveSensorCalibrationProfile(next);
+      return next;
+    });
+    addTelemetryLog('success', 'pH Single-Point Offset Calibrated', `Offset: ${res.offset}`);
+    return { success: true };
+  }, [addTelemetryLog]);
+
+  const calibrateTds = useCallback((rawTds: number, refTds: number) => {
+    const res = calibrateTdsReference(rawTds, refTds);
+    if (res.status === 'CALIBRATION_INVALID') {
+      addTelemetryLog('error', 'TDS Reference Calibration Failed', res.error);
+      return { success: false, error: res.error };
+    }
+    setCalibrationProfile((prev) => {
+      const next: SensorCalibrationProfile = {
+        ...prev,
+        tds: {
+          ...prev.tds,
+          status: 'CALIBRATED',
+          method: 'reference_solution',
+          factor: res.factor,
+          referenceValue: refTds,
+          measuredRaw: rawTds,
+          lastCalibratedAt: Date.now(),
+          version: (prev.tds.version || 1) + 1,
+        },
+        updatedAt: Date.now(),
+      };
+      saveSensorCalibrationProfile(next);
+      return next;
+    });
+    addTelemetryLog('success', 'TDS Calibrated against Reference Standard', `Factor: ${res.factor}`);
+    return { success: true };
+  }, [addTelemetryLog]);
+
+  const calibrateUltrasonicReservoir = useCallback((
+    fullDist: number,
+    emptyDist: number,
+    minValid: number = 5.0,
+    maxValid: number = 120.0
+  ) => {
+    const res = calibrateUltrasonic(fullDist, emptyDist, minValid, maxValid);
+    if (res.status === 'CALIBRATION_INVALID') {
+      addTelemetryLog('error', 'Ultrasonic Calibration Failed', res.error);
+      return { success: false, error: res.error };
+    }
+    setCalibrationProfile((prev) => {
+      const next: SensorCalibrationProfile = {
+        ...prev,
+        ultrasonic: {
+          ...prev.ultrasonic,
+          status: 'CALIBRATED',
+          fullDistanceCm: fullDist,
+          emptyDistanceCm: emptyDist,
+          minValidDistanceCm: minValid,
+          maxValidDistanceCm: maxValid,
+          lastCalibratedAt: Date.now(),
+          version: (prev.ultrasonic.version || 1) + 1,
+        },
+        updatedAt: Date.now(),
+      };
+      saveSensorCalibrationProfile(next);
+      return next;
+    });
+    addTelemetryLog('success', 'Ultrasonic Reservoir Dimensions Calibrated', `Full: ${fullDist}cm, Empty: ${emptyDist}cm`);
+    return { success: true };
+  }, [addTelemetryLog]);
+
+  const resetSensorCalibration = useCallback((sensorKey: 'ph' | 'tds' | 'ultrasonic' | 'all' = 'all') => {
+    setCalibrationProfile((prev) => {
+      let next: SensorCalibrationProfile;
+      if (sensorKey === 'ph') {
+        next = { ...prev, ph: DEFAULT_SENSOR_CALIBRATION_PROFILE.ph, updatedAt: Date.now() };
+      } else if (sensorKey === 'tds') {
+        next = { ...prev, tds: DEFAULT_SENSOR_CALIBRATION_PROFILE.tds, updatedAt: Date.now() };
+      } else if (sensorKey === 'ultrasonic') {
+        next = { ...prev, ultrasonic: DEFAULT_SENSOR_CALIBRATION_PROFILE.ultrasonic, updatedAt: Date.now() };
+      } else {
+        next = DEFAULT_SENSOR_CALIBRATION_PROFILE;
+      }
+      saveSensorCalibrationProfile(next);
+      return next;
+    });
+    addTelemetryLog('info', `Sensor Calibration Reset: ${sensorKey.toUpperCase()}`);
   }, [addTelemetryLog]);
 
   const renameDevice = useCallback((deviceId: string, newName: string) => {
@@ -206,7 +426,7 @@ export function ESP32SerialProvider({ children }: { children: React.ReactNode })
   useEffect(() => {
     const interval = setInterval(() => {
       const now = Date.now();
-      const timeoutThreshold = calibration.heartbeatTimeoutMs || 5000;
+      const timeoutThreshold = calibrationProfile.heartbeatTimeoutMs || 5000;
 
       if (connectionState === 'connected' || mode === 'real') {
         const timeSinceLastData = lastUpdateRef.current ? now - lastUpdateRef.current : Infinity;
@@ -231,30 +451,65 @@ export function ESP32SerialProvider({ children }: { children: React.ReactNode })
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [connectionState, mode, calibration.heartbeatTimeoutMs, activeDeviceId]);
+  }, [connectionState, mode, calibrationProfile.heartbeatTimeoutMs, activeDeviceId]);
 
-  // 2. Simulated Polling Loop
+  // 2. Simulated Polling Loop with Filtering & Quality Tagging
   useEffect(() => {
     if (mode !== 'simulation') return;
 
     const interval = setInterval(() => {
       const now = Date.now();
-      const mockRaw = JSON.stringify({
-        ph: 6.05 + Math.sin(now / 15000) * 0.15 + (Math.random() - 0.5) * 0.03,
-        tds: 980 + Math.cos(now / 20000) * 40 + (Math.random() - 0.5) * 10,
-        distance: 21.0 + Math.sin(now / 30000) * 1.5,
-        waterLevel: 82.0 + Math.cos(now / 30000) * 2.0,
-      });
+      const mockRawObj = {
+        ph: parseFloat((6.05 + Math.sin(now / 15000) * 0.15 + (Math.random() - 0.5) * 0.03).toFixed(2)),
+        tds: parseFloat((980 + Math.cos(now / 20000) * 40 + (Math.random() - 0.5) * 10).toFixed(1)),
+        distance: parseFloat((21.0 + Math.sin(now / 30000) * 1.5).toFixed(2)),
+        waterLevel: parseFloat((82.0 + Math.cos(now / 30000) * 2.0).toFixed(1)),
+      };
 
-      const validation = validateAndSanitizePacket(mockRaw, calibrationRef.current);
+      const validation = validateAndSanitizePacket(JSON.stringify(mockRawObj), calibrationProfileRef.current);
       if (validation.isValid && validation.sanitizedReading) {
         const r = validation.sanitizedReading;
+        const raw = validation.rawReading || mockRawObj;
+
+        // Apply moving median filtering to simulated readings
+        phWindowRef.current = [...phWindowRef.current, r.ph ?? 6.0].slice(-5);
+        tdsWindowRef.current = [...tdsWindowRef.current, r.tds ?? 980].slice(-5);
+        distWindowRef.current = [...distWindowRef.current, r.distance ?? 21.0].slice(-5);
+
+        const filteredPh = applyMovingMedianFilter(phWindowRef.current);
+        const filteredTds = applyMovingMedianFilter(tdsWindowRef.current);
+        const filteredDist = applyMovingMedianFilter(distWindowRef.current);
+
+        const isPhNoisy = detectSensorNoise(phWindowRef.current, 0.25);
+        const isTdsNoisy = detectSensorNoise(tdsWindowRef.current, 50.0);
+        const isDistNoisy = detectSensorNoise(distWindowRef.current, 4.0);
+
+        const qualityObj: Record<'ph' | 'tds' | 'waterLevel' | 'distance', SensorQualityStatus> = {
+          ph: isPhNoisy ? 'NOISY' : (validation.quality?.ph || 'VALID'),
+          tds: isTdsNoisy ? 'NOISY' : (validation.quality?.tds || 'VALID'),
+          waterLevel: isDistNoisy ? 'NOISY' : (validation.quality?.waterLevel || 'VALID'),
+          distance: isDistNoisy ? 'NOISY' : (validation.quality?.distance || 'VALID'),
+        };
+
         const reading: SensorReading = {
-          ph: r.ph ?? 6.0,
-          tds: r.tds ?? 980,
+          ph: filteredPh,
+          tds: filteredTds,
           waterLevel: r.waterLevel ?? 82,
-          distance: r.distance ?? 21.0,
+          distance: filteredDist,
           timestamp: now,
+          source: 'simulated', // Strictly identified as simulated
+          rawPh: raw.ph,
+          rawTds: raw.tds,
+          rawDistance: raw.distance,
+          rawWaterLevel: raw.waterLevel,
+          quality: qualityObj,
+          overallQuality: qualityObj.ph === 'NOISY' || qualityObj.tds === 'NOISY' ? 'NOISY' : 'VALID',
+          metrics: {
+            ph: { raw: raw.ph ?? 6.0, calibrated: r.ph ?? 6.0, filtered: filteredPh, quality: qualityObj.ph },
+            tds: { raw: raw.tds ?? 980, calibrated: r.tds ?? 980, filtered: filteredTds, quality: qualityObj.tds },
+            waterLevel: { raw: raw.waterLevel ?? 82, calibrated: r.waterLevel ?? 82, filtered: r.waterLevel ?? 82, quality: qualityObj.waterLevel },
+            distance: { raw: raw.distance ?? 21.0, calibrated: r.distance ?? 21.0, filtered: filteredDist, quality: qualityObj.distance },
+          },
         };
 
         setLatestReading(reading);
@@ -301,7 +556,7 @@ export function ESP32SerialProvider({ children }: { children: React.ReactNode })
             const rawPacket = line.trim();
             if (!rawPacket) continue;
 
-            const validation = validateAndSanitizePacket(rawPacket, calibrationRef.current);
+            const validation = validateAndSanitizePacket(rawPacket, calibrationProfileRef.current);
 
             // Increment packet stats
             setDevices((prev) =>
@@ -331,6 +586,7 @@ export function ESP32SerialProvider({ children }: { children: React.ReactNode })
             }
 
             const r = validation.sanitizedReading;
+            const raw = validation.rawReading;
             if (r) {
               const now = Date.now();
               lastUpdateRef.current = now;
@@ -338,14 +594,47 @@ export function ESP32SerialProvider({ children }: { children: React.ReactNode })
               setLastUpdateTime(now);
               setIsStale(false);
 
+              // Update noise buffers
+              if (r.ph !== undefined) phWindowRef.current = [...phWindowRef.current, r.ph].slice(-5);
+              if (r.tds !== undefined) tdsWindowRef.current = [...tdsWindowRef.current, r.tds].slice(-5);
+              if (r.distance !== undefined) distWindowRef.current = [...distWindowRef.current, r.distance].slice(-5);
+
+              const filteredPh = applyMovingMedianFilter(phWindowRef.current) || (r.ph ?? 6.0);
+              const filteredTds = applyMovingMedianFilter(tdsWindowRef.current) || (r.tds ?? 1000);
+              const filteredDist = applyMovingMedianFilter(distWindowRef.current) || (r.distance ?? 23.5);
+
+              const isPhNoisy = detectSensorNoise(phWindowRef.current, 0.35);
+              const isTdsNoisy = detectSensorNoise(tdsWindowRef.current, 80.0);
+              const isDistNoisy = detectSensorNoise(distWindowRef.current, 5.0);
+
+              const qualityObj: Record<'ph' | 'tds' | 'waterLevel' | 'distance', SensorQualityStatus> = {
+                ph: isPhNoisy ? 'NOISY' : (validation.quality?.ph || 'VALID'),
+                tds: isTdsNoisy ? 'NOISY' : (validation.quality?.tds || 'VALID'),
+                waterLevel: isDistNoisy ? 'NOISY' : (validation.quality?.waterLevel || 'VALID'),
+                distance: isDistNoisy ? 'NOISY' : (validation.quality?.distance || 'VALID'),
+              };
+
               setLatestReading((prev) => {
                 const base = prev || { ph: 6.0, tds: 1000, waterLevel: 85, distance: 23.5, timestamp: now };
                 const updated: SensorReading = {
-                  ph: r.ph !== undefined ? r.ph : base.ph,
-                  tds: r.tds !== undefined ? r.tds : base.tds,
+                  ph: filteredPh,
+                  tds: filteredTds,
                   waterLevel: r.waterLevel !== undefined ? r.waterLevel : base.waterLevel,
-                  distance: r.distance !== undefined ? r.distance : base.distance,
+                  distance: filteredDist,
                   timestamp: now,
+                  source: 'esp32_serial', // Real physical hardware reading
+                  rawPh: raw?.ph,
+                  rawTds: raw?.tds,
+                  rawDistance: raw?.distance,
+                  rawWaterLevel: raw?.waterLevel,
+                  quality: qualityObj,
+                  overallQuality: isPhNoisy || isTdsNoisy || isDistNoisy ? 'NOISY' : 'VALID',
+                  metrics: {
+                    ph: { raw: raw?.ph ?? r.ph ?? 6.0, calibrated: r.ph ?? 6.0, filtered: filteredPh, quality: qualityObj.ph },
+                    tds: { raw: raw?.tds ?? r.tds ?? 1000, calibrated: r.tds ?? 1000, filtered: filteredTds, quality: qualityObj.tds },
+                    waterLevel: { raw: raw?.waterLevel ?? r.waterLevel ?? 85, calibrated: r.waterLevel ?? 85, filtered: r.waterLevel ?? 85, quality: qualityObj.waterLevel },
+                    distance: { raw: raw?.distance ?? r.distance ?? 23.5, calibrated: r.distance ?? 23.5, filtered: filteredDist, quality: qualityObj.distance },
+                  },
                 };
 
                 setHistory((h) => [...h, updated].slice(-60));
@@ -479,8 +768,27 @@ export function ESP32SerialProvider({ children }: { children: React.ReactNode })
   // Evaluate Sensor Health Matrix
   const sensorHealth = useMemo(() => {
     const isOnline = (mode === 'simulation' || connectionState === 'connected') && !isStale;
-    return evaluateSensorHealth(latestReading, isOnline);
-  }, [latestReading, mode, connectionState, isStale]);
+    return evaluateSensorHealth(
+      latestReading
+        ? {
+            ph: latestReading.ph,
+            tds: latestReading.tds,
+            waterLevel: latestReading.waterLevel,
+            distance: latestReading.distance,
+            rawPh: latestReading.rawPh,
+            rawTds: latestReading.rawTds,
+            rawDistance: latestReading.rawDistance,
+            quality: latestReading.quality,
+            calibrationStatus: {
+              ph: calibrationProfile.ph.status,
+              tds: calibrationProfile.tds.status,
+              ultrasonic: calibrationProfile.ultrasonic.status,
+            },
+          }
+        : null,
+      isOnline
+    );
+  }, [latestReading, mode, connectionState, isStale, calibrationProfile]);
 
   // Compute Overall Device Health Score
   const deviceHealthScore = useMemo(() => {
@@ -509,6 +817,12 @@ export function ESP32SerialProvider({ children }: { children: React.ReactNode })
         calibration,
         updateCalibration,
         resetCalibration,
+        calibrationProfile,
+        calibratePh2Point,
+        calibratePh1Point,
+        calibrateTds,
+        calibrateUltrasonicReservoir,
+        resetSensorCalibration,
         renameDevice,
         telemetryLogs,
         addTelemetryLog,

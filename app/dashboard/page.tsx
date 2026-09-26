@@ -27,7 +27,8 @@ import {
   CameraOff,
   CheckCircle2,
   Activity,
-  ArrowRight
+  ArrowRight,
+  AlertTriangle
 } from 'lucide-react';
 import styles from './page.module.css';
 
@@ -702,9 +703,17 @@ export default function Dashboard() {
       {/* 5. SUPPORTING: PLANT ENVIRONMENT OVERVIEW                    */}
       {/* ============================================================ */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-        <span className="section-label">
-          {isKn ? copy.ui.plantEnvironmentSummary : 'Plant Environment Summary'}
-        </span>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span className="section-label">
+            {isKn ? copy.ui.plantEnvironmentSummary : 'Plant Environment Summary'}
+          </span>
+          {userMode === 'farmer' && (isStale || (latestReading?.quality && Object.values(latestReading.quality).some(q => q === 'INVALID' || q === 'OUT_OF_RANGE' || q === 'NOISY'))) && (
+            <span style={{ fontSize: '11.5px', color: '#F2B84B', display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <AlertTriangle size={12} />
+              {copy.devices.farmerCheckNotice}
+            </span>
+          )}
+        </div>
         
         <div className={styles.environmentalStrip}>
           

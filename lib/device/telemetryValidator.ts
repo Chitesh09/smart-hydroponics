@@ -1,14 +1,23 @@
 // ============================================================
 // HydroSmart — Telemetry Validation & Calibration Engine
-// Strict Physical Boundary Enforcement & Packet Sanitization
+// Strict Physical Boundary Enforcement, Raw vs Calibrated Separation
 // ============================================================
 
 import {
   DeviceCalibrationConfig,
   RawPacketValidationResult,
   SensorHealthStatus,
-  IoTDevice
+  IoTDevice,
+  SensorQualityStatus,
+  CalibrationStatus,
 } from './types';
+import {
+  SensorCalibrationProfile,
+  DEFAULT_SENSOR_CALIBRATION_PROFILE,
+  applyPhCalibration,
+  applyTdsCalibration,
+  applyUltrasonicDistanceAndWaterLevel,
+} from './sensorCalibration';
 
 export const DEFAULT_CALIBRATION: DeviceCalibrationConfig = {
   phOffset: 0.0,
@@ -21,10 +30,11 @@ export const DEFAULT_CALIBRATION: DeviceCalibrationConfig = {
 
 /**
  * Validate and sanitize raw serial input from ESP32 against physical limits
+ * Maintains strict separation between rawReading and calibrated sanitizedReading.
  */
 export function validateAndSanitizePacket(
   rawInput: string,
-  calibration: DeviceCalibrationConfig = DEFAULT_CALIBRATION
+  calibrationOrProfile: DeviceCalibrationConfig | SensorCalibrationProfile = DEFAULT_CALIBRATION
 ): RawPacketValidationResult {
   const trimmed = rawInput.trim();
   if (!trimmed) {
@@ -74,90 +84,169 @@ export function validateAndSanitizePacket(
 
   const p = parsed || {};
 
-  // Extract raw numerical values
-  const rawPh = typeof p.ph === 'number' && !isNaN(p.ph) ? p.ph : undefined;
-  const rawTds = typeof p.tds === 'number' && !isNaN(p.tds) ? p.tds : undefined;
-  const rawWL = typeof p.waterLevel === 'number' && !isNaN(p.waterLevel) ? p.waterLevel : undefined;
-  const rawDist = typeof p.distance === 'number' && !isNaN(p.distance) ? p.distance : undefined;
+  // Reject packets with explicit NaN or Infinity tokens
+  for (const [key, val] of Object.entries(p)) {
+    if (typeof val === 'string' && (val.toLowerCase() === 'nan' || val.toLowerCase() === 'infinity' || val.toLowerCase() === '-infinity')) {
+      return { isValid: false, errorMessage: `Field '${key}' contains invalid numeric token '${val}'.` };
+    }
+  }
 
-  // 3. Physical Boundary Validations
-  // pH: Valid range [0.0, 14.0]
+  // Extract raw numerical values (validate NaN and Infinity)
+  const rawPh = typeof p.ph === 'number' && Number.isFinite(p.ph) ? p.ph : undefined;
+  const rawTds = typeof p.tds === 'number' && Number.isFinite(p.tds) ? p.tds : undefined;
+  const rawWL = typeof p.waterLevel === 'number' && Number.isFinite(p.waterLevel) ? p.waterLevel : undefined;
+  const rawDist = typeof p.distance === 'number' && Number.isFinite(p.distance) ? p.distance : undefined;
+
+  // Adapt input calibration: support either legacy DeviceCalibrationConfig or modern SensorCalibrationProfile
+  let profile: SensorCalibrationProfile;
+  if ('ph' in calibrationOrProfile && typeof calibrationOrProfile.ph === 'object') {
+    profile = calibrationOrProfile as SensorCalibrationProfile;
+  } else {
+    const legacy = calibrationOrProfile as DeviceCalibrationConfig;
+    profile = {
+      ...DEFAULT_SENSOR_CALIBRATION_PROFILE,
+      ph: {
+        ...DEFAULT_SENSOR_CALIBRATION_PROFILE.ph,
+        offset: legacy.phOffset ?? 0.0,
+        slope: legacy.phSlopeMultiplier ?? 1.0,
+        status: (legacy.phOffset !== 0.0 || legacy.phSlopeMultiplier !== 1.0) ? 'CALIBRATED' : 'NOT_CALIBRATED',
+      },
+      tds: {
+        ...DEFAULT_SENSOR_CALIBRATION_PROFILE.tds,
+        factor: legacy.tdsCalibrationFactor ?? 1.0,
+        status: legacy.tdsCalibrationFactor !== 1.0 ? 'CALIBRATED' : 'NOT_CALIBRATED',
+      },
+      ultrasonic: {
+        ...DEFAULT_SENSOR_CALIBRATION_PROFILE.ultrasonic,
+        emptyDistanceCm: legacy.ultrasonicEmptyDistanceCm ?? 60.0,
+        fullDistanceCm: legacy.ultrasonicFullDistanceCm ?? 13.0,
+        status: (legacy.ultrasonicEmptyDistanceCm !== 60.0 || legacy.ultrasonicFullDistanceCm !== 13.0) ? 'CALIBRATED' : 'NOT_CALIBRATED',
+      },
+      heartbeatTimeoutMs: legacy.heartbeatTimeoutMs ?? 5000,
+      updatedAt: Date.now(),
+    };
+  }
+
+  const quality: Record<'ph' | 'tds' | 'waterLevel' | 'distance', SensorQualityStatus> = {
+    ph: 'VALID',
+    tds: 'VALID',
+    waterLevel: 'VALID',
+    distance: 'VALID',
+  };
+
+  // 3. Physical Boundary Validations & Calibration Transformations
+
+  // --- pH: Valid physical range [0.0, 14.0] ---
   let sanitizedPh: number | undefined = undefined;
   if (rawPh !== undefined) {
     if (rawPh < 0.0 || rawPh > 14.0) {
+      quality.ph = 'OUT_OF_RANGE';
       return { isValid: false, errorMessage: `Physical pH limit exceeded (${rawPh}). Expected 0.0 - 14.0.` };
     }
-    // Apply calibration: (raw * slope) + offset
-    const calPh = (rawPh * calibration.phSlopeMultiplier) + calibration.phOffset;
-    sanitizedPh = parseFloat(Math.min(14.0, Math.max(0.0, calPh)).toFixed(2));
+    const calResult = applyPhCalibration(rawPh, profile.ph);
+    sanitizedPh = calResult.calibratedPh;
+    quality.ph = calResult.quality;
+  } else {
+    quality.ph = 'INVALID';
   }
 
-  // TDS: Valid range [0, 5000 PPM]
+  // --- TDS: Valid physical range [0, 5000 PPM] ---
   let sanitizedTds: number | undefined = undefined;
   if (rawTds !== undefined) {
     if (rawTds < 0 || rawTds > 5000) {
+      quality.tds = 'OUT_OF_RANGE';
       return { isValid: false, errorMessage: `Physical TDS limit exceeded (${rawTds} PPM). Expected 0 - 5000 PPM.` };
     }
-    // Apply calibration factor
-    const calTds = rawTds * calibration.tdsCalibrationFactor;
-    sanitizedTds = parseFloat(Math.max(0, Math.min(5000, calTds)).toFixed(1));
+    const calResult = applyTdsCalibration(rawTds, profile.tds);
+    sanitizedTds = calResult.calibratedTds;
+    quality.tds = calResult.quality;
+  } else {
+    quality.tds = 'INVALID';
   }
 
-  // Distance: Valid range [5.0 cm, 400.0 cm]
+  // --- Ultrasonic Distance & Water Level Percentage ---
   let sanitizedDist: number | undefined = undefined;
-  if (rawDist !== undefined) {
-    if (rawDist < 5.0 || rawDist > 400.0) {
-      return { isValid: false, errorMessage: `Ultrasonic distance impossible (${rawDist} cm). Expected 5.0 - 400.0 cm.` };
-    }
-    sanitizedDist = parseFloat(rawDist.toFixed(2));
-  }
-
-  // Water Level calculation & synchronization
   let sanitizedWL: number | undefined = undefined;
-  const emptyDist = calibration.ultrasonicEmptyDistanceCm;
-  const fullDist = calibration.ultrasonicFullDistanceCm;
-  const range = emptyDist - fullDist;
 
-  if (sanitizedDist !== undefined && rawWL === undefined) {
-    // Derive water level from calibrated ultrasonic distance
-    if (range > 0) {
-      const derivedPercent = ((emptyDist - sanitizedDist) / range) * 100.0;
-      sanitizedWL = parseFloat(Math.min(100.0, Math.max(0.0, derivedPercent)).toFixed(1));
+  if (rawDist !== undefined) {
+    if (rawDist < profile.ultrasonic.minValidDistanceCm || rawDist > profile.ultrasonic.maxValidDistanceCm) {
+      quality.distance = 'OUT_OF_RANGE';
+      quality.waterLevel = 'OUT_OF_RANGE';
+      return {
+        isValid: false,
+        errorMessage: `Ultrasonic distance impossible (${rawDist} cm). Expected ${profile.ultrasonic.minValidDistanceCm} - ${profile.ultrasonic.maxValidDistanceCm} cm.`,
+      };
     }
+
+    const distResult = applyUltrasonicDistanceAndWaterLevel(rawDist, profile.ultrasonic);
+    sanitizedDist = distResult.distanceCm;
+    sanitizedWL = distResult.waterLevelPercent;
+    quality.distance = distResult.quality;
+    quality.waterLevel = distResult.quality;
   } else if (rawWL !== undefined) {
+    // If only waterLevel was supplied
     if (rawWL < 0 || rawWL > 100) {
-      sanitizedWL = parseFloat(Math.min(100.0, Math.max(0.0, rawWL)).toFixed(1));
-    } else {
-      sanitizedWL = parseFloat(rawWL.toFixed(1));
+      quality.waterLevel = 'OUT_OF_RANGE';
+      return { isValid: false, errorMessage: `Water level percentage out of range (${rawWL}%). Expected 0 - 100%.` };
     }
-
-    if (sanitizedDist === undefined && range > 0) {
-      const derivedDist = emptyDist - ((sanitizedWL / 100.0) * range);
-      sanitizedDist = parseFloat(Math.max(fullDist, derivedDist).toFixed(2));
+    sanitizedWL = parseFloat(Math.max(0, Math.min(100, rawWL)).toFixed(1));
+    const range = profile.ultrasonic.emptyDistanceCm - profile.ultrasonic.fullDistanceCm;
+    if (range > 0) {
+      sanitizedDist = parseFloat((profile.ultrasonic.emptyDistanceCm - (sanitizedWL / 100.0) * range).toFixed(2));
     }
+    quality.waterLevel = profile.ultrasonic.status === 'CALIBRATED' ? 'VALID' : 'UNCALIBRATED';
+    quality.distance = quality.waterLevel;
+  } else {
+    quality.distance = 'INVALID';
+    quality.waterLevel = 'INVALID';
   }
+
+  const now = Date.now();
 
   return {
     isValid: true,
     isHeartbeat,
+    rawReading: {
+      ph: rawPh,
+      tds: rawTds,
+      waterLevel: rawWL,
+      distance: rawDist,
+      timestamp: now,
+    },
     sanitizedReading: {
       ph: sanitizedPh,
       tds: sanitizedTds,
       waterLevel: sanitizedWL,
       distance: sanitizedDist,
-      timestamp: Date.now(),
+      timestamp: now,
     },
+    quality,
   };
 }
 
 /**
  * Derive per-sensor diagnostic health state
+ * Strictly avoids inventing fake temperature data or fake temperature compensation.
  */
 export function evaluateSensorHealth(
-  currentReading: { ph?: number; tds?: number; waterLevel?: number; distance?: number } | null,
+  currentReading: {
+    ph?: number;
+    tds?: number;
+    waterLevel?: number;
+    distance?: number;
+    rawPh?: number;
+    rawTds?: number;
+    rawDistance?: number;
+    quality?: Record<string, SensorQualityStatus>;
+    calibrationStatus?: Record<string, CalibrationStatus>;
+  } | null,
   isConnectionActive: boolean
 ): Record<'ph' | 'tds' | 'ultrasonic' | 'temperature', SensorHealthStatus> {
   const isOnline = isConnectionActive && !!currentReading;
+
+  const phQuality = currentReading?.quality?.ph || (isOnline && currentReading?.ph !== undefined ? 'VALID' : 'DISCONNECTED');
+  const tdsQuality = currentReading?.quality?.tds || (isOnline && currentReading?.tds !== undefined ? 'VALID' : 'DISCONNECTED');
+  const ultraQuality = currentReading?.quality?.waterLevel || (isOnline && currentReading?.waterLevel !== undefined ? 'VALID' : 'DISCONNECTED');
 
   return {
     ph: {
@@ -165,11 +254,15 @@ export function evaluateSensorHealth(
       name: 'pH Electrode Probe',
       state: !isOnline ? 'disconnected' : currentReading?.ph !== undefined ? 'working' : 'fault',
       lastReading: currentReading?.ph,
+      rawValue: currentReading?.rawPh,
+      calibratedValue: currentReading?.ph,
+      quality: phQuality,
+      calibrationStatus: currentReading?.calibrationStatus?.ph || 'NOT_CALIBRATED',
       unit: 'pH',
       minThreshold: 5.5,
       maxThreshold: 6.5,
       statusDetails: isOnline && currentReading?.ph !== undefined
-        ? 'Electrode impedance and reference junction nominal.'
+        ? `Electrode impedance nominal. Quality: ${phQuality}.`
         : 'Awaiting sensor analog telemetry.',
     },
     tds: {
@@ -177,11 +270,15 @@ export function evaluateSensorHealth(
       name: 'TDS Conductivity Probe',
       state: !isOnline ? 'disconnected' : currentReading?.tds !== undefined ? 'working' : 'fault',
       lastReading: currentReading?.tds,
+      rawValue: currentReading?.rawTds,
+      calibratedValue: currentReading?.tds,
+      quality: tdsQuality,
+      calibrationStatus: currentReading?.calibrationStatus?.tds || 'NOT_CALIBRATED',
       unit: 'PPM',
       minThreshold: 750,
       maxThreshold: 1100,
       statusDetails: isOnline && currentReading?.tds !== undefined
-        ? 'Conductivity temperature compensation active.'
+        ? `Conductivity active (25°C uncompensated standard). Quality: ${tdsQuality}.`
         : 'Awaiting EC/TDS sensor data.',
     },
     ultrasonic: {
@@ -189,22 +286,30 @@ export function evaluateSensorHealth(
       name: 'HC-SR04 Ultrasonic Sensor',
       state: !isOnline ? 'disconnected' : currentReading?.waterLevel !== undefined ? 'working' : 'fault',
       lastReading: currentReading?.waterLevel,
+      rawValue: currentReading?.rawDistance,
+      calibratedValue: currentReading?.waterLevel,
+      quality: ultraQuality,
+      calibrationStatus: currentReading?.calibrationStatus?.ultrasonic || 'NOT_CALIBRATED',
       unit: '%',
-      minThreshold: 60,
-      maxThreshold: 95,
+      minThreshold: 25,
+      maxThreshold: 100,
       statusDetails: isOnline && currentReading?.waterLevel !== undefined
-        ? 'Time-of-flight echo return calibrated.'
+        ? `Time-of-flight echo return calibrated. Quality: ${ultraQuality}.`
         : 'Echo pulse timeout or reservoir unread.',
     },
     temperature: {
       sensorKey: 'temperature',
-      name: 'DS18B20 Water Temperature',
+      name: 'Water Temperature Sensor',
       state: 'unavailable',
-      lastReading: 22.4,
+      lastReading: undefined, // STRICT REQUIREMENT: NO FAKE TEMPERATURE
+      rawValue: undefined,
+      calibratedValue: undefined,
+      quality: 'DISCONNECTED',
+      calibrationStatus: 'NOT_CALIBRATED',
       unit: '°C',
       minThreshold: 18.0,
       maxThreshold: 26.0,
-      statusDetails: 'Auxiliary 1-Wire channel (Simulated baseline).',
+      statusDetails: 'No physical DS18B20 temperature sensor installed. Temperature compensation unavailable.',
     },
   };
 }
@@ -227,11 +332,13 @@ export function calculateDeviceHealthScore(
   if (isStale) score -= 30;
   if (Date.now() - device.lastHeartbeat > 6000) score -= 20;
 
-  // 2. Sensor Availability Penalty
-  const sensorArray = Object.values(sensors);
-  sensorArray.forEach((sensor) => {
+  // 2. Sensor Availability Penalty (Only for installed sensors: ph, tds, ultrasonic)
+  const installedSensors = [sensors.ph, sensors.tds, sensors.ultrasonic].filter(Boolean);
+  installedSensors.forEach((sensor) => {
     if (sensor.state === 'fault') score -= 20;
     if (sensor.state === 'disconnected') score -= 15;
+    if (sensor.quality === 'NOISY') score -= 10;
+    if (sensor.quality === 'OUT_OF_RANGE') score -= 15;
   });
 
   // 3. Packet Corruption Penalty

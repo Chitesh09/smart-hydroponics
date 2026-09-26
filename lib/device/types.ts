@@ -3,6 +3,20 @@
 // Production-grade IoT Station Hierarchy & Validation Types
 // ============================================================
 
+import {
+  CalibrationStatus,
+  SensorQualityStatus,
+  SensorDataSource,
+  SensorCalibrationProfile,
+} from './sensorCalibration';
+
+export type {
+  CalibrationStatus,
+  SensorQualityStatus,
+  SensorDataSource,
+  SensorCalibrationProfile,
+};
+
 export type DeviceConnectionStatus =
   | 'online'
   | 'offline'
@@ -41,6 +55,10 @@ export interface SensorHealthStatus {
   name: string;
   state: SensorDiagnosticState;
   lastReading?: number;
+  rawValue?: number;
+  calibratedValue?: number;
+  quality?: SensorQualityStatus;
+  calibrationStatus?: CalibrationStatus;
   unit: string;
   statusDetails: string;
   minThreshold: number;
@@ -74,6 +92,14 @@ export interface RawPacketValidationResult {
     distance?: number;
     timestamp: number;
   };
+  rawReading?: {
+    ph?: number;
+    tds?: number;
+    waterLevel?: number;
+    distance?: number;
+    timestamp: number;
+  };
+  quality?: Record<'ph' | 'tds' | 'waterLevel' | 'distance', SensorQualityStatus>;
   errorMessage?: string;
   isHeartbeat?: boolean;
 }

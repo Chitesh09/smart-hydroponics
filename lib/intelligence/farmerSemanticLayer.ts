@@ -249,6 +249,7 @@ export interface FarmerCopyGroup {
     techModeRequiredDesc: string;
     switchToTechBtn: string;
     returnDashboardBtn: string;
+    farmerCheckNotice: string;
   };
   settings: {
     title: string;
@@ -523,6 +524,7 @@ export const FARMER_COPY: Record<SupportedLanguageCode, FarmerCopyGroup> = {
       techModeRequiredDesc: 'The IoT Station is a technical hardware and sensor management area containing ESP32 diagnostics, serial configurations, and telemetry calibration. To access this station, switch to Technical Mode.',
       switchToTechBtn: 'Switch to Technical Mode',
       returnDashboardBtn: 'Return to Plant Command',
+      farmerCheckNotice: 'Some environment readings may need checking.',
     },
     settings: {
       title: 'Station Settings & Profile',
@@ -795,6 +797,7 @@ export const FARMER_COPY: Record<SupportedLanguageCode, FarmerCopyGroup> = {
       techModeRequiredDesc: 'IoT ಸಾಧನ ಕೇಂದ್ರವು ESP32 ರೋಗನಿರ್ಣಯ, ಸೀರಿಯಲ್ ಸೆಟ್ಟಿಂಗ್ಸ್ ಮತ್ತು ಸಂವೇದಕಗಳ ಮಾಪನಾಂಕಗಳನ್ನು ಒಳಗೊಂಡ ತಾಂತ್ರಿಕ ಪ್ರದೇಶವಾಗಿದೆ. ಇದನ್ನು ಬಳಸಲು ತಾಂತ್ರಿಕ ಮೋಡ್‌ಗೆ ಬದಲಿಸಿ.',
       switchToTechBtn: 'ತಾಂತ್ರಿಕ ಮೋಡ್‌ಗೆ ಬದಲಿಸಿ',
       returnDashboardBtn: 'ಗಿಡದ ಮುಖ್ಯ ಕೇಂದ್ರಕ್ಕೆ ಹಿಂತಿರುಗಿ',
+      farmerCheckNotice: 'ಕೆಲವು ಪರಿಸರ ಮಾಪನಗಳನ್ನು ಪರಿಶೀಲಿಸಬೇಕಾಗಬಹುದು.',
     },
     settings: {
       title: 'ಕೇಂದ್ರದ ಸೆಟ್ಟಿಂಗ್ಸ್ ಮತ್ತು ಪ್ರೊಫೈಲ್',
@@ -2092,6 +2095,57 @@ export function getLocalizedAlert(
       };
   }
 }
+
+/**
+ * Localize sensor quality state
+ */
+export function getLocalizedSensorQuality(
+  quality: string = 'VALID',
+  lang: SupportedLanguageCode = 'en'
+): string {
+  const isKn = lang === 'kn';
+  switch (quality) {
+    case 'VALID':
+      return isKn ? 'ಮಾನ್ಯವಾಗಿದೆ (ನಿಖರ)' : 'Valid & Reliable';
+    case 'UNCALIBRATED':
+      return isKn ? 'ಕ್ಯಾಲಿಬ್ರೇಟ್ ಆಗಿಲ್ಲ' : 'Uncalibrated Baseline';
+    case 'STALE':
+      return isKn ? 'ಮಾಹಿತಿ ಹಳೆಯದಾಗಿದೆ' : 'Stale Telemetry';
+    case 'NOISY':
+      return isKn ? 'ಸ್ಥಿರವಾಗಿಲ್ಲ (ಶಬ್ದ)' : 'Fluctuating / Noisy';
+    case 'OUT_OF_RANGE':
+      return isKn ? 'ಮಿತಿಯನ್ನು ಮೀರಿದೆ' : 'Out of Physical Envelope';
+    case 'DISCONNECTED':
+      return isKn ? 'ಸಂಪರ್ಕ ಕಡಿತಗೊಂಡಿದೆ' : 'Disconnected';
+    case 'INVALID':
+      return isKn ? 'ಅಮಾನ್ಯ ಮಾಹಿತಿ' : 'Invalid Telemetry';
+    default:
+      return quality;
+  }
+}
+
+/**
+ * Localize calibration status
+ */
+export function getLocalizedCalibrationStatus(
+  status: string = 'NOT_CALIBRATED',
+  lang: SupportedLanguageCode = 'en'
+): string {
+  const isKn = lang === 'kn';
+  switch (status) {
+    case 'CALIBRATED':
+      return isKn ? 'ಕ್ಯಾಲಿಬ್ರೇಟ್ ಮಾಡಲಾಗಿದೆ' : 'Calibrated';
+    case 'NOT_CALIBRATED':
+      return isKn ? 'ಕ್ಯಾಲಿಬ್ರೇಟ್ ಆಗಿಲ್ಲ' : 'Not Calibrated';
+    case 'CALIBRATION_REQUIRED':
+      return isKn ? 'ಕ್ಯಾಲಿಬ್ರೇಶನ್ ಅಗತ್ಯವಿದೆ' : 'Calibration Required';
+    case 'CALIBRATION_INVALID':
+      return isKn ? 'ಅಮಾನ್ಯ ಕ್ಯಾಲಿಬ್ರೇಶನ್' : 'Invalid Calibration';
+    default:
+      return status;
+  }
+}
+
 
 
 

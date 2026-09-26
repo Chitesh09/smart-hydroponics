@@ -535,7 +535,10 @@ export interface SensorEvidence {
   anomalyDetails?: string;
   timestamp: number;
   availability: SensorAvailabilityState;
-  quality: 'reliable' | 'stale' | 'invalid' | 'unknown';
+  quality: 'reliable' | 'stale' | 'invalid' | 'unknown' | 'uncalibrated' | 'noisy' | 'out_of_range';
+  rawValue?: number;
+  calibratedValue?: number;
+  calibrationStatus?: string;
 }
 
 export type ReasoningConfidenceLevel =

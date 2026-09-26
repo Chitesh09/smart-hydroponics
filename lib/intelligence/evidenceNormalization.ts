@@ -89,21 +89,33 @@ export function normalizePlantEvidence(inputs: RawEvidenceInputs): NormalizedEvi
   const history = inputs.sensorHistory || [];
   const target = inputs.cropTargetProfile;
 
+  const isPhValid = reading && (!reading.quality || (reading.quality.ph !== 'INVALID' && reading.quality.ph !== 'OUT_OF_RANGE' && reading.quality.ph !== 'DISCONNECTED'));
+  const isTdsValid = reading && (!reading.quality || (reading.quality.tds !== 'INVALID' && reading.quality.tds !== 'OUT_OF_RANGE' && reading.quality.tds !== 'DISCONNECTED'));
+  const isWaterValid = reading && (!reading.quality || (reading.quality.waterLevel !== 'INVALID' && reading.quality.waterLevel !== 'OUT_OF_RANGE' && reading.quality.waterLevel !== 'DISCONNECTED'));
+
   const sensorAvailability: SensorAvailabilityState = !isSensorAvailable
     ? 'unavailable'
     : isSimulation
       ? 'simulated'
       : 'available';
 
-  const sensorQuality = !isSensorAvailable
-    ? 'unknown'
-    : isStale
-      ? 'stale'
-      : 'reliable';
+  const resolveMetricQuality = (q?: string) => {
+    if (!isSensorAvailable) return 'unknown';
+    if (isStale) return 'stale';
+    if (q === 'INVALID') return 'invalid';
+    if (q === 'OUT_OF_RANGE') return 'out_of_range';
+    if (q === 'NOISY') return 'noisy';
+    if (q === 'UNCALIBRATED') return 'uncalibrated';
+    return 'reliable';
+  };
+
+  const phQualityState = resolveMetricQuality(reading?.quality?.ph);
+  const tdsQualityState = resolveMetricQuality(reading?.quality?.tds);
+  const waterQualityState = resolveMetricQuality(reading?.quality?.waterLevel);
 
   // pH Sensor
   const prevReading = history.length >= 2 ? history[history.length - 2] : null;
-  const currentPh = isSensorAvailable && reading ? reading.ph : undefined;
+  const currentPh = isSensorAvailable && isPhValid && reading ? reading.ph : undefined;
   const prevPh = prevReading ? prevReading.ph : undefined;
   const phDelta = currentPh !== undefined && prevPh !== undefined ? parseFloat((currentPh - prevPh).toFixed(2)) : undefined;
 
@@ -135,8 +147,10 @@ export function normalizePlantEvidence(inputs: RawEvidenceInputs): NormalizedEvi
         ? `pH (${currentPh?.toFixed(2)}) is above ceiling of ${target.phMax.toFixed(1)}`
         : undefined,
     timestamp,
-    availability: sensorAvailability,
-    quality: sensorQuality,
+    availability: isPhValid ? sensorAvailability : 'unavailable',
+    quality: phQualityState,
+    rawValue: reading?.rawPh ?? currentPh,
+    calibratedValue: currentPh,
   };
 
   if (currentPh !== undefined) {
@@ -146,15 +160,15 @@ export function normalizePlantEvidence(inputs: RawEvidenceInputs): NormalizedEvi
       label: 'Solution pH Telemetry',
       value: currentPh,
       timestamp,
-      confidence: isSimulation ? 'moderate' : 'high',
+      confidence: isSimulation || phQualityState === 'uncalibrated' || phQualityState === 'noisy' ? 'moderate' : 'high',
       unit: 'pH',
       plantId,
-      metadata: { trend: phTrend, targetMin: target.phMin, targetMax: target.phMax, isSimulation },
+      metadata: { trend: phTrend, targetMin: target.phMin, targetMax: target.phMax, isSimulation, quality: phQualityState },
     });
   }
 
   // TDS Sensor
-  const currentTds = isSensorAvailable && reading ? reading.tds : undefined;
+  const currentTds = isSensorAvailable && isTdsValid && reading ? reading.tds : undefined;
   const prevTds = prevReading ? prevReading.tds : undefined;
   const tdsDelta = currentTds !== undefined && prevTds !== undefined ? parseFloat((currentTds - prevTds).toFixed(1)) : undefined;
 
@@ -186,8 +200,10 @@ export function normalizePlantEvidence(inputs: RawEvidenceInputs): NormalizedEvi
         ? `TDS (${Math.round(currentTds || 0)} PPM) exceeds safe limit ${target.tdsMax} PPM`
         : undefined,
     timestamp,
-    availability: sensorAvailability,
-    quality: sensorQuality,
+    availability: isTdsValid ? sensorAvailability : 'unavailable',
+    quality: tdsQualityState,
+    rawValue: reading?.rawTds ?? currentTds,
+    calibratedValue: currentTds,
   };
 
   if (currentTds !== undefined) {
@@ -197,15 +213,15 @@ export function normalizePlantEvidence(inputs: RawEvidenceInputs): NormalizedEvi
       label: 'Nutrient TDS Telemetry',
       value: currentTds,
       timestamp,
-      confidence: isSimulation ? 'moderate' : 'high',
+      confidence: isSimulation || tdsQualityState === 'uncalibrated' || tdsQualityState === 'noisy' ? 'moderate' : 'high',
       unit: 'PPM',
       plantId,
-      metadata: { trend: tdsTrend, targetMin: target.tdsMin, targetMax: target.tdsMax, isSimulation },
+      metadata: { trend: tdsTrend, targetMin: target.tdsMin, targetMax: target.tdsMax, isSimulation, quality: tdsQualityState },
     });
   }
 
   // Water Level Sensor
-  const currentWater = isSensorAvailable && reading ? reading.waterLevel : undefined;
+  const currentWater = isSensorAvailable && isWaterValid && reading ? reading.waterLevel : undefined;
   const prevWater = prevReading ? prevReading.waterLevel : undefined;
   const waterDelta = currentWater !== undefined && prevWater !== undefined ? parseFloat((currentWater - prevWater).toFixed(1)) : undefined;
 
@@ -237,8 +253,10 @@ export function normalizePlantEvidence(inputs: RawEvidenceInputs): NormalizedEvi
         ? `Water level is low (${Math.round(currentWater || 0)}% capacity). Refill suggested.`
         : undefined,
     timestamp,
-    availability: sensorAvailability,
-    quality: sensorQuality,
+    availability: isWaterValid ? sensorAvailability : 'unavailable',
+    quality: waterQualityState,
+    rawValue: reading?.rawWaterLevel ?? currentWater,
+    calibratedValue: currentWater,
   };
 
   if (currentWater !== undefined) {
