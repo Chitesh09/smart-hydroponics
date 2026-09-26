@@ -760,7 +760,8 @@ export type PlantMilestoneType =
   | 'RECOVERY_DETECTED'
   | 'ENVIRONMENTAL_CHANGE'
   | 'REASONING_EVENT'
-  | 'CORRELATION_DETECTED';
+  | 'CORRELATION_DETECTED'
+  | 'ALERT_GENERATED';
 
 export interface PlantMilestone {
   id: string;
@@ -961,5 +962,96 @@ export interface CorrelationAnalysisSummary {
   farmerHeadline: string;
   farmerWhy: string;
   farmerAction: string;
+}
+
+// ============================================================================
+// PHASE 10: CONFIDENCE-AWARE PLANT ALERTS & ACTIONABLE NOTIFICATIONS
+// ============================================================================
+
+export type PlantAlertSeverity = 'INFO' | 'ATTENTION' | 'URGENT';
+
+export type PlantAlertCategory =
+  | 'PLANT_HEALTH'
+  | 'VISUAL_ANOMALY'
+  | 'ENVIRONMENT'
+  | 'WATER_LEVEL'
+  | 'PH'
+  | 'TDS'
+  | 'GROWTH'
+  | 'RECOVERY'
+  | 'MULTIMODAL'
+  | 'DATA_QUALITY';
+
+export type PlantAlertStatus =
+  | 'DETECTED'
+  | 'ACTIVE'
+  | 'ACKNOWLEDGED'
+  | 'RESOLVED'
+  | 'DISMISSED';
+
+export type PlantAlertConfidence = 'HIGH' | 'MODERATE' | 'LOW' | 'INSUFFICIENT';
+
+export type PlantAlertTrigger =
+  | 'visual_health_transition'
+  | 'visual_anomaly'
+  | 'sensor_out_of_range'
+  | 'sensor_baseline_deviation'
+  | 'sensor_stale'
+  | 'sensor_missing'
+  | 'phase9_association'
+  | 'what_changed'
+  | 'multimodal'
+  | 'data_quality'
+  | 'growth_decline'
+  | 'recovery';
+
+export interface PlantAlert {
+  id: string;
+  plantId: string;
+  createdAt: number;
+  updatedAt: number;
+  status: PlantAlertStatus;
+  severity: PlantAlertSeverity;
+  category: PlantAlertCategory;
+  triggerType: PlantAlertTrigger;
+  metric?: string;
+  currentValue?: number | string;
+  baselineValue?: number | string;
+  threshold?: number | string;
+  direction?: 'rising' | 'falling' | 'stable' | 'unknown';
+  confidence: PlantAlertConfidence;
+  confidenceReason: string;
+  title: string;
+  farmerMessage: string;
+  farmerWhy: string;
+  farmerAction: string;
+  technicalMessage: string;
+  limitation: string;
+  evidenceIds: string[];
+  reasoningEventId?: string;
+  changeEventIds: string[];
+  environmentAssociationIds: string[];
+  occurrenceCount: number;
+  firstDetectedAt: number;
+  lastDetectedAt: number;
+  persistenceWindowMs: number;
+  recommendedAction: string;
+  source: 'visual' | 'sensor' | 'reasoning' | 'correlation' | 'system';
+  dismissedAt?: number;
+  resolvedAt?: number;
+  hysteresisThreshold?: number;
+}
+
+export interface PlantAlertSummary {
+  plantId: string;
+  timestamp: number;
+  activeAlerts: PlantAlert[];
+  dismissedAlerts: PlantAlert[];
+  resolvedAlerts: PlantAlert[];
+  urgentCount: number;
+  attentionCount: number;
+  infoCount: number;
+  hasAnyAlert: boolean;
+  primaryAlert: PlantAlert | null;
 }
 

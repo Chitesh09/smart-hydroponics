@@ -11,6 +11,8 @@ import { LanguageToggle } from '@/components/ui/LanguageToggle';
 import { getFarmerCopy } from '@/lib/intelligence/farmerSemanticLayer';
 import { WhatChangedCard } from '@/components/ui/WhatChangedCard';
 import { EnvironmentPlantCard } from '@/components/ui/EnvironmentPlantCard';
+import { PlantAlertCard } from '@/components/ui/PlantAlertCard';
+
 import {
   Brain,
   Layers,
@@ -67,6 +69,9 @@ export default function IntelligencePage() {
     whatChangedSummary,
     correlationSummary,
     correlations,
+    alertSummary,
+    dismissAlert,
+    acknowledgeAlert,
   } = usePlantIntelligence();
 
   const { mode, isStale, latestReading } = useESP32Serial();
@@ -616,6 +621,40 @@ export default function IntelligencePage() {
           userMode={userMode}
           onUserModeChange={setUserMode}
         />
+      )}
+
+      {/* ============================================================ */}
+      {/* SECTION 1E: CONFIDENCE-AWARE PLANT ALERTS (Phase 10)         */}
+      {/* ============================================================ */}
+      {alertSummary.hasAnyAlert && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span className="section-label">
+                {isKn ? 'ಸಕ್ರಿಯ ಎಚ್ಚರಿಕೆಗಳು ಮತ್ತು ಸಾಕ್ಷ್ಯಾಧಾರಗಳು' : 'Active Alerts & Evidence Backing'}
+              </span>
+              <span className="badge badge-amber" style={{ fontSize: '10.5px', padding: '2px 8px' }}>
+                {alertSummary.activeAlerts.length} {isKn ? 'ಸಕ್ರಿಯ' : 'active'}
+              </span>
+            </div>
+            <span className="scientific-meta">
+              {isKn ? 'ಖಚಿತತೆ-ಆಧಾರಿತ ಅಧಿಸೂಚನೆಗಳು' : 'Confidence-Gated & Non-Causal'}
+            </span>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            {alertSummary.activeAlerts.map(alert => (
+              <PlantAlertCard
+                key={alert.id}
+                alert={alert}
+                mode={userMode}
+                language={language}
+                onDismiss={dismissAlert}
+                onAcknowledge={acknowledgeAlert}
+              />
+            ))}
+          </div>
+        </div>
       )}
 
       {/* ============================================================ */}

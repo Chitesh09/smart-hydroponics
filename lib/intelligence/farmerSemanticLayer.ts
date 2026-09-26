@@ -24,7 +24,12 @@ import {
   EnvironmentAssociationType,
   AssociationStrength,
   CorrelationAnalysisSummary,
+  PlantAlert,
+  PlantAlertSeverity,
+  PlantAlertCategory,
+  PlantAlertStatus,
 } from './types';
+
 import { SupportedLanguageCode } from '@/lib/assistant/assistantConfig';
 
 export type PlantStatusLevel = 'GOOD' | 'ATTENTION' | 'URGENT' | 'UNKNOWN';
@@ -1864,5 +1869,229 @@ export function getLocalizedCorrelationSummary(
     statusLabel,
   };
 }
+
+// ============================================================================
+// PHASE 10: CONFIDENCE-AWARE ALERT LOCALIZATION
+// ============================================================================
+
+export function getLocalizedAlertSeverity(
+  severity: PlantAlertSeverity,
+  lang: SupportedLanguageCode = 'en'
+): string {
+  if (lang !== 'kn') return severity;
+  switch (severity) {
+    case 'URGENT':
+      return 'ತುರ್ತು ಗಮನ';
+    case 'ATTENTION':
+      return 'ಗಮನಿಸಿ';
+    case 'INFO':
+      return 'ಮಾಹಿತಿ';
+    default:
+      return severity;
+  }
+}
+
+export function getLocalizedAlertCategory(
+  category: PlantAlertCategory,
+  lang: SupportedLanguageCode = 'en'
+): string {
+  if (lang !== 'kn') {
+    switch (category) {
+      case 'PLANT_HEALTH': return 'Plant Health';
+      case 'VISUAL_ANOMALY': return 'Visual Anomaly';
+      case 'ENVIRONMENT': return 'Environment';
+      case 'WATER_LEVEL': return 'Water Level';
+      case 'PH': return 'Nutrient pH';
+      case 'TDS': return 'Nutrient TDS';
+      case 'GROWTH': return 'Growth';
+      case 'RECOVERY': return 'Recovery';
+      case 'MULTIMODAL': return 'Multimodal';
+      case 'DATA_QUALITY': return 'Data Quality';
+      default: return category;
+    }
+  }
+
+  switch (category) {
+    case 'PLANT_HEALTH':
+      return 'ಗಿಡದ ಆರೋಗ್ಯ';
+    case 'VISUAL_ANOMALY':
+      return 'ದೃಷ್ಟಿಗೋಚರ ವ್ಯತ್ಯಾಸ';
+    case 'ENVIRONMENT':
+      return 'ಬೆಳವಣಿಗೆಯ ಪರಿಸರ';
+    case 'WATER_LEVEL':
+      return 'ನೀರಿನ ಮಟ್ಟ';
+    case 'PH':
+      return 'pH ಆಮ್ಲೀಯತೆ';
+    case 'TDS':
+      return 'ಪೋಷಕಾಂಶ ಪ್ರಮಾಣ (TDS)';
+    case 'GROWTH':
+      return 'ಬೆಳವಣಿಗೆ';
+    case 'RECOVERY':
+      return 'ಚೇತರಿಕೆ';
+    case 'MULTIMODAL':
+      return 'ಸಂಯೋಜಿತ ವಿಶ್ಲೇಷಣೆ';
+    case 'DATA_QUALITY':
+      return 'ಮಾಹಿತಿ ನಿಖರತೆ';
+    default:
+      return category;
+  }
+}
+
+export function getLocalizedAlertStatus(
+  status: PlantAlertStatus,
+  lang: SupportedLanguageCode = 'en'
+): string {
+  if (lang !== 'kn') return status;
+  switch (status) {
+    case 'ACTIVE':
+      return 'ಸಕ್ರಿಯ';
+    case 'ACKNOWLEDGED':
+      return 'ಪರಿಶೀಲಿಸಲಾಗಿದೆ';
+    case 'RESOLVED':
+      return 'ಪರಿಹರಿಸಲಾಗಿದೆ';
+    case 'DISMISSED':
+      return 'ವಜಾಗೊಳಿಸಲಾಗಿದೆ';
+    case 'DETECTED':
+      return 'ಪತ್ತೆಯಾಗಿದೆ';
+    default:
+      return status;
+  }
+}
+
+export function getLocalizedAlert(
+  alert: PlantAlert,
+  lang: SupportedLanguageCode = 'en'
+): {
+  title: string;
+  farmerMessage: string;
+  farmerWhy: string;
+  farmerAction: string;
+  limitation: string;
+} {
+  if (lang !== 'kn') {
+    return {
+      title: alert.title,
+      farmerMessage: alert.farmerMessage,
+      farmerWhy: alert.farmerWhy,
+      farmerAction: alert.farmerAction,
+      limitation: alert.limitation,
+    };
+  }
+
+  // Kannada localization mapping based on category and triggerType
+  switch (alert.category) {
+    case 'WATER_LEVEL':
+      return {
+        title: alert.severity === 'URGENT' ? 'ತುರ್ತು: ತೊಟ್ಟಿಯಲ್ಲಿ ನೀರಿನ ಕೊರತೆ' : 'ನೀರಿನ ಮಟ್ಟ ಕಡಿಮೆಯಾಗಿದೆ',
+        farmerMessage: alert.severity === 'URGENT'
+          ? `ತೊಟ್ಟಿಯಲ್ಲಿ ನೀರಿನ ಪ್ರಮಾಣ ಅತ್ಯಂತ ಕಡಿಮೆಯಾಗಿದೆ (${alert.currentValue || ''}%). ಪಂಪ್ ಒಣಗುವ ಅಪಾಯವಿದೆ.`
+          : `ತೊಟ್ಟಿಯಲ್ಲಿ ನೀರಿನ ಪ್ರಮಾಣ ಕಡಿಮೆಯಾಗಿದೆ (${alert.currentValue || ''}%).`,
+        farmerWhy: 'ಗಿಡವು ನೀರನ್ನು ಹೀರಿಕೊಂಡಿದೆ ಮತ್ತು ಆವಿಯಾಗುವಿಕೆಯಿಂದ ನೀರಿನ ಮಟ್ಟ ಇಳಿದಿದೆ.',
+        farmerAction: 'ತೊಟ್ಟಿಗೆ ತಕ್ಷಣ ಶುದ್ಧ ನೀರನ್ನು ತುಂಬಿಸಿ.',
+        limitation: 'ಅಲ್ಟ್ರಾಸಾನಿಕ್ ಸಂವೇದಕದಿಂದ ಲೆಕ್ಕಾಚಾರ ಮಾಡಲಾಗಿದೆ; ತೊಟ್ಟಿಯ ಆಳವನ್ನು ಕಣ್ಣಾರೆ ಪರೀಕ್ಷಿಸಿ.',
+      };
+
+    case 'PH':
+      return {
+        title: alert.direction === 'falling' ? 'ಆಮ್ಲೀಯ pH ವ್ಯತ್ಯಾಸ' : 'ಕ್ಷಾರೀಯ pH ವ್ಯತ್ಯಾಸ',
+        farmerMessage: alert.direction === 'falling'
+          ? `ನೀರಿನ pH ಮೌಲ್ಯ (${alert.currentValue || ''}) ಶಿಫಾರಸು ಮಾಡಿದ ವ್ಯಾಪ್ತಿಗಿಂತ ಕಡಿಮೆಯಾಗಿದೆ.`
+          : `ನೀರಿನ pH ಮೌಲ್ಯ (${alert.currentValue || ''}) ಶಿಫಾರಸು ಮಾಡಿದ ವ್ಯಾಪ್ತಿಗಿಂತ ಹೆಚ್ಚಾಗಿದೆ.`,
+        farmerWhy: 'ಸರಿಯಾದ pH ಇಲ್ಲದಿದ್ದರೆ ಗಿಡಕ್ಕೆ ಅಗತ್ಯ ಪೋಷಕಾಂಶಗಳು ಸಿಗುವುದಿಲ್ಲ.',
+        farmerAction: 'ನೀರಿನ pH ಪರೀಕ್ಷಿಸಿ ನಿಗದಿತ ಬಫರ್ ದ್ರಾವಣವನ್ನು ಬಳಸಿ ಸರಿಹೊಂದಿಸಿ.',
+        limitation: 'ರಾಸಾಯನಿಕ ಪರೀಕ್ಷೆಯು ನೀರಿನ ಆಮ್ಲೀಯತೆಯನ್ನು ಸೂಚಿಸುತ್ತದೆ; ನೇರ ಪೋಷಕಾಂಶ ರೋಗನಿರ್ಣಯವಲ್ಲ.',
+      };
+
+    case 'TDS':
+      return {
+        title: alert.direction === 'falling' ? 'ಪೋಷಕಾಂಶಗಳ ಕೊರತೆ (TDS)' : 'ಹೆಚ್ಚಿನ ಪೋಷಕಾಂಶ ಸಾಂದ್ರತೆ (TDS)',
+        farmerMessage: alert.direction === 'falling'
+          ? `ಪೋಷಕಾಂಶ ಲವಣಗಳ ಸಾಂದ್ರತೆ ಕಡಿಮೆಯಾಗಿದೆ (${alert.currentValue || ''} PPM).`
+          : `ಪೋಷಕಾಂಶ ಲವಣಗಳ ಸಾಂದ್ರತೆ ಹೆಚ್ಚಾಗಿದೆ (${alert.currentValue || ''} PPM).`,
+        farmerWhy: alert.direction === 'falling'
+          ? 'ಗಿಡದ ಬೆಳವಣಿಗೆಯಿಂದಾಗಿ ದ್ರಾವ್ಯ ಲವಣಗಳು ಖಾಲಿಯಾಗುತ್ತಿವೆ.'
+          : 'ಅತಿಯಾದ ಲವಣಾಂಶವು ಬೇರುಗಳಿಗೆ ಹಾನಿ ಉಂಟುಮಾಡಬಹುದು.',
+        farmerAction: alert.direction === 'falling'
+          ? 'ಸಮತೋಲಿತ ಪೋಷಕಾಂಶ ದ್ರಾವಣವನ್ನು ಸೇರಿಸಿ.'
+          : 'ಸ್ವಚ್ಛ ನೀರನ್ನು ಸೇರಿಸಿ ರಸಗೊಬ್ಬರದ ಸಾಂದ್ರತೆಯನ್ನು ತಗ್ಗಿಸಿ.',
+        limitation: 'TDS ಒಟ್ಟು ಕರಗಿದ ಲವಣಗಳನ್ನು ಅಳೆಯುತ್ತದೆ; ಪ್ರತ್ಯೇಕ ಧಾತುಗಳ ಅನುಪಾತವನ್ನು ತಿಳಿಸುವುದಿಲ್ಲ.',
+      };
+
+    case 'PLANT_HEALTH':
+      return {
+        title: alert.severity === 'URGENT' ? 'ಎಲೆಗಳ ಸ್ಥಿತಿ ಗಂಭೀರ ಒತ್ತಡದಲ್ಲಿದೆ' : 'ಎಲೆಗಳ ಆರೋಗ್ಯ ಪರಿಶೀಲನೆ ಅಗತ್ಯ',
+        farmerMessage: alert.severity === 'URGENT'
+          ? `ಎಲೆಗಳಲ್ಲಿ ಗಮನಾರ್ಹ ಒತ್ತಡದ ಲಕ್ಷಣಗಳು ಕಂಡುಬಂದಿವೆ (ಆರೋಗ್ಯ ಅಂಕ: ${alert.currentValue || ''}).`
+          : `ಎಲೆಗಳ ಬಣ್ಣ ಮತ್ತು ಚೈತನ್ಯದಲ್ಲಿ ಇಳಿಕೆ ಕಂಡುಬಂದಿದೆ (ಆರೋಗ್ಯ ಅಂಕ: ${alert.currentValue || ''}).`,
+        farmerWhy: 'ದೃಷ್ಟಿಗೋಚರ ವಿಶ್ಲೇಷಣೆಯಲ್ಲಿ ಎಲೆಗಳ ಹಸಿರು ಬಣ್ಣ ಮತ್ತು ತಾಜಾತನ ಕಡಿಮೆಯಾಗಿರುವುದು ಪತ್ತೆಯಾಗಿದೆ.',
+        farmerAction: 'ಎಲೆಗಳನ್ನು ಹತ್ತಿರದಿಂದ ಪರೀಕ್ಷಿಸಿ ನೀರಿನ ಮತ್ತು ಪೋಷಕಾಂಶಗಳ ಮಟ್ಟವನ್ನು ಪರಿಶೀಲಿಸಿ.',
+        limitation: 'ಕ್ಯಾಮರಾ ಮೇಲ್ಮೈ ಬಣ್ಣವನ್ನು ವಿಶ್ಲೇಷಿಸುತ್ತದೆ; ನೇರ ರೋಗಾಣು ಪತ್ತೆ ಸಾಧ್ಯವಿಲ್ಲ.',
+      };
+
+    case 'VISUAL_ANOMALY':
+      if (alert.metric === 'chlorosis') {
+        return {
+          title: alert.severity === 'URGENT' ? 'ಎಲೆಗಳು ವ್ಯಾಪಕವಾಗಿ ಹಳದಿಯಾಗುತ್ತಿವೆ' : 'ಎಲೆಗಳು ಹಳದಿಯಾಗುತ್ತಿರುವುದು ಪತ್ತೆಯಾಗಿದೆ',
+          farmerMessage: `ಎಲೆಗಳ ಮೇಲೆ ಹಳದಿ ಬಣ್ಣ ಹೆಚ್ಚಾಗಿದೆ (ವ್ಯಾಪ್ತಿ: ${alert.currentValue || ''}).`,
+          farmerWhy: 'ಕ್ಲೋರೊಫಿಲ್ ಪ್ರಮಾಣ ಕಡಿಮೆಯಾಗುತ್ತಿರುವುದು ಎಲೆಗಳ ಹಳದಿ ಬಣ್ಣಕ್ಕೆ ಕಾರಣವಾಗಬಹುದು.',
+          farmerAction: 'ಎಲೆಗಳನ್ನು ಪರೀಕ್ಷಿಸಿ ಮತ್ತು ಇತ್ತೀಚಿನ ನೀರಿನ ಪೋಷಕಾಂಶ ಮಟ್ಟಗಳನ್ನು ಗಮನಿಸಿ.',
+          limitation: 'ಹಳದಿ ಬಣ್ಣವು ಬೆಳಕು, ನೀರು ಅಥವಾ ಪೋಷಕಾಂಶ ಬದಲಾವಣೆಯೊಂದಿಗೆ ಕಂಡುಬರಬಹುದು.',
+        };
+      }
+      return {
+        title: 'ಎಲೆಗಳ ಅಂಚು ಕಂದುಬಣ್ಣಕ್ಕೆ ತಿರುಗಿದೆ',
+        farmerMessage: `ಎಲೆಗಳ ಅಂಚುಗಳು ಒಣಗಿ ಕಂದುಬಣ್ಣಕ್ಕೆ ತಿರುಗಿರುವುದು ಕಂಡುಬಂದಿದೆ (${alert.currentValue || ''}).`,
+        farmerWhy: 'ಹೆಚ್ಚಿನ ಉಪ್ಪಿನಾಂಶ ಅಥವಾ ನೀರಿನ ಕೊರತೆಯಿಂದ ಎಲೆಗಳ ತುದಿ ಒಣಗಬಹುದು.',
+        farmerAction: 'TDS ಮಟ್ಟವನ್ನು ಪರೀಕ್ಷಿಸಿ ಬೇರುಗಳ ತೇವಾಂಶವನ್ನು ಖಚಿತಪಡಿಸಿಕೊಳ್ಳಿ.',
+        limitation: 'ಕ್ಯಾಮರಾ ಒಣಗಿದ ಅಂಗಾಂಶದ ಬಣ್ಣವನ್ನು ಗುರುತಿಸುತ್ತದೆ; ಸೂಕ್ಷ್ಮಾಣು ಪರೀಕ್ಷೆಯಲ್ಲ.',
+      };
+
+    case 'GROWTH':
+      return {
+        title: 'ಗಿಡದ ಹರಡುವಿಕೆಯಲ್ಲಿ ಇಳಿಕೆ ಕಂಡುಬಂದಿದೆ',
+        farmerMessage: `ಗಿಡದ ಎಲೆಗಳ ಹರಡುವಿಕೆ ಮುಂಚೆಗಿಂತ ಕಡಿಮೆಯಾಗಿ ಕಾಣುತ್ತಿದೆ (${alert.currentValue || ''}).`,
+        farmerWhy: 'ಎಲೆಗಳು ಬಾಡಿರುವುದು ಅಥವಾ ಬಾಗಿರುವುದರಿಂದ ಇದು ಸಂಭವಿಸಿರಬಹುದು.',
+        farmerAction: 'ಗಿಡ ಬಾಡುತ್ತಿದೆಯೇ ಎಂದು ಪರೀಕ್ಷಿಸಿ ಮತ್ತು ಬೇರುಗಳಿಗೆ ಗಾಳಿ ಸಿಗುತ್ತಿದೆಯೇ ಗಮನಿಸಿ.',
+        limitation: 'ಕ್ಯಾಮರಾ ಕೋನ ಅಥವಾ ಬೆಳಕಿನ ವ್ಯತ್ಯಾಸದಿಂದಲೂ ಎಲೆಗಳ ಹರಡುವಿಕೆ ಬದಲಾಗಬಹುದು.',
+      };
+
+    case 'MULTIMODAL':
+      return {
+        title: alert.title || 'ಪರಿಸರ ಬದಲಾವಣೆಯೊಂದಿಗೆ ಎಲೆಗಳ ಸ್ಥಿತಿಯಲ್ಲಿ ವ್ಯತ್ಯಾಸ',
+        farmerMessage: alert.farmerMessage || 'ಪರಿಸರ ನಿಯತಾಂಕಗಳ ವ್ಯತ್ಯಾಸದ ಜೊತೆಗೆ ಗಿಡದಲ್ಲೂ ಒತ್ತಡದ ಲಕ್ಷಣಗಳು ಕಂಡುಬಂದಿವೆ.',
+        farmerWhy: alert.farmerWhy || 'ಪರಿಸರ ಬದಲಾವಣೆಯ ಅವಧಿಯಲ್ಲೇ ಎಲೆಗಳಲ್ಲೂ ಬದಲಾವಣೆ ಸಂಭವಿಸಿದೆ.',
+        farmerAction: 'ತೊಟ್ಟಿಯ ಪರಿಸ್ಥಿತಿಯನ್ನು ಪರಿಶೀಲಿಸಿ ಮತ್ತು ನಿಗಾ ಇರಿಸಿ.',
+        limitation: 'ಇದು ಏಕಕಾಲದಲ್ಲಿ ಸಂಭವಿಸಿದ ಘಟನೆಗಳ ಸಹಸಂಬಂಧವಾಗಿದೆ; ನೇರ ಜೈವಿಕ ಕಾರಣವನ್ನು ಸಾಬೀತುಪಡಿಸುವುದಿಲ್ಲ.',
+      };
+
+    case 'DATA_QUALITY':
+      if (alert.metric === 'telemetry') {
+        return {
+          title: 'ಸಂವೇದಕಗಳ ಮಾಹಿತಿ ಸ್ಥಗಿತಗೊಂಡಿದೆ',
+          farmerMessage: 'ಸೆನ್ಸರ್‌ಗಳಿಂದ ಹೊಸ ಮಾಹಿತಿ ಬರುತ್ತಿಲ್ಲ. ಹಿಂದಿನ ಮೌಲ್ಯಗಳನ್ನು ಮಾತ್ರ ತೋರಿಸಲಾಗುತ್ತಿದೆ.',
+          farmerWhy: 'ESP32 ಸಂವೇದಕದಿಂದ ಸಂವಹನ ಸ್ಥಗಿತಗೊಂಡಿದೆ.',
+          farmerAction: 'ಸಾಧನದ ಪವರ್ ಮತ್ತು ಯುಎಸ್‌ಬಿ/ಸೀರಿಯಲ್ ಸಂಪರ್ಕವನ್ನು ಪರಿಶೀಲಿಸಿ.',
+          limitation: 'ಮಾಹಿತಿ ಲಭ್ಯವಿಲ್ಲದಿದ್ದಾಗ ಪರಿಸರದ ನಿಖರ ಮೌಲ್ಯಮಾಪನ ಸಾಧ್ಯವಿಲ್ಲ.',
+        };
+      }
+      return {
+        title: 'ಕ್ಯಾಮರಾದಲ್ಲಿ ಗಿಡ ಸ್ಪಷ್ಟವಾಗಿ ಕಾಣಿಸುತ್ತಿಲ್ಲ',
+        farmerMessage: 'ಕ್ಯಾಮರಾ ಮುಂದೆ ಗಿಡದ ಎಲೆಗಳು ಪತ್ತೆಯಾಗಿಲ್ಲ.',
+        farmerWhy: 'ಕ್ಯಾಮರಾ ದೃಷ್ಟಿಕೋನ ಸರಿಯಾಗಿಲ್ಲದಿರಬಹುದು ಅಥವಾ ಬೆಳಕಿನ ಕೊರತೆ ಇರಬಹುದು.',
+        farmerAction: 'ಕ್ಯಾಮರಾವನ್ನು ಗಿಡದ ಎಲೆಗಳ ಕಡೆಗೆ ಸರಿಯಾಗಿ ಹೊಂದಿಸಿ.',
+        limitation: 'ಕ್ಯಾಮರಾದಲ್ಲಿ ಎಲೆಗಳು ಸ್ಪಷ್ಟವಾಗಿರದಿದ್ದಾಗ ಆರೋಗ್ಯ ವಿಶ್ಲೇಷಣೆ ಸಾಧ್ಯವಿಲ್ಲ.',
+      };
+
+    default:
+      return {
+        title: alert.title,
+        farmerMessage: alert.farmerMessage,
+        farmerWhy: alert.farmerWhy,
+        farmerAction: alert.farmerAction,
+        limitation: alert.limitation,
+      };
+  }
+}
+
 
 

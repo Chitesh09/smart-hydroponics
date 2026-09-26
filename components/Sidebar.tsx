@@ -17,7 +17,8 @@ import {
   Settings,
   ChevronRight,
   User,
-  LogOut
+  LogOut,
+  Bell,
 } from 'lucide-react';
 import styles from './Sidebar.module.css';
 
@@ -35,7 +36,7 @@ export function Sidebar({
 }: SidebarProps) {
   const pathname = usePathname();
   const { currentUser, userProfile, signOut } = useAuth();
-  const { userMode, setUserMode, language, setLanguage } = usePlantIntelligence();
+  const { userMode, setUserMode, language, setLanguage, alertSummary } = usePlantIntelligence();
 
   const copy = useMemo(() => getFarmerCopy(language), [language]);
 
@@ -58,6 +59,12 @@ export function Sidebar({
         items: [
           { href: '/dashboard/intelligence', icon: Sparkles, label: copy.nav.reasoningLab },
           { href: '/dashboard/analytics', icon: BarChart3, label: copy.nav.plantJourney },
+          {
+            href: '/dashboard/alerts',
+            icon: Bell,
+            label: language === 'kn' ? 'ಎಚ್ಚರಿಕೆಗಳು' : 'Alerts',
+            badge: alertSummary?.activeAlerts?.length || 0,
+          },
         ],
       },
     ];
@@ -75,7 +82,7 @@ export function Sidebar({
     });
 
     return sections;
-  }, [copy, userMode]);
+  }, [copy, userMode, language, alertSummary?.activeAlerts?.length]);
 
   const displayName = currentUser?.displayName || userProfile?.displayName || (userMode === 'farmer' ? copy.nav.grower : copy.nav.operator);
 
@@ -111,7 +118,7 @@ export function Sidebar({
         {localizedNavSections.map((section) => (
           <div key={section.title} className={styles.navSection}>
             <div className={styles.sectionHeading}>{section.title}</div>
-            {section.items.map(({ href, icon: Icon, label }) => {
+            {section.items.map(({ href, icon: Icon, label, badge }: { href: string; icon: React.ComponentType<{ size?: number }>; label: string; badge?: number }) => {
               const isActive = pathname === href;
               return (
                 <Link
@@ -124,6 +131,19 @@ export function Sidebar({
                     <Icon size={16} />
                   </div>
                   <span style={{ flex: 1 }}>{label}</span>
+                  {badge !== undefined && badge > 0 && (
+                    <span style={{
+                      background: 'var(--color-amber)',
+                      color: '#000',
+                      fontSize: '10px',
+                      fontWeight: 800,
+                      padding: '1px 6px',
+                      borderRadius: '10px',
+                      marginRight: '4px',
+                    }}>
+                      {badge}
+                    </span>
+                  )}
                   {isActive && <ChevronRight size={13} style={{ color: 'var(--text-dim)' }} />}
                 </Link>
               );

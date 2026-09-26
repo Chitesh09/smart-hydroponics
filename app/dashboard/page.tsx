@@ -15,6 +15,7 @@ import { LanguageToggle } from '@/components/ui/LanguageToggle';
 import { FarmerActionCard } from '@/components/ui/FarmerActionCard';
 import { WhatChangedCard } from '@/components/ui/WhatChangedCard';
 import { EnvironmentPlantCard } from '@/components/ui/EnvironmentPlantCard';
+import { PlantAlertCard } from '@/components/ui/PlantAlertCard';
 import { WhatChanged, MetricDelta } from '@/components/ui/WhatChanged';
 import { getFarmerCopy, getLocalizedLifecycleState } from '@/lib/intelligence/farmerSemanticLayer';
 import {
@@ -24,7 +25,6 @@ import {
   Ruler,
   Camera,
   CameraOff,
-  AlertTriangle,
   CheckCircle2,
   Activity,
   ArrowRight
@@ -44,7 +44,6 @@ export default function Dashboard() {
     latestDetection,
     latestVisualHealth,
     multimodalAssessment,
-    activeAnomalies,
     activeRecommendations,
     farmerSemanticState,
     userMode,
@@ -58,6 +57,9 @@ export default function Dashboard() {
     whatChangedSummary,
     correlationSummary,
     correlations,
+    alertSummary,
+    dismissAlert,
+    acknowledgeAlert,
   } = usePlantIntelligence();
 
   const [selectedMetric, setSelectedMetric] = useState<'ph' | 'tds' | 'waterLevel' | 'distance'>('ph');
@@ -273,8 +275,6 @@ export default function Dashboard() {
       ? `ಗಿಡ ಪತ್ತೆಯಾಗಿದೆ · ಎಲೆಗಳ ವ್ಯಾಪ್ತಿ ${latestDetection.canopyCoveragePercent}%`
       : `Plant Detected · Canopy ${latestDetection.canopyCoveragePercent}%`;
   }, [isCameraActive, latestDetection, isPlantIdentified, cropIdentity.commonName, cropIdentity.confidence, isKn, copy]);
-
-  const hasActiveAttention = activeAnomalies.length > 0;
 
   return (
     <div className={styles.container}>
@@ -624,40 +624,79 @@ export default function Dashboard() {
       )}
 
       {/* ============================================================ */}
-      {/* 4. SECONDARY: WHAT NEEDS YOUR ATTENTION                       */}
+      {/* 4. CONFIDENCE-AWARE PLANT ALERTS & NOTIFICATIONS (Phase 10)  */}
       {/* ============================================================ */}
-      {hasActiveAttention ? (
-        <div className={`${styles.attentionBanner} ${styles.attentionWarning}`}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <AlertTriangle size={18} style={{ color: 'var(--color-amber)', flexShrink: 0 }} />
-            <div>
-              <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--color-amber)' }}>
-                {activeAnomalies[0].title}
-              </div>
-              <div style={{ fontSize: '12px', color: 'var(--text-primary)', marginTop: '2px' }}>
-                {activeAnomalies[0].description} · Suggested: {activeAnomalies[0].suggestedAction}
-              </div>
-            </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span className="section-label">
+              {isKn ? 'ನಿಮ್ಮ ಗಮನ ಅಗತ್ಯವಿದೆ' : 'Needs Your Attention'}
+            </span>
+            {alertSummary.hasAnyAlert && (
+              <span className="badge badge-amber" style={{ fontSize: '10.5px', padding: '2px 8px' }}>
+                {alertSummary.activeAlerts.length} {isKn ? 'ಸಕ್ರಿಯ' : 'active'}
+              </span>
+            )}
           </div>
-          <Link href="/dashboard/intelligence" className="btn btn-secondary" style={{ fontSize: '11.5px', padding: '4px 10px' }}>
-            {isKn ? 'ವಿವರಗಳು' : 'Diagnostic Details'}
+          <Link
+            href="/dashboard/alerts"
+            style={{
+              fontSize: '12px',
+              fontWeight: 600,
+              color: 'var(--color-emerald-light)',
+              textDecoration: 'none',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+            }}
+          >
+            <span>{isKn ? 'ಎಲ್ಲಾ ಎಚ್ಚರಿಕೆಗಳನ್ನು ವೀಕ್ಷಿಸಿ' : 'View all alerts'}</span>
+            <ArrowRight size={13} />
           </Link>
         </div>
-      ) : (
-        <div className={`${styles.attentionBanner} ${styles.attentionStable}`}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <CheckCircle2 size={16} style={{ color: 'var(--color-green)' }} />
-            <span style={{ fontSize: '12.5px', fontWeight: 600, color: 'var(--text-primary)' }}>
-              {isKn ? copy.ui.everythingStable : 'Everything Looks Stable'}
-            </span>
-            <span style={{ fontSize: '11.5px', color: 'var(--text-muted)' }}>
-              {isKn
-                ? `— ${copy.ui.allParametersOptimal}`
-                : '— All biological parameters and environmental channels are within optimal ranges.'}
-            </span>
+
+        {alertSummary.hasAnyAlert ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            {alertSummary.activeAlerts.slice(0, 2).map(alert => (
+              <PlantAlertCard
+                key={alert.id}
+                alert={alert}
+                mode={userMode}
+                language={language}
+                onDismiss={dismissAlert}
+                onAcknowledge={acknowledgeAlert}
+              />
+            ))}
+            {alertSummary.activeAlerts.length > 2 && (
+              <div style={{ textAlign: 'center', paddingTop: '4px' }}>
+                <Link
+                  href="/dashboard/alerts"
+                  className="btn btn-secondary"
+                  style={{ fontSize: '12px', padding: '6px 14px' }}
+                >
+                  {isKn
+                    ? `ಇನ್ನಷ್ಟು ${alertSummary.activeAlerts.length - 2} ಎಚ್ಚರಿಕೆಗಳನ್ನು ನೋಡಿ →`
+                    : `See ${alertSummary.activeAlerts.length - 2} more active alerts →`}
+                </Link>
+              </div>
+            )}
           </div>
-        </div>
-      )}
+        ) : (
+          <div className={`${styles.attentionBanner} ${styles.attentionStable}`}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <CheckCircle2 size={16} style={{ color: 'var(--color-green)' }} />
+              <span style={{ fontSize: '12.5px', fontWeight: 600, color: 'var(--text-primary)' }}>
+                {isKn ? copy.ui.everythingStable : 'Everything Looks Stable'}
+              </span>
+              <span style={{ fontSize: '11.5px', color: 'var(--text-muted)' }}>
+                {isKn
+                  ? `— ${copy.ui.allParametersOptimal}`
+                  : '— All biological parameters and environmental channels are within optimal ranges.'}
+              </span>
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* ============================================================ */}
       {/* 5. SUPPORTING: PLANT ENVIRONMENT OVERVIEW                    */}

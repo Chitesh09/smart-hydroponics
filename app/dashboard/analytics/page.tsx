@@ -12,6 +12,8 @@ import { LanguageToggle } from '@/components/ui/LanguageToggle';
 import { PlantProfileCard } from '@/components/ui/PlantProfileCard';
 import { WhatChangedCard } from '@/components/ui/WhatChangedCard';
 import { EnvironmentPlantCard } from '@/components/ui/EnvironmentPlantCard';
+import { PlantAlertCard } from '@/components/ui/PlantAlertCard';
+
 import {
   Compass,
   Download,
@@ -41,6 +43,9 @@ export default function AnalyticsPage() {
     whatChangedSummary,
     correlationSummary,
     correlations,
+    alertSummary,
+    dismissAlert,
+    acknowledgeAlert,
   } = usePlantIntelligence();
 
   const activeProfile = digitalProfile || plantProfile;
@@ -451,6 +456,40 @@ export default function AnalyticsPage() {
           userMode={userMode}
           onUserModeChange={setUserMode}
         />
+      )}
+
+      {/* ============================================================ */}
+      {/* 3D. CONFIDENCE-AWARE ALERTS & NOTIFICATIONS (Phase 10)       */}
+      {/* ============================================================ */}
+      {alertSummary.hasAnyAlert && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span className="section-label">
+                {isKn ? 'ಗಿಡದ ಸಕ್ರಿಯ ಎಚ್ಚರಿಕೆಗಳು' : 'Active Plant Alerts & Warnings'}
+              </span>
+              <span className="badge badge-amber" style={{ fontSize: '10.5px', padding: '2px 8px' }}>
+                {alertSummary.activeAlerts.length} {isKn ? 'ಸಕ್ರಿಯ' : 'active'}
+              </span>
+            </div>
+            <span className="scientific-meta">
+              {isKn ? 'ಸಾಕ್ಷ್ಯಾಧಾರಿತ ಎಚ್ಚರಿಕೆಗಳು' : 'Gated Longitudinal Evidence'}
+            </span>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            {alertSummary.activeAlerts.map(alert => (
+              <PlantAlertCard
+                key={alert.id}
+                alert={alert}
+                mode={userMode}
+                language={language}
+                onDismiss={dismissAlert}
+                onAcknowledge={acknowledgeAlert}
+              />
+            ))}
+          </div>
+        </div>
       )}
 
       {/* ============================================================ */}

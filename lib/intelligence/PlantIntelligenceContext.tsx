@@ -39,11 +39,21 @@ import {
   PlantMilestone,
   CorrelationAnalysisSummary,
   EnvironmentPlantAssociation,
+  PlantAlert,
+  PlantAlertSummary,
 } from './types';
 import { evaluateWhatChanged } from './whatChangedEngine';
 import { deriveDigitalPlantProfile, compilePlantLifecycleMilestones } from './plantDigitalProfile';
 import { evaluateEnvironmentPlantCorrelation } from './environmentPlantCorrelation';
+import { evaluatePlantAlerts } from './alertEngine';
+import {
+  getStoredAlerts,
+  saveStoredAlerts,
+  dismissStoredAlert,
+  acknowledgeStoredAlert,
+} from './alertStore';
 import { CloudSyncStatus } from '@/lib/firebase/types';
+
 import {
   DEFAULT_CROP_PROFILE,
   evaluateEnvironmentalHealth,
@@ -133,6 +143,10 @@ interface PlantIntelligenceContextType {
   lifecycleMilestones: PlantMilestone[];
   correlationSummary: CorrelationAnalysisSummary;
   correlations: EnvironmentPlantAssociation[];
+  alertSummary: PlantAlertSummary;
+  activeAlerts: PlantAlert[];
+  dismissAlert: (alertId: string) => void;
+  acknowledgeAlert: (alertId: string) => void;
 }
 
 const PlantIntelligenceContext = createContext<PlantIntelligenceContextType | undefined>(undefined);
@@ -240,6 +254,26 @@ export function PlantIntelligenceProvider({ children }: { children: React.ReactN
   // Multimodal Observation History (loaded from Firestore or local fallback)
   const [observations, setObservations] = useState<PlantObservation[]>(() => getStoredObservations());
   const [activeScenario, setActiveScenarioState] = useState<DemoScenario>('healthy');
+
+  // Confidence-Aware Plant Alerts State (persisted via localStorage alertStore)
+  const [storedAlerts, setStoredAlerts] = useState<PlantAlert[]>(() => getStoredAlerts(plantProfile.plantId));
+
+  useEffect(() => {
+    if (plantProfile.plantId) {
+      setStoredAlerts(getStoredAlerts(plantProfile.plantId));
+    }
+  }, [plantProfile.plantId]);
+
+  const dismissAlert = useCallback((alertId: string) => {
+    const updated = dismissStoredAlert(plantProfile.plantId, alertId);
+    setStoredAlerts(updated);
+  }, [plantProfile.plantId]);
+
+  const acknowledgeAlert = useCallback((alertId: string) => {
+    const updated = acknowledgeStoredAlert(plantProfile.plantId, alertId);
+    setStoredAlerts(updated);
+  }, [plantProfile.plantId]);
+
 
   // AI Plant Conversation Thread
   const [aiMessages, setAiMessages] = useState<AIPlantMessage[]>(() => [
@@ -903,6 +937,52 @@ export function PlantIntelligenceProvider({ children }: { children: React.ReactN
     });
   }, [plantProfile, observations, sensorHistory, latestReading, whatChangedSummary]);
 
+  // 12. Confidence-Aware Plant Alert Engine (Phase 10)
+  const alertSummary = useMemo(() => {
+    const summary = evaluatePlantAlerts({
+      plantId: plantProfile.plantId,
+      observations,
+      latestObservation: observations.length > 0 ? observations[0] : null,
+      latestDetection,
+      latestVisualHealth,
+      latestReading,
+      sensorHistory,
+      isTelemetryStale: isStale,
+      telemetryMode: mode,
+      isCameraActive: cameraStatus === 'connected',
+      plantProfile,
+      cropProfile: cropIdentity.targetProfile,
+      latestReasoningEvent,
+      whatChangedSummary,
+      correlationSummary,
+      storedAlerts,
+    });
+
+    // Automatically synchronize updated alerts to persistent store
+    saveStoredAlerts(plantProfile.plantId, [
+      ...summary.activeAlerts,
+      ...summary.dismissedAlerts,
+      ...summary.resolvedAlerts,
+    ]);
+
+    return summary;
+  }, [
+    plantProfile,
+    observations,
+    latestDetection,
+    latestVisualHealth,
+    latestReading,
+    sensorHistory,
+    isStale,
+    mode,
+    cameraStatus,
+    cropIdentity.targetProfile,
+    latestReasoningEvent,
+    whatChangedSummary,
+    correlationSummary,
+    storedAlerts,
+  ]);
+
   const lifecycleMilestones = useMemo(() => {
     const baseMilestones = compilePlantLifecycleMilestones(
       observations,
@@ -940,8 +1020,34 @@ export function PlantIntelligenceProvider({ children }: { children: React.ReactN
       }
     }
 
+    // Milestone injection for primary active URGENT alerts
+    if (alertSummary.primaryAlert && alertSummary.primaryAlert.severity === 'URGENT') {
+      const alert = alertSummary.primaryAlert;
+      const dayNumber = Math.max(
+        1,
+        Math.round((alert.lastDetectedAt - (plantProfile.createdAt || alert.lastDetectedAt)) / 86400000) + 1
+      );
+      const isAlreadyIncluded = baseMilestones.some(m => m.id === `milestone_alert_${alert.id}`);
+      if (!isAlreadyIncluded) {
+        baseMilestones.push({
+          id: `milestone_alert_${alert.id}`,
+          plantId: alert.plantId,
+          type: 'ALERT_GENERATED',
+          timestamp: alert.lastDetectedAt,
+          dateString: new Date(alert.lastDetectedAt).toLocaleDateString(),
+          dayNumber,
+          dayLabel: `Day ${dayNumber} · Urgent Alert`,
+          title: alert.title,
+          description: alert.farmerMessage,
+          confidence: alert.confidence === 'HIGH' ? 'HIGH' : alert.confidence === 'MODERATE' ? 'MODERATE' : 'LOW',
+          status: 'critical',
+          sourceMetric: alert.metric,
+        });
+      }
+    }
+
     return baseMilestones.sort((a, b) => b.timestamp - a.timestamp);
-  }, [observations, reasoningHistory, whatChangedSummary, plantProfile, correlationSummary]);
+  }, [observations, reasoningHistory, whatChangedSummary, plantProfile, correlationSummary, alertSummary]);
 
   return (
     <PlantIntelligenceContext.Provider
@@ -996,11 +1102,16 @@ export function PlantIntelligenceProvider({ children }: { children: React.ReactN
         lifecycleMilestones,
         correlationSummary,
         correlations: correlationSummary.associations,
+        alertSummary,
+        activeAlerts: alertSummary.activeAlerts,
+        dismissAlert,
+        acknowledgeAlert,
       }}
     >
       {children}
     </PlantIntelligenceContext.Provider>
   );
+
 }
 
 export function usePlantIntelligence() {
