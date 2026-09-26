@@ -25,6 +25,20 @@ export const REGISTERED_VISION_MODELS: VisionModelInfo[] = [
     statusText: 'Active — In-Browser Depthwise Separable CNN (TensorFlow.js / WebGL)',
   },
   {
+    id: 'hydrosmart-leaf-health-v1',
+    name: 'HydroSmart Foliar Health & Anomaly Classifier',
+    version: '1.0.0',
+    type: 'tfjs',
+    classes: [
+      'Healthy Foliage',
+      'Chlorosis / Yellowing Stress',
+      'Necrotic Browning / Tissue Lesions',
+    ],
+    inputSize: [160, 160],
+    enabled: true,
+    statusText: 'Active — In-Browser Foliar Health CNN (TensorFlow.js / WebGL)',
+  },
+  {
     id: 'heuristic-v2-production',
     name: 'HydroSmart Classical Agronomic Vision Engine',
     version: '2.0-prod',

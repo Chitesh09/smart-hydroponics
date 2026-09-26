@@ -1,0 +1,26 @@
+[
+  {
+    "index": 0,
+    "id": "healthy_foliage",
+    "label": "Healthy Foliage",
+    "description": "Uniform vibrant chlorophyll reflectance without abnormal chlorosis or dry necrosis.",
+    "nominalStatus": "HEALTHY",
+    "minConfidenceThreshold": 0.55
+  },
+  {
+    "index": 1,
+    "id": "chlorosis_yellowing",
+    "label": "Chlorosis / Yellowing Stress",
+    "description": "Loss of green chlorophyll pigmentation resulting in pale yellow foliage.",
+    "nominalStatus": "ATTENTION",
+    "minConfidenceThreshold": 0.55
+  },
+  {
+    "index": 2,
+    "id": "necrotic_tissue",
+    "label": "Necrotic Browning / Tissue Lesions",
+    "description": "Cell death and tissue dehydration characterized by dry brown leaf margins and spots.",
+    "nominalStatus": "CRITICAL",
+    "minConfidenceThreshold": 0.55
+  }
+]

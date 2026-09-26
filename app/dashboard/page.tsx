@@ -39,6 +39,7 @@ export default function Dashboard() {
     cropIdentity,
     plantProfile,
     latestDetection,
+    latestVisualHealth,
     multimodalAssessment,
     activeAnomalies,
     activeRecommendations,
@@ -190,7 +191,7 @@ export default function Dashboard() {
     const tdsDelta = last.tds - first.tds;
     const waterDelta = last.waterLevel - first.waterLevel;
 
-    return [
+    const deltas: MetricDelta[] = [
       {
         parameter: 'pH Level',
         unit: 'pH',
@@ -213,7 +214,29 @@ export default function Dashboard() {
         isBeneficial: waterDelta > -15,
       },
     ];
-  }, [history]);
+
+    if (latestVisualHealth?.baselineDeltas) {
+      const bDeltas = latestVisualHealth.baselineDeltas;
+      deltas.unshift({
+        parameter: isKn ? 'ಎಲೆಗಳ ಹರಡುವಿಕೆ' : 'Canopy Area',
+        unit: '%',
+        delta: bDeltas.canopyDeltaPercent,
+        direction: Math.abs(bDeltas.canopyDeltaPercent) < 1.0 ? 'stable' : bDeltas.canopyDeltaPercent > 0 ? 'rising' : 'falling',
+        isBeneficial: bDeltas.canopyDeltaPercent >= -5.0,
+      });
+      if (Math.abs(bDeltas.chlorosisDeltaPercent) > 2.0) {
+        deltas.push({
+          parameter: isKn ? 'ಎಲೆಗಳ ಹಳದಿ ಬಣ್ಣ' : 'Leaf Yellowing',
+          unit: '%',
+          delta: bDeltas.chlorosisDeltaPercent,
+          direction: bDeltas.chlorosisDeltaPercent > 0 ? 'rising' : 'falling',
+          isBeneficial: bDeltas.chlorosisDeltaPercent <= 0,
+        });
+      }
+    }
+
+    return deltas;
+  }, [history, latestVisualHealth, isKn]);
 
   // Optical detection progression label
   const opticalProgression = useMemo(() => {
@@ -382,13 +405,23 @@ export default function Dashboard() {
                   <span>·</span>
                   <span>SCORE: <strong style={{ color: 'var(--text-primary)' }}>{latestDetection.plantPresenceScore}/100</strong></span>
                   <span>·</span>
+                  <span>HEALTH: <strong style={{ color: latestVisualHealth?.healthState === 'HEALTHY' ? 'var(--color-green)' : latestVisualHealth?.healthState === 'CRITICAL' ? 'var(--color-red)' : latestVisualHealth?.healthState === 'ATTENTION' ? 'var(--color-amber)' : 'var(--color-teal)' }}>{latestVisualHealth?.healthState ?? 'UNKNOWN'}</strong></span>
+                  <span>·</span>
+                  <span>CHLOR: <strong style={{ color: (latestVisualHealth?.chlorosisYellowPercent ?? 0) > 12 ? 'var(--color-amber)' : 'var(--text-primary)' }}>{latestVisualHealth?.chlorosisYellowPercent ?? 0}%</strong></span>
+                  <span>·</span>
+                  <span>NECR: <strong style={{ color: (latestVisualHealth?.necroticBrownPercent ?? 0) > 4 ? 'var(--color-red)' : 'var(--text-primary)' }}>{latestVisualHealth?.necroticBrownPercent ?? 0}%</strong></span>
+                  {latestVisualHealth?.baselineDeltas && (
+                    <>
+                      <span>·</span>
+                      <span>ΔCANOPY: <strong style={{ color: latestVisualHealth.baselineDeltas.canopyDeltaPercent >= 0 ? 'var(--color-green)' : 'var(--color-amber)' }}>{latestVisualHealth.baselineDeltas.canopyDeltaPercent > 0 ? '+' : ''}{latestVisualHealth.baselineDeltas.canopyDeltaPercent}%</strong></span>
+                    </>
+                  )}
+                  <span>·</span>
                   <span>EDGE: <strong style={{ color: 'var(--text-primary)' }}>{latestDetection.diagnostics?.internalEdgeDensity ?? '--'}</strong></span>
                   <span>·</span>
                   <span>COH: <strong style={{ color: 'var(--text-primary)' }}>{latestDetection.diagnostics?.spatialCoherence ?? '--'}</strong></span>
                   <span>·</span>
                   <span>SKIN: <strong style={{ color: (latestDetection.diagnostics?.skinPercent ?? 0) > 3 ? 'var(--color-amber)' : 'var(--text-primary)' }}>{latestDetection.diagnostics?.skinPercent ?? 0}%</strong></span>
-                  <span>·</span>
-                  <span>ML-MODEL: <strong style={{ color: 'var(--color-teal)' }}>hydrosmart-v1</strong></span>
                   <span>·</span>
                   <span>SPECIES: <strong style={{ color: cropIdentity.confidence ? 'var(--color-green)' : 'var(--text-muted)' }}>{isPlantIdentified ? `${cropIdentity.commonName} (${cropIdentity.confidence}%)` : 'Pending'}</strong></span>
                   {identificationResult?.inferenceLatencyMs !== undefined && (
@@ -447,7 +480,7 @@ export default function Dashboard() {
             </div>
 
             <div className={styles.stateRow}>
-              <StatusBadge status={farmerSemanticState.plantStatus.toLowerCase()} label={farmerSemanticState.plantMessage} size="md" />
+              <StatusBadge status={farmerSemanticState.plantStatus.toLowerCase()} label={farmerSemanticState.visualHealthMessage || farmerSemanticState.plantMessage} size="md" />
               {isTelemetryAvailable && userMode === 'technical' && (
                 <div className={styles.conditionScoreDisplay}>
                   <span className={styles.scoreNumber}>{multimodalAssessment.overallScore}</span>

@@ -9,6 +9,7 @@ import {
   EnvironmentalAssessment,
   PlantDetectionResult,
   VisualHealthAnalysisResult,
+  StructuredHealthState,
   AnomalyReport
 } from './types';
 import { SupportedLanguageCode } from '@/lib/assistant/assistantConfig';
@@ -29,6 +30,7 @@ export interface FarmerSemanticState {
   waterStatus: WaterStatusLevel;
   nutrientStatus: NutrientStatusLevel;
   cameraStatus: CameraStatusLevel;
+  visualHealthStatus: StructuredHealthState;
 
   // Standardized human interpretation wording (localized)
   plantMessage: string;
@@ -36,6 +38,7 @@ export interface FarmerSemanticState {
   waterMessage: string;
   nutrientMessage: string;
   cameraMessage: string;
+  visualHealthMessage: string;
 
   // Visual cues
   plantColor: 'green' | 'amber' | 'red' | 'gray';
@@ -54,6 +57,7 @@ export interface FarmerCopyGroup {
   nutrient: Record<NutrientStatusLevel, string>;
   camera: Record<CameraStatusLevel, string>;
   environment: Record<EnvironmentStatusLevel, string>;
+  visualHealth: Record<StructuredHealthState, string>;
   actions: {
     title: string;
     addWater: string;
@@ -289,6 +293,14 @@ export const FARMER_COPY: Record<SupportedLanguageCode, FarmerCopyGroup> = {
       URGENT: 'Growing conditions need urgent action',
       UNKNOWN: 'Unable to assess environment',
     },
+    visualHealth: {
+      HEALTHY: 'Your plant looks healthy 🌱',
+      STABLE: 'Your plant looks stable.',
+      ATTENTION: 'We noticed a visual change in your plant.',
+      CRITICAL: 'Your plant needs attention.',
+      RECOVERING: 'Your plant appears to be recovering.',
+      UNKNOWN: 'Not enough visual information to assess plant health.',
+    },
     actions: {
       title: 'What should I do now?',
       addWater: 'Add water to the reservoir immediately.',
@@ -521,6 +533,14 @@ export const FARMER_COPY: Record<SupportedLanguageCode, FarmerCopyGroup> = {
       ATTENTION: 'ವಾತಾವರಣದಲ್ಲಿ ಸ್ವಲ್ಪ ಬದಲಾವಣೆ ಅಗತ್ಯವಿದೆ.',
       URGENT: 'ವಾತಾವರಣವನ್ನು ತಕ್ಷಣ ಸರಿಪಡಿಸಬೇಕು.',
       UNKNOWN: 'ವಾತಾವರಣದ ಮಾಹಿತಿ ಲಭ್ಯವಿಲ್ಲ.',
+    },
+    visualHealth: {
+      HEALTHY: 'ನಿಮ್ಮ ಗಿಡ ಆರೋಗ್ಯಕರವಾಗಿ ಕಾಣುತ್ತಿದೆ 🌱',
+      STABLE: 'ನಿಮ್ಮ ಗಿಡ ಸ್ಥಿರವಾಗಿದೆ.',
+      ATTENTION: 'ನಿಮ್ಮ ಗಿಡದಲ್ಲಿ ದೃಶ್ಯ ಬದಲಾವಣೆ ಕಂಡುಬಂದಿದೆ.',
+      CRITICAL: 'ನಿಮ್ಮ ಗಿಡಕ್ಕೆ ತುರ್ತು ಗಮನ ಬೇಕಾಗಿದೆ.',
+      RECOVERING: 'ನಿಮ್ಮ ಗಿಡ ಚೇತರಿಸಿಕೊಳ್ಳುತ್ತಿರುವಂತೆ ಕಾಣುತ್ತಿದೆ.',
+      UNKNOWN: 'ಗಿಡದ ಆರೋಗ್ಯವನ್ನು ನಿರ್ಣಯಿಸಲು ಸಾಕಷ್ಟು ದೃಶ್ಯ ಮಾಹಿತಿಯಿಲ್ಲ.',
     },
     actions: {
       title: 'ನಾನು ಈಗ ಏನು ಮಾಡಬೇಕು?',
@@ -848,7 +868,34 @@ export function deriveFarmerSemanticState({
     }
   }
 
-  // 5. Overall Plant Status
+  // 5. Visual Health Status
+  let visualHealthStatus: StructuredHealthState = 'UNKNOWN';
+  let visualHealthMessage = copy.visualHealth.UNKNOWN || fallbackCopy.visualHealth.UNKNOWN;
+
+  if (isCameraActive && latestDetection?.isPlantDetected && latestVisualHealth) {
+    const rawState = (latestVisualHealth.healthState as string).toUpperCase();
+    if (rawState === 'HEALTHY') {
+      visualHealthStatus = 'HEALTHY';
+      visualHealthMessage = copy.visualHealth.HEALTHY || fallbackCopy.visualHealth.HEALTHY;
+    } else if (rawState === 'STABLE') {
+      visualHealthStatus = 'STABLE';
+      visualHealthMessage = copy.visualHealth.STABLE || fallbackCopy.visualHealth.STABLE;
+    } else if (rawState === 'RECOVERING') {
+      visualHealthStatus = 'RECOVERING';
+      visualHealthMessage = copy.visualHealth.RECOVERING || fallbackCopy.visualHealth.RECOVERING;
+    } else if (rawState === 'ATTENTION' || rawState === 'MILD_STRESS' || rawState === 'POSSIBLE_ANOMALY') {
+      visualHealthStatus = 'ATTENTION';
+      visualHealthMessage = copy.visualHealth.ATTENTION || fallbackCopy.visualHealth.ATTENTION;
+    } else if (rawState === 'CRITICAL' || rawState === 'SIGNIFICANT_ANOMALY') {
+      visualHealthStatus = 'CRITICAL';
+      visualHealthMessage = copy.visualHealth.CRITICAL || fallbackCopy.visualHealth.CRITICAL;
+    } else {
+      visualHealthStatus = 'UNKNOWN';
+      visualHealthMessage = copy.visualHealth.UNKNOWN || fallbackCopy.visualHealth.UNKNOWN;
+    }
+  }
+
+  // 6. Overall Plant Status
   const hasSufficientData = isTelemetryAvailable || (isCameraActive && Boolean(latestDetection?.isPlantDetected));
   let plantStatus: PlantStatusLevel = 'UNKNOWN';
   let plantMessage = copy.plant.UNKNOWN || fallbackCopy.plant.UNKNOWN;
@@ -861,6 +908,7 @@ export function deriveFarmerSemanticState({
   } else if (
     multimodalAssessment.overallHealthState === 'critical' ||
     environmentStatus === 'URGENT' ||
+    visualHealthStatus === 'CRITICAL' ||
     activeAnomalies.some(a => a.severity === 'critical')
   ) {
     plantStatus = 'URGENT';
@@ -869,8 +917,8 @@ export function deriveFarmerSemanticState({
   } else if (
     multimodalAssessment.overallHealthState === 'warning' ||
     environmentStatus === 'ATTENTION' ||
-    activeAnomalies.length > 0 ||
-    (latestDetection?.isPlantDetected && latestVisualHealth && latestVisualHealth.healthState !== 'healthy' && latestVisualHealth.healthState !== 'unknown')
+    visualHealthStatus === 'ATTENTION' ||
+    activeAnomalies.length > 0
   ) {
     plantStatus = 'ATTENTION';
     plantMessage = copy.plant.ATTENTION || fallbackCopy.plant.ATTENTION;
@@ -904,11 +952,13 @@ export function deriveFarmerSemanticState({
     waterStatus,
     nutrientStatus,
     cameraStatus,
+    visualHealthStatus,
     plantMessage,
     environmentMessage,
     waterMessage,
     nutrientMessage,
     cameraMessage,
+    visualHealthMessage,
     plantColor,
     waterColor,
     nutrientColor,

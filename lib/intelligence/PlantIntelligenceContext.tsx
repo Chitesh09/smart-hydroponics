@@ -336,7 +336,7 @@ export function PlantIntelligenceProvider({ children }: { children: React.ReactN
 
   // 4. Overall Health Assessment
   const healthReport = useMemo(() => {
-    const visualScore = latestVisualHealth && latestVisualHealth.healthState !== 'unknown'
+    const visualScore = latestVisualHealth && latestVisualHealth.healthState !== 'UNKNOWN' && (latestVisualHealth.healthState as string) !== 'unknown'
       ? latestVisualHealth.visualHealthScore
       : undefined;
     return generateHealthReport(environmentalAssessment, visualScore);
@@ -655,7 +655,10 @@ export function PlantIntelligenceProvider({ children }: { children: React.ReactN
     const snapshot = captureFrame();
 
     const isVisualAnomaly = visualHealth
-      ? visualHealth.healthState === 'possible_anomaly' || visualHealth.healthState === 'significant_anomaly'
+      ? visualHealth.healthState === 'ATTENTION' ||
+        visualHealth.healthState === 'CRITICAL' ||
+        (visualHealth.healthState as string) === 'possible_anomaly' ||
+        (visualHealth.healthState as string) === 'significant_anomaly'
       : false;
 
     const source: 'esp32' | 'simulation' = mode === 'real' ? 'esp32' : 'simulation';
@@ -676,9 +679,11 @@ export function PlantIntelligenceProvider({ children }: { children: React.ReactN
       canopyCoveragePercent: detection.canopyCoveragePercent,
       vegetationIndex: detection.vegetationIndex,
       visualHealthScore: isLowConfidence ? undefined : visualHealth?.visualHealthScore,
-      visualHealthState: isLowConfidence ? 'unknown' : visualHealth?.healthState,
+      visualHealthState: isLowConfidence ? 'UNKNOWN' : (visualHealth?.healthState || 'UNKNOWN'),
       visualScoreBreakdown: isLowConfidence ? undefined : visualHealth?.breakdown,
       visualIndicators: visualHealth?.indicators.map(i => i.label),
+      healthConfidence: isLowConfidence ? 'low' : (visualHealth?.qualitativeConfidence || 'moderate'),
+      baselineDeltas: visualHealth?.baselineDeltas || null,
       ph: currentPh,
       tds: currentTds,
       waterLevel: currentWaterLevel,
@@ -695,12 +700,20 @@ export function PlantIntelligenceProvider({ children }: { children: React.ReactN
       recommendations: activeRecommendations.map(r => r.title),
     };
 
-    // Update plant profile observation counter and recency
+    // Update plant profile observation counter, recency, and structured health status
+    const effectiveHealthStatus = isLowConfidence
+      ? 'UNKNOWN'
+      : (visualHealth?.healthState || 'STABLE');
+
     setPlantProfile(prev => ({
       ...prev,
       observationCount: prev.observationCount + 1,
       lastObservedAt: now,
-      currentHealthStatus: multimodalAssessment.overallHealthState || 'optimal',
+      currentHealthStatus: effectiveHealthStatus,
+      lastVisualAssessment: visualHealth || undefined,
+      lastVisualAssessmentAt: now,
+      healthConfidence: isLowConfidence ? 'low' : (visualHealth?.qualitativeConfidence || 'moderate'),
+      activeAnomaly: visualHealth?.indicators.find(i => i.severity === 'critical' || i.severity === 'warning')?.label,
     }));
 
     if (currentUser?.uid) {

@@ -135,11 +135,15 @@ export function usePlantMonitor({
     // Gate Visual Health Analysis: ONLY run on confirmed plant presence
     let health: VisualHealthAnalysisResult;
     if (isPlantDetected) {
-      health = analyzeVisualPlantHealth(videoRef.current);
+      health = analyzeVisualPlantHealth(videoRef.current, {
+        skipPresenceGate: true // Already verified by presence detector above
+      });
     } else {
       health = {
         visualHealthScore: 0,
-        healthState: 'unknown',
+        healthState: 'UNKNOWN',
+        legacyHealthState: 'unknown',
+        qualitativeConfidence: 'unknown',
         breakdown: {
           colorConditionScore: 0,
           surfaceUniformityScore: 0,
@@ -151,9 +155,13 @@ export function usePlantMonitor({
         chlorosisYellowPercent: 0,
         necroticBrownPercent: 0,
         canopyCoveragePercent: 0,
+        avgTextureGradient: 0,
+        aspectRatio: 1.0,
+        canopyDensity: 0,
         inferenceTimeMs: 0,
         timestamp: Date.now(),
         statusText: 'Visual health analysis paused — No plant detected in frame',
+        nonPlantRejectionReason: rawDetection.nonPlantRejectionReason,
       };
     }
 

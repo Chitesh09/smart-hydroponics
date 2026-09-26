@@ -81,10 +81,15 @@ export interface PlantProfile {
   createdAt: number;
   lastObservedAt?: number;
   monitoringStatus: 'active' | 'archived' | 'completed';
-  currentHealthStatus: 'optimal' | 'warning' | 'critical' | 'unknown';
+  currentHealthStatus: StructuredHealthState | 'optimal' | 'warning' | 'critical' | 'unknown';
   observationCount: number;
   growthStage?: 'germination' | 'seedling' | 'vegetative' | 'flowering' | 'fruiting' | 'harvest_ready';
   targetProfile?: CropTargetProfile;
+  lastVisualAssessment?: VisualHealthAnalysisResult;
+  lastVisualAssessmentAt?: number;
+  healthConfidence?: 'high' | 'moderate' | 'low' | 'unknown';
+  activeAnomaly?: string;
+  recoveryStatus?: 'recovering' | 'stable' | 'deteriorating' | 'none';
 }
 
 export interface VisualAnomaly {
@@ -179,9 +184,11 @@ import {
 import {
   VisualHealthAnalysisResult,
   VisualHealthState,
+  StructuredHealthState,
   VisualScoreBreakdown,
   VisualStressIndicator
 } from '@/lib/vision/plantHealthAnalyzer';
+import { VisualChangeDeltas } from '@/lib/intelligence/visualBaselineEngine';
 
 export type {
   PlantDetectionResult,
@@ -190,8 +197,10 @@ export type {
   PlantDetectorDiagnostics,
   VisualHealthAnalysisResult,
   VisualHealthState,
+  StructuredHealthState,
   VisualScoreBreakdown,
-  VisualStressIndicator
+  VisualStressIndicator,
+  VisualChangeDeltas
 };
 export { PLANT_DETECTOR_CONFIG };
 
@@ -428,6 +437,8 @@ export interface PlantObservation {
   visualHealthState?: VisualHealthState;
   visualScoreBreakdown?: VisualScoreBreakdown;
   visualIndicators?: string[];
+  healthConfidence?: 'high' | 'moderate' | 'low' | 'unknown';
+  baselineDeltas?: VisualChangeDeltas | null;
 
   // Sensor Telemetry (ESP32 or Simulator)
   ph?: number;

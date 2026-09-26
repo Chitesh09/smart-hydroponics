@@ -1,0 +1,20 @@
+{
+  "modelId": "hydrosmart-leaf-health-v1",
+  "modelVersion": "1.0.0",
+  "architecture": "Depthwise Separable CNN",
+  "inputShape": [
+    160,
+    160,
+    3
+  ],
+  "totalParameters": 4739,
+  "weightSizeBytes": 18956,
+  "testLoss": 1.1387760639190674,
+  "testAccuracy": 0.6000000238418579,
+  "classes": [
+    "healthy_foliage",
+    "chlorosis_yellowing",
+    "necrotic_tissue"
+  ],
+  "trainingDate": "2026-09-26"
+}

@@ -193,10 +193,24 @@ export function answerPlantMemoryQueries(
     ? `Latest update: Active warning "${recentAnomalies[0]}" was logged. pH shifted by ${recentPhDelta >= 0 ? `+${recentPhDelta}` : recentPhDelta} and TDS changed by ${recentTdsDelta >= 0 ? `+${recentTdsDelta}` : recentTdsDelta} PPM.`
     : `Latest update: Parameters remain well-balanced. Recent pH shift is ${recentPhDelta >= 0 ? `+${recentPhDelta}` : recentPhDelta}, TDS shift is ${recentTdsDelta >= 0 ? `+${recentTdsDelta}` : recentTdsDelta} PPM, with no active physiological anomalies.`;
 
+  // Calculate evidence-based confidence from available sensory channels
+  const hasCamera = newest.cameraActive && newest.isPlantDetected;
+  const hasTelemetry = newest.ph !== undefined && newest.tds !== undefined;
+  const observationDensityFactor = Math.min(1.0, sorted.length / 5);
+  
+  let calculatedConfidence = 50;
+  if (hasCamera && hasTelemetry) {
+    calculatedConfidence = Math.round(75 + 15 * observationDensityFactor);
+  } else if (hasCamera || hasTelemetry) {
+    calculatedConfidence = Math.round(60 + 15 * observationDensityFactor);
+  } else {
+    calculatedConfidence = 45;
+  }
+
   return {
     howHasPlantChanged,
     isPlantHealthier,
     whatChangedRecently,
-    confidenceScore: 94,
+    confidenceScore: calculatedConfidence,
   };
 }

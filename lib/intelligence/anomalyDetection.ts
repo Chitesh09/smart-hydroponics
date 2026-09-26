@@ -106,8 +106,99 @@ export function detectEnvironmentalAnomalies(
   return anomalies;
 }
 
-// Service boundary for future visual anomaly ML model
+// Evidence-based visual anomaly detection from optical foliar analysis
+export function detectVisualAnomaliesFromHealth(
+  visualHealth?: {
+    chlorosisYellowPercent: number;
+    necroticBrownPercent: number;
+    canopyCoveragePercent: number;
+    avgTextureGradient?: number;
+    baselineDeltas?: {
+      canopyDeltaPercent: number;
+      relativeCanopyChangePercent: number;
+      chlorosisDeltaPercent: number;
+      necrosisDeltaPercent: number;
+    } | null;
+  } | null
+): VisualAnomaly[] {
+  if (!visualHealth) return [];
+  const anomalies: VisualAnomaly[] = [];
+
+  // 1. Severe or Moderate Chlorosis Anomaly
+  if (visualHealth.chlorosisYellowPercent >= 25.0) {
+    anomalies.push({
+      type: 'severe_chlorosis',
+      description: `Severe foliage yellowing detected (${visualHealth.chlorosisYellowPercent}% of canopy). Chlorophyll depletion observed across leaf lamina.`,
+      confidence: Math.min(95, Math.round(50 + visualHealth.chlorosisYellowPercent)),
+      severity: 'high',
+      affectedRegion: 'Upper and middle canopy foliage',
+    });
+  } else if (visualHealth.chlorosisYellowPercent >= 12.0) {
+    anomalies.push({
+      type: 'foliar_chlorosis',
+      description: `Foliage yellowing detected (${visualHealth.chlorosisYellowPercent}% of canopy). Visual coloration is paler than healthy baseline.`,
+      confidence: Math.min(88, Math.round(50 + visualHealth.chlorosisYellowPercent)),
+      severity: 'medium',
+      affectedRegion: 'Leaf margins and lamina',
+    });
+  }
+
+  // 2. Severe or Moderate Necrosis Anomaly
+  if (visualHealth.necroticBrownPercent >= 8.0) {
+    anomalies.push({
+      type: 'severe_necrosis',
+      description: `Extensive necrotic tissue browning (${visualHealth.necroticBrownPercent}% of leaf area). Dried lesions or margin burn detected.`,
+      confidence: Math.min(96, Math.round(60 + visualHealth.necroticBrownPercent * 3)),
+      severity: 'high',
+      affectedRegion: 'Leaf tips and margins',
+    });
+  } else if (visualHealth.necroticBrownPercent >= 4.0) {
+    anomalies.push({
+      type: 'foliar_necrosis',
+      description: `Localized necrotic tip browning detected (${visualHealth.necroticBrownPercent}% of leaf area). Inspect for salt burn or drying.`,
+      confidence: Math.min(85, Math.round(55 + visualHealth.necroticBrownPercent * 3)),
+      severity: 'medium',
+      affectedRegion: 'Leaf margins',
+    });
+  }
+
+  // 3. Canopy Contraction Anomaly (relative to baseline)
+  if (visualHealth.baselineDeltas) {
+    const relDrop = visualHealth.baselineDeltas.relativeCanopyChangePercent;
+    if (relDrop <= -30.0) {
+      anomalies.push({
+        type: 'canopy_collapse',
+        description: `Severe canopy contraction (${relDrop}% drop from baseline). Significant reduction in visible foliage area.`,
+        confidence: 90,
+        severity: 'high',
+        affectedRegion: 'Overall canopy stature',
+      });
+    } else if (relDrop <= -15.0) {
+      anomalies.push({
+        type: 'canopy_shrinkage',
+        description: `Noticeable canopy reduction (${relDrop}% change from baseline). Inspect for foliage drooping or physical trimming.`,
+        confidence: 80,
+        severity: 'medium',
+        affectedRegion: 'Canopy perimeter',
+      });
+    }
+  }
+
+  // 4. Textural Mottling / Spotting Anomaly
+  if (visualHealth.avgTextureGradient && visualHealth.avgTextureGradient > 32.0) {
+    anomalies.push({
+      type: 'surface_mottling',
+      description: 'High localized leaf texture variance detected. Inspect leaf surface for potential spotting, stippling, or lesions.',
+      confidence: 75,
+      severity: 'medium',
+      affectedRegion: 'Leaf surface texture',
+    });
+  }
+
+  return anomalies;
+}
+
 export async function detectVisualAnomalies(_imageRef: string): Promise<VisualAnomaly[]> {
-  // Service boundary: No fake ML - explicitly returns empty until computer vision pipeline is wired in Phase 2
+  // Service boundary: imageRef async hook
   return [];
 }
