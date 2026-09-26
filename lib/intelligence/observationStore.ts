@@ -10,6 +10,10 @@ import {
   getObservations as getFirestoreObservations,
   validateObservation
 } from '@/lib/firebase/firestore';
+import {
+  saveObservation as saveDbObservation,
+  savePlantProfile as saveDbPlantProfile,
+} from '@/lib/backend/databaseService';
 
 export const DEFAULT_PRIMARY_PLANT_ID = 'plant_primary';
 export const LOCAL_PLANT_PROFILE_KEY = 'hydrosmart_active_plant_profile_v2';
@@ -80,6 +84,9 @@ export function saveStoredPlantProfile(profile: PlantProfile): void {
   if (typeof window === 'undefined') return;
   try {
     localStorage.setItem(LOCAL_PLANT_PROFILE_KEY, JSON.stringify(profile));
+    saveDbPlantProfile(null, 'farm_main', 'station_esp32_1', profile).catch(e => {
+      console.warn('[ObservationStore] saveDbPlantProfile notice:', e);
+    });
   } catch (err) {
     console.warn('[ObservationStore] Error saving local plant profile:', err);
   }
@@ -302,6 +309,7 @@ export async function persistObservationToCloud(
   const updated = saveObservation(observation);
 
   try {
+    await saveDbObservation(uid, farmId, stationId, plantId, observation);
     const firestorePayload = mapPlantObservationToFirestore(observation, source);
     if (validateObservation(firestorePayload)) {
       await createObservation(uid, farmId, stationId, plantId, firestorePayload);

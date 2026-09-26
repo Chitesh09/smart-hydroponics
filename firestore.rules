@@ -19,21 +19,51 @@ service cloud.firestore {
           match /plants/{plantId} {
             allow read, write: if request.auth != null && request.auth.uid == userId;
 
-            // Scoped Observations subcollection
+            // 1. Observations
             match /observations/{obsId} {
+              allow read, write: if request.auth != null && request.auth.uid == userId;
+            }
+
+            // 2. Periodic Telemetry Snapshots
+            match /telemetry_snapshots/{snapId} {
+              allow read, write: if request.auth != null && request.auth.uid == userId;
+            }
+
+            // 3. Multimodal Reasoning Events
+            match /reasoning_events/{eventId} {
+              allow read, write: if request.auth != null && request.auth.uid == userId;
+            }
+
+            // 4. Change Events ("What Changed")
+            match /change_events/{changeId} {
+              allow read, write: if request.auth != null && request.auth.uid == userId;
+            }
+
+            // 5. Environment ↔ Plant Correlations
+            match /correlations/{assocId} {
+              allow read, write: if request.auth != null && request.auth.uid == userId;
+            }
+
+            // 6. Confidence-Aware Alerts
+            match /alerts/{alertId} {
+              allow read, write: if request.auth != null && request.auth.uid == userId;
+            }
+
+            // 7. Sensor Calibration Profiles
+            match /calibrations/{calId} {
               allow read, write: if request.auth != null && request.auth.uid == userId;
             }
           }
         }
       }
       
-      // Recursive safety rule for any other nested subcollections
+      // Recursive safety rule for any other nested user subcollections
       match /{allSubcollections=**} {
         allow read, write: if request.auth != null && request.auth.uid == userId;
       }
     }
 
-    // Default: Deny all unauthenticated or unscoped access
+    // Default: Deny all unauthenticated or unscoped cross-user access
     match /{document=**} {
       allow read, write: false;
     }

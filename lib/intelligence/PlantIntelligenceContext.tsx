@@ -80,9 +80,16 @@ import {
   clearStoredObservations,
   fetchObservationsFromCloud,
   persistObservationToCloud,
-  migrateLegacyLocalStorageObservations
 } from './observationStore';
 import { ensureDefaultHierarchy } from '@/lib/firebase/firestore';
+import {
+  saveReasoningEvent,
+  getReasoningHistory,
+  saveTelemetrySnapshot,
+  getAlerts as getDbAlerts,
+} from '@/lib/backend/databaseService';
+import { executeSafeLocalStorageMigration } from '@/lib/backend/migrationService';
+import { DbTelemetrySnapshot } from '@/lib/backend/types';
 import { DEMO_SCENARIOS } from './demoScenarios';
 import { deriveFarmerSemanticState, FarmerSemanticState } from './farmerSemanticLayer';
 import {
@@ -294,6 +301,13 @@ export function PlantIntelligenceProvider({ children }: { children: React.ReactN
     async function syncCloudData() {
       if (!currentUser?.uid) {
         setSyncStatus('offline');
+        // Execute local migration and hydrate local database state
+        executeSafeLocalStorageMigration(null, farmId, stationId, plantProfile.plantId).catch(() => {});
+        getReasoningHistory(null, farmId, stationId, plantProfile.plantId).then(history => {
+          if (!isCancelled && history && history.length > 0) {
+            setReasoningHistory(history);
+          }
+        }).catch(() => {});
         return;
       }
 
@@ -308,8 +322,8 @@ export function PlantIntelligenceProvider({ children }: { children: React.ReactN
         setPlantIdState(hierarchy.plantId);
         setPlantProfile(prev => ({ ...prev, plantId: hierarchy.plantId }));
 
-        // 2. Perform safe one-time migration of any legacy localStorage observations
-        await migrateLegacyLocalStorageObservations(
+        // 2. Perform safe one-time migration of any legacy localStorage data
+        await executeSafeLocalStorageMigration(
           currentUser.uid,
           hierarchy.farmId,
           hierarchy.stationId,
@@ -324,8 +338,30 @@ export function PlantIntelligenceProvider({ children }: { children: React.ReactN
           hierarchy.plantId
         );
 
+        // 4. Hydrate reasoning history from database
+        const persistedReasoning = await getReasoningHistory(
+          currentUser.uid,
+          hierarchy.farmId,
+          hierarchy.stationId,
+          hierarchy.plantId
+        );
+
+        // 5. Hydrate alerts from database
+        const persistedAlerts = await getDbAlerts(
+          currentUser.uid,
+          hierarchy.farmId,
+          hierarchy.stationId,
+          hierarchy.plantId
+        );
+
         if (!isCancelled) {
           setObservations(cloudObservations);
+          if (persistedReasoning && persistedReasoning.length > 0) {
+            setReasoningHistory(persistedReasoning);
+          }
+          if (persistedAlerts && persistedAlerts.length > 0) {
+            setStoredAlerts(persistedAlerts);
+          }
           setSyncStatus('synced');
         }
       } catch (err) {
@@ -341,7 +377,7 @@ export function PlantIntelligenceProvider({ children }: { children: React.ReactN
     return () => {
       isCancelled = true;
     };
-  }, [currentUser?.uid, cropIdentity.commonName, setPlantProfile]);
+  }, [currentUser?.uid, cropIdentity.commonName, farmId, stationId, plantProfile.plantId, setPlantProfile]);
 
   // Active reading values
   const currentPh = latestReading?.ph;
@@ -475,9 +511,67 @@ export function PlantIntelligenceProvider({ children }: { children: React.ReactN
       if (prev.length > 0 && prev[prev.length - 1].scenarioCode === latestReasoningEvent.scenarioCode) {
         return prev;
       }
+      saveReasoningEvent(
+        currentUser?.uid,
+        farmId,
+        stationId,
+        plantProfile.plantId,
+        latestReasoningEvent
+      ).catch(() => {});
       return [...prev.slice(-19), latestReasoningEvent];
     });
-  }, [latestReasoningEvent]);
+  }, [latestReasoningEvent, currentUser?.uid, farmId, stationId, plantProfile.plantId]);
+
+  // Periodic and on-change aggregated telemetry snapshot persistence
+  const lastSavedTelemetryRef = useRef<{ ph?: number; tds?: number; waterLevel?: number; time: number }>({ time: 0 });
+
+  useEffect(() => {
+    if (!latestReading || isStale) return;
+    const now = Date.now();
+    const last = lastSavedTelemetryRef.current;
+    const timeDiff = now - last.time;
+
+    const isSignificantShift =
+      last.ph !== undefined &&
+      (Math.abs(latestReading.ph - last.ph) > 0.3 ||
+       Math.abs(latestReading.tds - (last.tds || 0)) > 60 ||
+       Math.abs(latestReading.waterLevel - (last.waterLevel || 0)) > 5);
+
+    if (timeDiff >= 30000 || (timeDiff >= 5000 && isSignificantShift) || last.time === 0) {
+      lastSavedTelemetryRef.current = {
+        ph: latestReading.ph,
+        tds: latestReading.tds,
+        waterLevel: latestReading.waterLevel,
+        time: now,
+      };
+
+      const snapshot: DbTelemetrySnapshot = {
+        id: `snap_${now}_${Math.random().toString(36).substring(2, 6)}`,
+        plantId: plantProfile.plantId,
+        timestamp: now,
+        ph: latestReading.ph,
+        tds: latestReading.tds,
+        waterLevel: latestReading.waterLevel,
+        distance: latestReading.distance,
+        rawPh: latestReading.rawPh ?? latestReading.metrics?.ph?.raw,
+        rawTds: latestReading.rawTds ?? latestReading.metrics?.tds?.raw,
+        rawDistance: latestReading.rawDistance ?? latestReading.metrics?.distance?.raw,
+        phStatus: latestReading.quality?.ph ?? latestReading.metrics?.ph?.quality,
+        tdsStatus: latestReading.quality?.tds ?? latestReading.metrics?.tds?.quality,
+        waterLevelStatus: latestReading.quality?.waterLevel ?? latestReading.metrics?.waterLevel?.quality,
+        source: mode === 'real' ? 'esp32_serial' : 'simulation',
+        isSimulated: mode !== 'real',
+      };
+
+      saveTelemetrySnapshot(
+        currentUser?.uid,
+        farmId,
+        stationId,
+        plantProfile.plantId,
+        snapshot
+      ).catch(e => console.warn('[PlantIntelligence] Telemetry snapshot error:', e));
+    }
+  }, [latestReading, isStale, mode, currentUser?.uid, farmId, stationId, plantProfile.plantId]);
 
   // 6. Plant Growth & Memory Calculations
   const growthMetrics = useMemo(() => {

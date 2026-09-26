@@ -7,6 +7,7 @@
 
 import { PlantAlert } from './types';
 import { ALERT_CONFIG } from './alertConfig';
+import { saveAlert, updateAlertStatus } from '@/lib/backend/databaseService';
 
 export const LOCAL_ALERTS_KEY = 'hydrosmart_plant_alerts_v1';
 
@@ -58,6 +59,11 @@ export function saveStoredAlerts(plantId: string, alerts: PlantAlert[]): void {
     const allAlerts: Record<string, PlantAlert[]> = raw ? JSON.parse(raw) : {};
     allAlerts[plantId] = boundedAlerts;
     localStorage.setItem(LOCAL_ALERTS_KEY, JSON.stringify(allAlerts));
+
+    // Async sync to databaseService
+    for (const a of boundedAlerts) {
+      saveAlert(null, 'farm_main', 'station_esp32_1', plantId, a).catch(() => {});
+    }
   } catch (err) {
     console.warn('[AlertStore] Error saving local alerts:', err);
   }
@@ -81,6 +87,7 @@ export function dismissStoredAlert(plantId: string, alertId: string): PlantAlert
     return alert;
   });
   saveStoredAlerts(plantId, updated);
+  updateAlertStatus(null, 'farm_main', 'station_esp32_1', plantId, alertId, 'DISMISSED').catch(() => {});
   return updated;
 }
 
@@ -101,6 +108,7 @@ export function acknowledgeStoredAlert(plantId: string, alertId: string): PlantA
     return alert;
   });
   saveStoredAlerts(plantId, updated);
+  updateAlertStatus(null, 'farm_main', 'station_esp32_1', plantId, alertId, 'ACKNOWLEDGED').catch(() => {});
   return updated;
 }
 
@@ -122,6 +130,7 @@ export function resolveStoredAlert(plantId: string, alertId: string): PlantAlert
     return alert;
   });
   saveStoredAlerts(plantId, updated);
+  updateAlertStatus(null, 'farm_main', 'station_esp32_1', plantId, alertId, 'RESOLVED').catch(() => {});
   return updated;
 }
 
