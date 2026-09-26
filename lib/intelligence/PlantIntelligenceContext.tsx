@@ -33,7 +33,8 @@ import {
   PredictiveAnalyticsResult,
   StatisticalAnomalyResult,
   StructuredPlantContext,
-  AIPlantMessage
+  AIPlantMessage,
+  PlantReasoningEvent,
 } from './types';
 import { CloudSyncStatus } from '@/lib/firebase/types';
 import {
@@ -44,6 +45,7 @@ import {
 import { detectEnvironmentalAnomalies } from './anomalyDetection';
 import { identifyPlant } from './plantIdentification';
 import { multimodalHealthEngine } from './multimodalEngine';
+import { runMultimodalPlantReasoning } from './multimodalReasoningEngine';
 import {
   computeGrowthEstimates,
   compilePlantJourney,
@@ -117,13 +119,15 @@ interface PlantIntelligenceContextType {
   farmId: string;
   stationId: string;
   plantId: string;
+  latestReasoningEvent: PlantReasoningEvent | null;
+  reasoningHistory: PlantReasoningEvent[];
 }
 
 const PlantIntelligenceContext = createContext<PlantIntelligenceContextType | undefined>(undefined);
 
 export function PlantIntelligenceProvider({ children }: { children: React.ReactNode }) {
   const { currentUser } = useAuth();
-  const { mode, isStale, latestReading } = useESP32Serial();
+  const { mode, isStale, latestReading, history: sensorHistory } = useESP32Serial();
   const { status: cameraStatus, captureFrame, videoRef } = useCamera();
   const { latestDetection, latestVisualHealth, isScanning, setIsScanning, analyzeNow } = usePlantMonitor();
 
@@ -388,6 +392,46 @@ export function PlantIntelligenceProvider({ children }: { children: React.ReactN
     mode,
     observations
   ]);
+
+  // 5B. Multimodal Plant Reasoning Engine
+  const latestReasoningEvent = useMemo(() => {
+    return runMultimodalPlantReasoning({
+      plantId: plantProfile.plantId,
+      detection: latestDetection,
+      visualHealth: latestVisualHealth,
+      cropIdentity,
+      sensorReading: latestReading,
+      sensorHistory,
+      observationHistory: observations,
+      cropTargetProfile: cropIdentity.targetProfile,
+      telemetryMode: mode,
+      isTelemetryStale: isStale,
+      isCameraActive: cameraStatus === 'connected',
+    });
+  }, [
+    plantProfile.plantId,
+    latestDetection,
+    latestVisualHealth,
+    cropIdentity,
+    latestReading,
+    sensorHistory,
+    observations,
+    mode,
+    isStale,
+    cameraStatus,
+  ]);
+
+  const [reasoningHistory, setReasoningHistory] = useState<PlantReasoningEvent[]>([]);
+
+  useEffect(() => {
+    if (!latestReasoningEvent) return;
+    setReasoningHistory(prev => {
+      if (prev.length > 0 && prev[prev.length - 1].scenarioCode === latestReasoningEvent.scenarioCode) {
+        return prev;
+      }
+      return [...prev.slice(-19), latestReasoningEvent];
+    });
+  }, [latestReasoningEvent]);
 
   // 6. Plant Growth & Memory Calculations
   const growthMetrics = useMemo(() => {
@@ -698,6 +742,7 @@ export function PlantIntelligenceProvider({ children }: { children: React.ReactN
       anomalyDetected: activeAnomalies.length > 0 || isVisualAnomaly || statisticalAnomalies.some(a => a.isAnomaly),
       activeAnomalies: activeAnomalies.map(a => a.title),
       recommendations: activeRecommendations.map(r => r.title),
+      reasoningEvent: latestReasoningEvent || undefined,
     };
 
     // Update plant profile observation counter, recency, and structured health status
@@ -754,6 +799,7 @@ export function PlantIntelligenceProvider({ children }: { children: React.ReactN
     activeAnomalies,
     statisticalAnomalies,
     activeRecommendations,
+    latestReasoningEvent,
     currentUser?.uid,
     farmId,
     stationId,
@@ -846,7 +892,9 @@ export function PlantIntelligenceProvider({ children }: { children: React.ReactN
         syncStatus,
         farmId,
         stationId,
-        plantId
+        plantId,
+        latestReasoningEvent,
+        reasoningHistory
       }}
     >
       {children}

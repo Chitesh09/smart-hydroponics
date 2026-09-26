@@ -10,7 +10,8 @@ import {
   PlantDetectionResult,
   VisualHealthAnalysisResult,
   StructuredHealthState,
-  AnomalyReport
+  AnomalyReport,
+  MultimodalScenarioCode,
 } from './types';
 import { SupportedLanguageCode } from '@/lib/assistant/assistantConfig';
 
@@ -259,6 +260,37 @@ export interface FarmerCopyGroup {
     telemetryInterval: string;
     telemetryIntervalDesc: string;
   };
+  reasoning: {
+    title: string;
+    subtitle: string;
+    whatsHappening: string;
+    whyHappening: string;
+    whatShouldIDo: string;
+    evidenceChain: string;
+    observations: string;
+    interpretations: string;
+    recommendations: string;
+    limitations: string;
+    conflictingSignals: string;
+    confidence: string;
+    confidenceHigh: string;
+    confidenceModerate: string;
+    confidenceLow: string;
+    confidenceInsufficient: string;
+    sensorUnavailable: string;
+    cameraUnavailable: string;
+    insufficientHistory: string;
+    noPlantDetected: string;
+    poorImageQuality: string;
+    unknownSpecies: string;
+    stableEquilibrium: string;
+    visualChangeOnly: string;
+    correlatedStress: string;
+    temporalAssociation: string;
+    conflictingEvidence: string;
+    environmentalAnomalyOnly: string;
+    recovering: string;
+  };
 }
 
 export const FARMER_COPY: Record<SupportedLanguageCode, FarmerCopyGroup> = {
@@ -502,6 +534,37 @@ export const FARMER_COPY: Record<SupportedLanguageCode, FarmerCopyGroup> = {
       telemetryInterval: 'Telemetry Interval',
       telemetryIntervalDesc: 'ESP32 serial baud rate streaming at 115200 bps',
     },
+    reasoning: {
+      title: 'Multimodal Plant Reasoning',
+      subtitle: 'Evidence-based cross-modal synthesis of camera vision, ESP32 telemetry, and historical trends.',
+      whatsHappening: "What's happening?",
+      whyHappening: 'Why might it be happening?',
+      whatShouldIDo: 'What should I do now?',
+      evidenceChain: 'Botanical Evidence Chain',
+      observations: 'Direct Observations',
+      interpretations: 'Possible Interpretations',
+      recommendations: 'Actionable Steps',
+      limitations: 'Limitations & Missing Data',
+      conflictingSignals: 'Conflicting Signals',
+      confidence: 'Reasoning Confidence',
+      confidenceHigh: 'High Confidence',
+      confidenceModerate: 'Moderate Confidence',
+      confidenceLow: 'Low Confidence',
+      confidenceInsufficient: 'Insufficient Evidence',
+      sensorUnavailable: 'Environmental sensor readings are currently unavailable.',
+      cameraUnavailable: 'Camera vision is currently offline.',
+      insufficientHistory: 'Insufficient history to determine trajectory.',
+      noPlantDetected: 'No plant detected in front of the camera.',
+      poorImageQuality: 'Camera image quality is insufficient for visual analysis.',
+      unknownSpecies: 'Botanical crop species is currently unclassified.',
+      stableEquilibrium: 'Plant appears stable. No significant environmental change was detected.',
+      visualChangeOnly: 'Increased leaf discoloration was detected without an environmental sensor anomaly.',
+      correlatedStress: 'Leaf discoloration co-occurs with nutrient parameter shifts.',
+      temporalAssociation: 'Plant visual condition changed during a period of decreasing water level.',
+      conflictingEvidence: 'Foliage appears healthy, but an environmental sensor anomaly was detected.',
+      environmentalAnomalyOnly: 'Water level has decreased significantly while leaves remain stable.',
+      recovering: 'Plant is recovering nicely 🌿',
+    },
   },
   kn: {
     plant: {
@@ -743,8 +806,233 @@ export const FARMER_COPY: Record<SupportedLanguageCode, FarmerCopyGroup> = {
       telemetryInterval: 'ಟೆಲಿಮೆಟ್ರಿ ಮಧ್ಯಂತರ',
       telemetryIntervalDesc: 'ESP32 ಸೀರಿಯಲ್ ಬಾಡ್ ದರ 115200 bps ನಲ್ಲಿ ಸ್ಟ್ರೀಮಿಂಗ್ ಆಗುತ್ತಿದೆ',
     },
+    reasoning: {
+      title: 'ಗಿಡದ ಸಮಗ್ರ ವಿಶ್ಲೇಷಣೆ ಮತ್ತು ವಿವರಣೆ',
+      subtitle: 'ಕ್ಯಾಮೆರಾ ವೀಕ್ಷಣೆ, ESP32 ಸಂವೇದಕಗಳು ಮತ್ತು ಹಿಂದಿನ ಇತಿಹಾಸದ ಆಧಾರದ ಮೇಲೆ ಪುರಾವೆ ಆಧಾರಿತ ತೀರ್ಮಾನ.',
+      whatsHappening: 'ಏನಾಗುತ್ತಿದೆ?',
+      whyHappening: 'ಏಕೆ ಹೀಗಾಗುತ್ತಿದೆ?',
+      whatShouldIDo: 'ಈಗ ನಾನು ಏನು ಮಾಡಬೇಕು?',
+      evidenceChain: 'ಪುರಾವೆಗಳ ಸರಣಿ',
+      observations: 'ನೇರ ಅವಲೋಕನಗಳು',
+      interpretations: 'ಸಾಧ್ಯವಿರುವ ಕಾರಣಗಳು',
+      recommendations: 'ಶಿಫಾರಸು ಮಾಡಿದ ಕ್ರಮಗಳು',
+      limitations: 'ಲಭ್ಯವಿಲ್ಲದ ಮಾಹಿತಿ ಮತ್ತು ಮಿತಿಗಳು',
+      conflictingSignals: 'ಪರಸ್ಪರ ಭಿನ್ನ ಸಂಕೇತಗಳು',
+      confidence: 'ವಿಶ್ವಾಸಾರ್ಹತೆ',
+      confidenceHigh: 'ಹೆಚ್ಚು ವಿಶ್ವಾಸಾರ್ಹ',
+      confidenceModerate: 'ಸಾಧಾರಣ ವಿಶ್ವಾಸಾರ್ಹ',
+      confidenceLow: 'ಕಡಿಮೆ ವಿಶ್ವಾಸಾರ್ಹ',
+      confidenceInsufficient: 'ಸಾಕಷ್ಟು ಪುರಾವೆಗಳಿಲ್ಲ',
+      sensorUnavailable: 'ಪರಿಸರ ಸಂವೇದಕಗಳ ಮಾಹಿತಿ ಪ್ರಸ್ತುತ ಲಭ್ಯವಿಲ್ಲ.',
+      cameraUnavailable: 'ಕ್ಯಾಮೆರಾ ವೀಕ್ಷಣೆ ಪ್ರಸ್ತುತ ಲಭ್ಯವಿಲ್ಲ.',
+      insufficientHistory: 'ಬದಲಾವಣೆಯ ಗತಿಯನ್ನು ಅಳೆಯಲು ಸಾಕಷ್ಟು ಹಿಂದಿನ ದಾಖಲೆಗಳಿಲ್ಲ.',
+      noPlantDetected: 'ಕ್ಯಾಮೆರಾ ಮುಂದೆ ಯಾವುದೇ ಗಿಡ ಕಂಡುಬಂದಿಲ್ಲ.',
+      poorImageQuality: 'ವಿಶ್ವಾಸಾರ್ಹ ವಿಶ್ಲೇಷಣೆಗೆ ಕ್ಯಾಮೆರಾ ಗುಣಮಟ್ಟ ಸಾಕಾಗುತ್ತಿಲ್ಲ.',
+      unknownSpecies: 'ಗಿಡದ ನಿರ್ದಿಷ್ಟ ಪ್ರಭೇದ ಇನ್ನೂ ವರ್ಗೀಕರಿಸಲಾಗಿಲ್ಲ.',
+      stableEquilibrium: 'ಗಿಡವು ಸ್ಥಿರವಾಗಿ ಕಂಡುಬರುತ್ತಿದೆ. ಯಾವುದೇ ಪರಿಸರ ವೈಪರೀತ್ಯ ಪತ್ತೆಯಾಗಿಲ್ಲ.',
+      visualChangeOnly: 'ಸಂವೇದಕಗಳಲ್ಲಿ ಯಾವುದೇ ವ್ಯತ್ಯಾಸವಿಲ್ಲದಿದ್ದರೂ ಎಲೆಗಳ ಬಣ್ಣದಲ್ಲಿ ಬದಲಾವಣೆ ಕಂಡುಬಂದಿದೆ.',
+      correlatedStress: 'ಪೋಷಕಾಂಶಗಳ ಮಟ್ಟ ಬದಲಾದಾಗ ಎಲೆಗಳಲ್ಲಿ ಬದಲಾವಣೆಗಳು ಕಂಡುಬಂದಿವೆ.',
+      temporalAssociation: 'ನೀರಿನ ಮಟ್ಟ ಕಡಿಮೆಯಾಗುತ್ತಿದ್ದ ಅವಧಿಯಲ್ಲಿ ಗಿಡದ ಎಲೆಗಳಲ್ಲಿ ಬದಲಾವಣೆ ಕಂಡುಬಂದಿದೆ.',
+      conflictingEvidence: 'ಎಲೆಗಳು ಆರೋಗ್ಯಕರವಾಗಿ ಕಾಣುತ್ತಿದ್ದರೂ, ಸಂವೇದಕಗಳಲ್ಲಿ ವ್ಯತ್ಯಾಸ ದಾಖಲಾಗಿದೆ.',
+      environmentalAnomalyOnly: 'ಎಲೆಗಳು ಆರೋಗ್ಯವಾಗಿದ್ದರೂ ನೀರಿನ ಮಟ್ಟ ಗಮನಾರ್ಹವಾಗಿ ಇಳಿಕೆಯಾಗಿದೆ.',
+      recovering: 'ಗಿಡ ಚೇತರಿಸಿಕೊಳ್ಳುತ್ತಿದೆ 🌿',
+    },
   },
 };
+
+/**
+ * Returns localized farmer headlines, explanations, and action guidance for a given scenario code
+ */
+export function getLocalizedReasoningCopy(
+  scenarioCode: MultimodalScenarioCode,
+  lang: SupportedLanguageCode = 'en'
+): { headline: string; why: string; action: string } {
+  const isKn = lang === 'kn';
+
+  switch (scenarioCode) {
+    case 'STABLE_EQUILIBRIUM':
+      return {
+        headline: isKn
+          ? 'ಗಿಡವು ಸ್ಥಿರವಾಗಿ ಕಂಡುಬರುತ್ತಿದೆ. ಯಾವುದೇ ಪರಿಸರ ವೈಪರೀತ್ಯ ಪತ್ತೆಯಾಗಿಲ್ಲ.'
+          : 'Plant appears stable. No significant environmental change was detected.',
+        why: isKn
+          ? 'ಎಲೆಗಳು ಆರೋಗ್ಯಕರ ಹಸಿರು ಬಣ್ಣದಲ್ಲಿವೆ ಮತ್ತು ಸಂವೇದಕಗಳು ನಿಗದಿತ ಮಿತಿಯೊಳಗೆ ಕಾರ್ಯನಿರ್ವಹಿಸುತ್ತಿವೆ.'
+          : 'Leaves show uniform chlorophyll and environmental telemetry remains within target limits.',
+        action: isKn
+          ? 'ಪ್ರಸ್ತುತ ನೀರಿನ ಪೋಷಕಾಂಶಗಳ ವೇಳಾಪಟ್ಟಿಯನ್ನು ಮುಂದುವರಿಸಿ ಮತ್ತು ನಿಗಾ ಇರಿಸಿ.'
+          : 'Maintain current nutrient delivery schedule and continue routine monitoring.',
+      };
+
+    case 'VISUAL_CHANGE_ONLY':
+      return {
+        headline: isKn
+          ? 'ಎಲೆಗಳಲ್ಲಿ ಹಳದಿ ಅಥವಾ ಕಂದು ಬಣ್ಣ ಕಂಡುಬಂದಿದೆ, ಆದರೆ ನೀರು ಮತ್ತು ಪೋಷಕಾಂಶಗಳು ಸಮತೋಲನದಲ್ಲಿವೆ.'
+          : 'Increased leaf yellowing was detected. Current environmental readings do not show a corresponding anomaly.',
+        why: isKn
+          ? 'ಕ್ಯಾಮೆರಾ ಎಲೆಗಳಲ್ಲಿ ಬದಲಾವಣೆ ಕಂಡಿದೆ, ಆದರೆ ಸಂವೇದಕಗಳಲ್ಲಿ ಯಾವುದೇ ವ್ಯತ್ಯಾಸವಾಗಿಲ್ಲ.'
+          : 'Optical change was observed without a concurrent pH, TDS, or water level deviation.',
+        action: isKn
+          ? 'ಗಿಡದ ಎಲೆಗಳ ಮೇಲೆ ನಿಗಾ ಇರಿಸಿ ಮತ್ತು ಬೆಳಕು ಅಥವಾ ಗಾಳಿಯ ಹರಿವನ್ನು ಪರಿಶೀಲಿಸಿ.'
+          : 'Continue monitoring the plant foliage and verify probe cleanliness.',
+      };
+
+    case 'ENVIRONMENTAL_ANOMALY_ONLY':
+      return {
+        headline: isKn
+          ? 'ನೀರಿನ ಮಟ್ಟ ಗಣನೀಯವಾಗಿ ಕಡಿಮೆಯಾಗಿದೆ.'
+          : 'Water level has decreased significantly. No corresponding visual stress has been detected yet.',
+        why: isKn
+          ? 'ತೊಟ್ಟಿಯಲ್ಲಿ ನೀರಿನ ಪ್ರಮಾಣ ಕಡಿಮೆಯಾಗಿದೆ, ಆದರೆ ಗಿಡದ ಎಲೆಗಳು ಇನ್ನೂ ಆರೋಗ್ಯವಾಗಿವೆ.'
+          : 'Reservoir volume dropped, but leaf structure remains turgid with healthy pigmentation.',
+        action: isKn
+          ? 'ತೊಟ್ಟಿಗೆ ಹೊಸ ನೀರನ್ನು ಸೇರಿಸಿ ಮತ್ತು ಗಿಡ ಒಣಗದಂತೆ ನೋಡಿಕೊಳ್ಳಿ.'
+          : 'Check the reservoir and add fresh water before stress symptoms manifest.',
+      };
+
+    case 'CORRELATED_ENVIRONMENTAL_STRESS':
+      return {
+        headline: isKn
+          ? 'ಪೋಷಕಾಂಶಗಳ ದ್ರಾವಣ ಬದಲಾದಾಗ ಎಲೆಗಳಲ್ಲಿ ಹಳದಿ ಅಥವಾ ಕಂದು ಬಣ್ಣ ಕಂಡುಬಂದಿದೆ.'
+          : 'Leaf yellowing increased while nutrient TDS shifted. The plant may be experiencing environmental stress.',
+        why: isKn
+          ? 'ಪೋಷಕಾಂಶಗಳ ಮಟ್ಟ ಅಥವಾ pH ಮಿತಿಯಿಂದ ಹೊರಬಂದಾಗ ಎಲೆಗಳ ಬಣ್ಣದಲ್ಲಿ ಬದಲಾವಣೆ ಹೆಚ್ಚಾಗಿದೆ.'
+          : 'Foliar discoloration co-occurs with nutrient parameters drifting outside configured targets.',
+        action: isKn
+          ? 'ಪೋಷಕಾಂಶಗಳ ದ್ರಾವಣವನ್ನು ಪರೀಕ್ಷಿಸಿ ಮತ್ತು pH ಸಮತೋಲನವನ್ನು ಸರಿಪಡಿಸಿ.'
+          : 'Check the nutrient solution and calibrate pH balance.',
+      };
+
+    case 'TEMPORAL_ASSOCIATION':
+      return {
+        headline: isKn
+          ? 'ನೀರಿನ ಮಟ್ಟ ಕಡಿಮೆಯಾಗುತ್ತಿದ್ದ ಅವಧಿಯಲ್ಲಿ ಗಿಡದ ಎಲೆಗಳಲ್ಲಿ ಬದಲಾವಣೆ ಕಂಡುಬಂದಿದೆ.'
+          : 'Plant visual condition changed during a period of decreasing water level. This may indicate environmental stress.',
+        why: isKn
+          ? 'ಹಿಂದಿನ ದಾಖಲೆಗಳ ಪ್ರಕಾರ, ನೀರಿನ ಮಟ್ಟ ಇಳಿಕೆಯಾದ ಸಮಯದಲ್ಲಿ ಎಲೆಗಳಲ್ಲಿ ಬದಲಾವಣೆಗಳು ದಾಖಲಾಗಿವೆ.'
+          : 'Historical telemetry indicates the foliar change occurred alongside or following a recorded water-level decline.',
+        action: isKn
+          ? 'ತೊಟ್ಟಿಯ ನೀರಿನ ಮಟ್ಟವನ್ನು ಪರಿಶೀಲಿಸಿ ಮತ್ತು ಗಿಡದ ಚೇತರಿಕೆಯನ್ನು ಗಮನಿಸಿ.'
+          : 'Check the reservoir water level and continue monitoring.',
+      };
+
+    case 'CONFLICTING_EVIDENCE':
+      return {
+        headline: isKn
+          ? 'ಗಿಡ ಚೆನ್ನಾಗಿ ಕಾಣಿಸುತ್ತಿದೆ, ಆದರೆ ನೀರಿನ ಅಥವಾ ಪೋಷಕಾಂಶಗಳ ಸಂವೇದಕದಲ್ಲಿ ಎಚ್ಚರಿಕೆ ಕಂಡುಬಂದಿದೆ.'
+          : 'Plant appearance currently appears stable, but an environmental sensor anomaly was detected.',
+        why: isKn
+          ? 'ಎಲೆಗಳು ಸಾಮಾನ್ಯ ಹಸಿರು ಬಣ್ಣದಲ್ಲಿದ್ದರೂ, ಸಂವೇದಕಗಳು ನಿಗದಿತ ವ್ಯಾಪ್ತಿಯಿಂದ ಹೊರಗಿವೆ.'
+          : 'Visual appearance indicates healthy foliage, but sensor telemetry indicates a parameter anomaly.',
+        action: isKn
+          ? 'ಎಲೆಗಳಿಗೆ ಒತ್ತಡ ಉಂಟಾಗುವ ಮೊದಲೇ ಪೋಷಕಾಂಶಗಳ ದ್ರಾವಣವನ್ನು ಸರಿಪಡಿಸಿ.'
+          : 'Monitor the plant closely and check the environmental condition.',
+      };
+
+    case 'SENSOR_UNAVAILABLE':
+      return {
+        headline: isKn
+          ? 'ಗಿಡದ ಎಲೆಗಳಲ್ಲಿ ಹಳದಿ ಬಣ್ಣ ಕಂಡುಬಂದಿದೆ; ಸಂವೇದಕ ಮಾಹಿತಿ ಲಭ್ಯವಿಲ್ಲ.'
+          : 'Visual yellowing was detected. Environmental sensor data is currently unavailable.',
+        why: isKn
+          ? 'ಎಲೆಗಳಲ್ಲಿ ಹಳದಿ ಪ್ರಮಾಣ ಕಾಣುತ್ತಿದೆ, ಆದರೆ ಸಂವೇದಕಗಳು ಆಫ್‌ಲೈನ್‌ನಲ್ಲಿವೆ.'
+          : 'Environmental sensor data is currently unavailable, so the system cannot assess whether a sensor change is associated with this observation.',
+        action: isKn
+          ? 'ಪೋಷಕಾಂಶಗಳ ದ್ರಾವಣವನ್ನು ಕೈಯಿಂದ ಪರಿಶೀಲಿಸಿ ಮತ್ತು ಸಂವೇದಕವನ್ನು ಸಂಪರ್ಕಿಸಿ.'
+          : 'Inspect the nutrient solution manually and connect sensor hardware.',
+      };
+
+    case 'CAMERA_UNAVAILABLE':
+      return {
+        headline: isKn
+          ? 'ಕ್ಯಾಮೆರಾ ಆಫ್‌ಲೈನ್‌ನಲ್ಲಿದೆ; ಸಂವೇದಕಗಳ ಆಧಾರದ ಮೇಲೆ ಪರಿಸರವನ್ನು ಪರಿಶೀಲಿಸಲಾಗುತ್ತಿದೆ.'
+          : 'Water level has decreased significantly. Camera evidence is currently unavailable, so plant visual condition cannot be assessed.',
+        why: isKn
+          ? 'ಸಂವೇದಕಗಳು ಲಭ್ಯವಿದ್ದರೂ, ಕ್ಯಾಮೆರಾ ಆಫ್‌ಲೈನ್‌ನಲ್ಲಿದೆ.'
+          : 'Camera evidence is currently unavailable, so plant visual condition cannot be assessed.',
+        action: isKn
+          ? 'ಗಿಡದ ಎಲೆಗಳನ್ನು ಪರಿಶೀಲಿಸಲು ಡ್ಯಾಶ್‌ಬೋರ್ಡ್ ಕ್ಯಾಮೆರಾವನ್ನು ಪ್ರಾರಂಭಿಸಿ.'
+          : 'Start Dashboard camera to inspect plant growth.',
+      };
+
+    case 'INSUFFICIENT_HISTORY':
+      return {
+        headline: isKn
+          ? 'ಎಲೆಗಳಲ್ಲಿ ಬಣ್ಣ ಬದಲಾಗಿದೆ; ಬದಲಾವಣೆಯ ಗತಿಯನ್ನು ತಿಳಿಯಲು ಹೆಚ್ಚಿನ ದಾಖಲೆಗಳು ಬೇಕು.'
+          : 'Yellowing is currently visible, but there is not enough historical data to determine whether it is increasing.',
+        why: isKn
+          ? 'ಕೇವಲ ಒಂದೇ ಅವಲೋಕನ ದಾಖಲಾಗಿದೆ. ಹಿಂದಿನ ಇತಿಹಾಸವಿಲ್ಲದೆ ವೇಗವನ್ನು ತಿಳಿಯಲು ಸಾಧ್ಯವಿಲ್ಲ.'
+          : 'Only one observation checkpoint exists. The system cannot establish rate of progression yet.',
+        action: isKn
+          ? 'ಮುಂದಿನ ಅವಲೋಕನವನ್ನು ದಾಖಲಿಸಿ ಮತ್ತು ಸಂವೇದಕಗಳು ಕಾರ್ಯನಿರ್ವಹಿಸುತ್ತಿವೆಯೇ ಎಂದು ನೋಡಿ.'
+          : 'Log subsequent observations to calculate change over time.',
+      };
+
+    case 'NO_PLANT_DETECTED':
+      return {
+        headline: isKn
+          ? 'ಯಾವುದೇ ಗಿಡ ಕಂಡುಬಂದಿಲ್ಲ. ಗಿಡವನ್ನು ಕ್ಯಾಮೆರಾ ಮುಂದೆ ಇರಿಸಿ.'
+          : 'No plant detected. Position the plant in front of the camera and try again.',
+        why: isKn
+          ? 'ಕ್ಯಾಮೆರಾ ನೋಟ ಸ್ಪಷ್ಟವಾಗಿದ್ದರೂ, ಜೀವಂತ ಗಿಡದ ಎಲೆಗಳು ಕಂಡುಬಂದಿಲ್ಲ.'
+          : 'The camera view is clear, but no living plant canopy was detected.',
+        action: isKn
+          ? 'ನಿಮ್ಮ ಗಿಡವನ್ನು ಕ್ಯಾಮೆರಾ ಮುಂದೆ ಸ್ಪಷ್ಟವಾಗಿ ಇರಿಸಿ.'
+          : 'Position specimen inside camera view.',
+      };
+
+    case 'POOR_IMAGE_QUALITY':
+      return {
+        headline: isKn
+          ? 'ಕ್ಯಾಮೆರಾ ಮಸುಕಾಗಿದೆ ಅಥವಾ ಬೆಳಕು ಸಾಕಷ್ಟಿಲ್ಲ.'
+          : 'Camera image quality is insufficient for reliable visual assessment.',
+        why: isKn
+          ? 'ಕ್ಯಾಮೆರಾ ಫ್ರೇಮ್ ಗುಣಮಟ್ಟವು ವಿಶ್ವಾಸಾರ್ಹ ವಿಶ್ಲೇಷಣೆಗೆ ಸಾಕಾಗುತ್ತಿಲ್ಲ.'
+          : 'Optical scan quality is below the required sharpness or illumination threshold.',
+        action: isKn
+          ? 'ಲೆನ್ಸ್ ಸ್ವಚ್ಛಗೊಳಿಸಿ, ಫೋಕಸ್ ಸರಿಪಡಿಸಿ ಅಥವಾ ಬೆಳಕನ್ನು ಹೆಚ್ಚಿಸಿ.'
+          : 'Clean the lens, focus the camera, or adjust ambient lighting.',
+      };
+
+    case 'UNKNOWN_SPECIES':
+      return {
+        headline: isKn
+          ? 'ಎಲೆಗಳ ಬಣ್ಣ ಬದಲಾವಣೆ ಕಾಣುತ್ತಿದೆ, ಆದರೆ ಗಿಡದ ಪ್ರಭೇದವನ್ನು ಗುರುತಿಸಲಾಗಿಲ್ಲ.'
+          : 'Leaf yellowing is visible, but the plant species could not be identified.',
+        why: isKn
+          ? 'ಸಾಮಾನ್ಯ ಗಿಡದ ನಿಯತಾಂಕಗಳ ಅಡಿಯಲ್ಲಿ ವಿಶ್ಲೇಷಣೆ ನಡೆಸಲಾಗಿದೆ.'
+          : 'Reasoning evaluates generalized botanical parameters without a species-specific envelope.',
+        action: isKn
+          ? 'ಡ್ಯಾಶ್‌ಬೋರ್ಡ್‌ನಲ್ಲಿ ಇನ್ನೊಮ್ಮೆ ಸ್ಪಷ್ಟವಾಗಿ ಸ್ಕ್ಯಾನ್ ಮಾಡಿ.'
+          : 'Perform a clear scan from Dashboard or continue monitoring.',
+      };
+
+    case 'RECOVERING_TRAJECTORY':
+      return {
+        headline: isKn
+          ? 'ಗಿಡದ ನೋಟ ಮತ್ತು ಆರೋಗ್ಯ ಸುಧಾರಿಸುತ್ತಿದೆ 🌿'
+          : 'Plant visual condition is recovering nicely 🌿',
+        why: isKn
+          ? 'ಹಿಂದಿನ ಒತ್ತಡದ ನಂತರ ಎಲೆಗಳ ಹಸಿರು ಪ್ರಮಾಣ ಹೆಚ್ಚಾಗಿದೆ.'
+          : 'Foliar chlorosis has decreased and leaf vigor has stabilized.',
+        action: isKn
+          ? 'ಪ್ರಸ್ತುತ ಆರೈಕೆಯನ್ನು ಮುಂದುವರಿಸಿ.'
+          : 'Maintain current growing conditions and continue monitoring.',
+      };
+
+    default:
+      return {
+        headline: isKn
+          ? 'ಗಿಡವು ಸ್ಥಿರವಾಗಿ ಕಂಡುಬರುತ್ತಿದೆ.'
+          : 'Plant appears stable.',
+        why: isKn
+          ? 'ಎಲ್ಲಾ ನಿಯತಾಂಕಗಳು ಸಾಮಾನ್ಯ ವ್ಯಾಪ್ತಿಯಲ್ಲಿವೆ.'
+          : 'All biological and environmental parameters are nominal.',
+        action: isKn
+          ? 'ನಿಯಮಿತ ನಿಗಾ ಮುಂದುವರಿಸಿ.'
+          : 'Continue routine monitoring.',
+      };
+  }
+}
 
 /**
  * Safe copy getter that guarantees never returning undefined or null

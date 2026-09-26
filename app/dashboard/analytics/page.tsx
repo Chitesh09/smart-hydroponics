@@ -98,20 +98,28 @@ export default function AnalyticsPage() {
         ? `${plantDisplayName} · ${copy.analytics.milestoneCheckpointTitle}`
         : `${copy.analytics.milestoneCheckpointTitle} #${checkpointNumber}`;
       
+      const reasoning = obs.reasoningEvent;
       const description = isFarmer
-        ? (isKn
-            ? `ಗಿಡ ಪರಿಶೀಲಿಸಲಾಗಿದೆ: ನೀರಿನ ಮಟ್ಟ ${Math.round(obs.waterLevel || 0)}%, ಆರೋಗ್ಯಕರ ಸ್ಥಿತಿ.`
-            : `Plant check recorded: Water level ${Math.round(obs.waterLevel || 0)}%, healthy growth maintained.`)
-        : (isKn
-            ? `ಸಂವೇದಕಗಳು [${obs.plantId || plantProfile.plantId}] pH ${obs.ph?.toFixed(2) || '--'} ಮತ್ತು TDS ${Math.round(obs.tds || 0)} PPM (${Math.round(obs.waterLevel || 0)}% ನೀರಿನ ಮಟ್ಟ) ದಾಖಲಿಸಿವೆ.`
-            : `Sensors [${obs.plantId || plantProfile.plantId}] recorded pH ${obs.ph?.toFixed(2) || '--'} and TDS ${Math.round(obs.tds || 0)} PPM with ${obs.waterLevel || 0}% reservoir level.`);
+        ? (reasoning?.farmerCopy?.observableSummary
+            ? `${reasoning.farmerCopy.observableSummary} ${reasoning.farmerCopy.whySummary ? `(${reasoning.farmerCopy.whySummary})` : ''}`
+            : (isKn
+                ? `ಗಿಡ ಪರಿಶೀಲಿಸಲಾಗಿದೆ: ನೀರಿನ ಮಟ್ಟ ${Math.round(obs.waterLevel || 0)}%, ಆರೋಗ್ಯಕರ ಸ್ಥಿತಿ.`
+                : `Plant check recorded: Water level ${Math.round(obs.waterLevel || 0)}%, healthy growth maintained.`))
+        : (reasoning?.observations && reasoning.observations.length > 0
+            ? `${reasoning.scenarioCode}: ${reasoning.observations.slice(0, 2).join('; ')}`
+            : (isKn
+                ? `ಸಂವೇದಕಗಳು [${obs.plantId || plantProfile.plantId}] pH ${obs.ph?.toFixed(2) || '--'} ಮತ್ತು TDS ${Math.round(obs.tds || 0)} PPM (${Math.round(obs.waterLevel || 0)}% ನೀರಿನ ಮಟ್ಟ) ದಾಖಲಿಸಿವೆ.`
+                : `Sensors [${obs.plantId || plantProfile.plantId}] recorded pH ${obs.ph?.toFixed(2) || '--'} and TDS ${Math.round(obs.tds || 0)} PPM with ${obs.waterLevel || 0}% reservoir level.`));
 
-      const isHealthy = obs.overallHealthScore && obs.overallHealthScore >= 80;
+      const isHealthy = reasoning ? reasoning.plantState === 'HEALTHY' : (obs.overallHealthScore && obs.overallHealthScore >= 80);
+      const isUrgent = reasoning ? reasoning.plantState === 'CRITICAL' : false;
+      const isAttention = reasoning ? reasoning.plantState === 'ATTENTION' : false;
+      const status = isUrgent ? 'attention' : isAttention ? 'warning' : isHealthy ? 'healthy' : 'stable';
       return {
         date: `${timeStr} · ${cycleText}`,
         title,
         description,
-        status: isHealthy ? 'healthy' : 'stable',
+        status,
         statusLabel: isHealthy ? copy.analytics.statusHealthy : copy.analytics.statusStable,
       };
     });

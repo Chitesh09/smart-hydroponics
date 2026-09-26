@@ -463,4 +463,112 @@ export interface PlantObservation {
   anomalyDetected: boolean;
   activeAnomalies?: string[];
   recommendations?: string[];
+
+  // Phase 6 Multimodal Reasoning Event
+  reasoningEvent?: PlantReasoningEvent;
+}
+
+// ============================================================
+// Phase 6: Multimodal Plant Reasoning & Evidence Model
+// ============================================================
+
+export type PlantEvidenceSource =
+  | 'camera'
+  | 'sensor'
+  | 'history'
+  | 'statistics'
+  | 'plant_profile';
+
+export type PlantEvidenceType =
+  | 'plant_presence'
+  | 'species_identification'
+  | 'visual_health'
+  | 'visual_anomaly'
+  | 'sensor_reading'
+  | 'sensor_anomaly'
+  | 'trend'
+  | 'historical_change'
+  | 'growth_change';
+
+export type PlantEvidenceConfidence = 'high' | 'moderate' | 'low' | 'unverified';
+
+export interface PlantEvidence {
+  source: PlantEvidenceSource;
+  type: PlantEvidenceType;
+  label: string;
+  value: unknown;
+  timestamp: number;
+  confidence: PlantEvidenceConfidence;
+  unit?: string;
+  plantId: string;
+  observationId?: string;
+  metadata?: Record<string, unknown>;
+}
+
+export type SensorAvailabilityState = 'available' | 'unavailable' | 'simulated';
+
+export interface SensorEvidence {
+  metric: 'ph' | 'tds' | 'waterLevel';
+  label: string;
+  current?: number;
+  previous?: number;
+  baseline?: number;
+  delta?: number;
+  unit: string;
+  trend: 'rising' | 'falling' | 'stable' | 'insufficient_data';
+  hasAnomaly: boolean;
+  anomalySeverity?: 'warning' | 'critical' | 'nominal';
+  anomalyDetails?: string;
+  timestamp: number;
+  availability: SensorAvailabilityState;
+  quality: 'reliable' | 'stale' | 'invalid' | 'unknown';
+}
+
+export type ReasoningConfidenceLevel =
+  | 'high'
+  | 'moderate'
+  | 'low'
+  | 'insufficient_evidence';
+
+export type MultimodalScenarioCode =
+  | 'STABLE_EQUILIBRIUM'
+  | 'VISUAL_CHANGE_ONLY'
+  | 'ENVIRONMENTAL_ANOMALY_ONLY'
+  | 'CORRELATED_ENVIRONMENTAL_STRESS'
+  | 'TEMPORAL_ASSOCIATION'
+  | 'CONFLICTING_EVIDENCE'
+  | 'SENSOR_UNAVAILABLE'
+  | 'CAMERA_UNAVAILABLE'
+  | 'INSUFFICIENT_HISTORY'
+  | 'NO_PLANT_DETECTED'
+  | 'POOR_IMAGE_QUALITY'
+  | 'UNKNOWN_SPECIES'
+  | 'RECOVERING_TRAJECTORY';
+
+export interface PlantReasoningEvent {
+  id: string;
+  plantId: string;
+  timestamp: number;
+  scenarioCode: MultimodalScenarioCode;
+  plantState: StructuredHealthState;
+  evidence: PlantEvidence[];
+  sensorEvidence: Record<'ph' | 'tds' | 'waterLevel', SensorEvidence>;
+  observations: string[];     // Direct facts (what was seen or measured)
+  interpretations: string[];  // Plausible associations (without false causality)
+  recommendations: string[];  // Actionable steps for grower
+  confidence: ReasoningConfidenceLevel;
+  contributingSignals: string[];
+  limitations: string[];      // Data gaps (e.g. "Sensor telemetry unavailable", "N=1 history")
+  conflictingSignals: string[]; // Disagreements (e.g. Visual healthy vs Sensor critical)
+  reasoningVersion: string;   // e.g. "hydrosmart-reasoning-v1"
+  primaryFarmerHeadline: string; // "Your plant is showing increased leaf yellowing"
+  primaryFarmerWhy: string;      // "The yellowing increased while the nutrient-solution readings changed"
+  primaryFarmerAction: string;   // "Check the nutrient solution and continue monitoring the plant"
+  confidenceScore?: number;
+  farmerCopy?: {
+    observableSummary: string;
+    whySummary: string;
+    farmerAction: string;
+  };
+  sensorAvailable?: boolean;
 }

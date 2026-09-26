@@ -51,6 +51,7 @@ export default function Dashboard() {
     identifyCurrentPlant,
     isIdentifying,
     identificationResult,
+    latestReasoningEvent,
   } = usePlantIntelligence();
 
   const [selectedMetric, setSelectedMetric] = useState<'ph' | 'tds' | 'waterLevel' | 'distance'>('ph');
@@ -552,7 +553,11 @@ export default function Dashboard() {
       {/* ============================================================ */}
       {/* 3. SECONDARY: PROMINENT "WHAT SHOULD I DO NOW?" SECTION       */}
       {/* ============================================================ */}
-      <FarmerActionCard semanticState={farmerSemanticState} recommendations={activeRecommendations} />
+      <FarmerActionCard
+        semanticState={farmerSemanticState}
+        recommendations={activeRecommendations}
+        reasoningEvent={latestReasoningEvent}
+      />
 
       {/* ============================================================ */}
       {/* 4. SECONDARY: WHAT NEEDS YOUR ATTENTION                       */}
