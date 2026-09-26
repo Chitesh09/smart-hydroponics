@@ -42,6 +42,7 @@ export default function Dashboard() {
     cropIdentity,
     plantProfile,
     digitalProfile,
+    observations,
     latestDetection,
     latestVisualHealth,
     multimodalAssessment,
@@ -488,6 +489,48 @@ export default function Dashboard() {
               <div className={styles.commonName}>{plantDisplayName}</div>
               <div className={styles.scientificName}>{botanicalScientific}</div>
             </div>
+
+            {observations.length === 0 && !isPlantIdentified && (
+              <div style={{
+                margin: '10px 0',
+                padding: '10px 12px',
+                borderRadius: 'var(--radius-sm)',
+                background: 'rgba(28, 167, 160, 0.08)',
+                border: '1px solid rgba(28, 167, 160, 0.25)',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '8px',
+              }}>
+                <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--color-teal)' }}>
+                  {isKn ? 'ಇನ್ನೂ ಯಾವುದೇ ಗಿಡವನ್ನು ಪರಿಶೀಲಿಸಲಾಗುತ್ತಿಲ್ಲ' : 'No plant is being monitored yet'}
+                </div>
+                <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
+                  {isKn
+                    ? 'ಕ್ಯಾಮೆರಾ ಮೂಲಕ ಗಿಡವನ್ನು ಗುರುತಿಸಿ ಅಥವಾ ಬೆಳೆ ಪ್ರೊಫೈಲ್ ಅನ್ನು ಕಾನ್ಫಿಗರ್ ಮಾಡಿ.'
+                    : 'Prompt: Identify your plant via camera or assign identity to begin tracking.'}
+                </div>
+                <div style={{ display: 'flex', gap: '8px', marginTop: '2px' }}>
+                  <button
+                    onClick={() => {
+                      if (!isCameraActive) startCamera();
+                      else identifyCurrentPlant();
+                    }}
+                    className="btn btn-secondary"
+                    style={{ fontSize: '10.5px', padding: '4px 10px' }}
+                  >
+                    <Camera size={12} />
+                    <span>{isKn ? 'ಕ್ಯಾಮೆರಾ ಮೂಲಕ ಗುರುತಿಸಿ' : 'Identify via Camera'}</span>
+                  </button>
+                  <Link
+                    href="/dashboard/plants"
+                    className="btn btn-secondary"
+                    style={{ fontSize: '10.5px', padding: '4px 10px' }}
+                  >
+                    <span>{isKn ? 'ಪ್ರೊಫೈಲ್ ಹೊಂದಿಸಿ' : 'Assign Identity'}</span>
+                  </Link>
+                </div>
+              </div>
+            )}
 
             <div className={styles.stateRow} style={{ flexWrap: 'wrap', gap: '6px' }}>
               <StatusBadge status={farmerSemanticState.plantStatus.toLowerCase()} label={farmerSemanticState.visualHealthMessage || farmerSemanticState.plantMessage} size="md" />

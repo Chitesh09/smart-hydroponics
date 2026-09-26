@@ -285,13 +285,17 @@ export async function fetchObservationsFromCloud(
       const mapped = cloudDocs.map(doc => mapFirestoreToPlantObservation(doc, plantId));
       saveStoredObservations(mapped);
       return mapped;
+    } else if (cloudDocs && cloudDocs.length === 0) {
+      // Authenticated user with 0 records: clean empty state, no fake baseline generation
+      saveStoredObservations([]);
+      return [];
     }
   } catch (err) {
     console.warn('[ObservationStore] Cloud fetch error (using cache fallback):', err);
   }
 
-  // Fallback to local storage or initial seed
-  return getStoredObservations(plantId);
+  // Fallback to local storage without injecting seed observations for authenticated users
+  return getStoredObservations(plantId, !uid);
 }
 
 /**
@@ -385,9 +389,12 @@ export async function migrateLegacyLocalStorageObservations(
 
 /**
  * Synchronous local memory/cache reader for initial SSR/client mounts
- * Pulls from persistent localStorage if present, or initializes with seed
+ * Pulls from persistent localStorage if present, or initializes with seed if permitted
  */
-export function getStoredObservations(plantId: string = DEFAULT_PRIMARY_PLANT_ID): PlantObservation[] {
+export function getStoredObservations(
+  plantId: string = DEFAULT_PRIMARY_PLANT_ID,
+  allowSeedFallback = true
+): PlantObservation[] {
   if (memoryObservationCache.length > 0) {
     return memoryObservationCache;
   }
@@ -397,7 +404,11 @@ export function getStoredObservations(plantId: string = DEFAULT_PRIMARY_PLANT_ID
       const raw = localStorage.getItem(LOCAL_OBSERVATIONS_KEY);
       if (raw) {
         const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed) && parsed.length > 0) {
+        if (Array.isArray(parsed)) {
+          if (parsed.length === 0) {
+            memoryObservationCache = [];
+            return [];
+          }
           // Normalize legacy observations lacking plantId or containing "Unknown Plant"
           const normalized: PlantObservation[] = (parsed as Record<string, unknown>[]).map((item) => ({
             ...(item as unknown as PlantObservation),
@@ -415,10 +426,21 @@ export function getStoredObservations(plantId: string = DEFAULT_PRIMARY_PLANT_ID
     }
   }
 
+  if (!allowSeedFallback) {
+    return [];
+  }
+
   const seed = createDefaultSeedObservations(plantId);
   memoryObservationCache = seed;
   saveStoredObservations(seed);
   return seed;
+}
+
+/**
+ * Resets the in-memory observation cache
+ */
+export function clearMemoryObservationCache(): void {
+  memoryObservationCache = [];
 }
 
 /**

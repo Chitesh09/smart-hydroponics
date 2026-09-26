@@ -1,14 +1,7 @@
 'use client';
 
-import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { AuthGateway } from '@/components/auth/AuthGateway';
 
 export default function SignupPage() {
-  const router = useRouter();
-
-  useEffect(() => {
-    router.replace('/');
-  }, [router]);
-
-  return null;
+  return <AuthGateway initialMode="signup" />;
 }

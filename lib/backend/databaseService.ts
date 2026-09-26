@@ -16,7 +16,7 @@ import {
   limit,
   serverTimestamp,
 } from 'firebase/firestore';
-import { firestore, isFirebaseConfigured } from '@/lib/firebase';
+import { auth, firestore, isFirebaseConfigured } from '@/lib/firebase';
 import {
   PersistenceResult,
   DbPlantProfile,
@@ -37,8 +37,47 @@ export const DEFAULT_PRIMARY_PLANT_ID = 'plant_primary';
 
 // Local storage partition keys for offline fallback & client mounts
 const STORAGE_PREFIX = 'hydrosmart_db_v12_';
-function getLocalKey(subKey: string, plantId: string): string {
-  return `${STORAGE_PREFIX}${subKey}_${plantId}`;
+
+/**
+ * Generates local cache key partitioned by userId and plantId
+ */
+export function getLocalKey(subKey: string, plantId: string, userId?: string | null): string {
+  const effectiveUid = userId || DEFAULT_DEVICE_USER;
+  return `${STORAGE_PREFIX}${effectiveUid}_${subKey}_${plantId}`;
+}
+
+/**
+ * Resolves the authorized user UID.
+ * 
+ * Rules:
+ * 1. If Firebase is configured with an active auth session (`auth?.currentUser`),
+ *    `auth.currentUser.uid` is the sole authority.
+ *    If caller passed a conflicting `requestedUid` that does not match `auth.currentUser.uid`,
+ *    the attempt is rejected with a Permission Denied error.
+ * 2. If Firebase is configured but no user is logged in, reject attempts to access protected user namespaces.
+ * 3. In offline/mock fallback mode (!isFirebaseConfigured), partitions by requested UID or DEFAULT_DEVICE_USER.
+ */
+export function resolveAuthorizedUid(requestedUid?: string | null): { uid: string; error?: string } {
+  if (isFirebaseConfigured && auth) {
+    const current = auth.currentUser;
+    if (current) {
+      if (requestedUid && requestedUid !== current.uid) {
+        return {
+          uid: current.uid,
+          error: `Permission denied: Cannot access or modify data for user '${requestedUid}' while authenticated as '${current.uid}'.`
+        };
+      }
+      return { uid: current.uid };
+    }
+    // Firebase is configured but no session exists
+    if (requestedUid && requestedUid !== DEFAULT_DEVICE_USER) {
+      return {
+        uid: requestedUid,
+        error: 'Authentication required: Operation rejected without active authenticated session.'
+      };
+    }
+  }
+  return { uid: requestedUid || DEFAULT_DEVICE_USER };
 }
 
 // Numerical sanitization helper
@@ -90,8 +129,17 @@ export async function savePlantProfile(
   profile: DbPlantProfile
 ): Promise<PersistenceResult<DbPlantProfile>> {
   const plantId = profile.plantId || DEFAULT_PRIMARY_PLANT_ID;
-  const ownerUid = uid || DEFAULT_DEVICE_USER;
-  const localKey = getLocalKey('profile', plantId);
+  const authRes = resolveAuthorizedUid(uid);
+  if (authRes.error) {
+    return {
+      status: 'FAILED',
+      data: profile,
+      plantId,
+      error: authRes.error,
+    };
+  }
+  const ownerUid = authRes.uid;
+  const localKey = getLocalKey('profile', plantId, ownerUid);
 
   // Always update local cache immediately
   writeToLocalCache(localKey, profile);
@@ -153,8 +201,13 @@ export async function getPlantProfile(
   plantId: string
 ): Promise<DbPlantProfile | null> {
   const effectivePlantId = plantId || DEFAULT_PRIMARY_PLANT_ID;
-  const ownerUid = uid || DEFAULT_DEVICE_USER;
-  const localKey = getLocalKey('profile', effectivePlantId);
+  const authRes = resolveAuthorizedUid(uid);
+  if (authRes.error) {
+    console.warn('[DatabaseService] getPlantProfile unauthorized:', authRes.error);
+    return null;
+  }
+  const ownerUid = authRes.uid;
+  const localKey = getLocalKey('profile', effectivePlantId, ownerUid);
 
   if (isFirebaseConfigured && firestore) {
     try {
@@ -205,7 +258,16 @@ export async function saveObservation(
   observation: DbPlantObservation
 ): Promise<PersistenceResult<DbPlantObservation>> {
   const effectivePlantId = plantId || observation.plantId || DEFAULT_PRIMARY_PLANT_ID;
-  const ownerUid = uid || DEFAULT_DEVICE_USER;
+  const authRes = resolveAuthorizedUid(uid);
+  if (authRes.error) {
+    return {
+      status: 'FAILED',
+      data: observation,
+      plantId: effectivePlantId,
+      error: authRes.error,
+    };
+  }
+  const ownerUid = authRes.uid;
   const obsId = observation.id || `obs_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
   const normalizedObs: DbPlantObservation = {
     ...observation,
@@ -223,7 +285,7 @@ export async function saveObservation(
   }
 
   // Update local cache
-  const localKey = getLocalKey('observations', effectivePlantId);
+  const localKey = getLocalKey('observations', effectivePlantId, ownerUid);
   const currentList = readFromLocalCache<DbPlantObservation[]>(localKey) || [];
   const updatedList = [normalizedObs, ...currentList.filter(o => o.id !== obsId)].slice(0, 100);
   writeToLocalCache(localKey, updatedList);
@@ -288,8 +350,13 @@ export async function getObservations(
   limitCount = 50
 ): Promise<DbPlantObservation[]> {
   const effectivePlantId = plantId || DEFAULT_PRIMARY_PLANT_ID;
-  const ownerUid = uid || DEFAULT_DEVICE_USER;
-  const localKey = getLocalKey('observations', effectivePlantId);
+  const authRes = resolveAuthorizedUid(uid);
+  if (authRes.error) {
+    console.warn('[DatabaseService] getObservations unauthorized:', authRes.error);
+    return [];
+  }
+  const ownerUid = authRes.uid;
+  const localKey = getLocalKey('observations', effectivePlantId, ownerUid);
 
   if (isFirebaseConfigured && firestore) {
     try {
@@ -333,7 +400,16 @@ export async function saveTelemetrySnapshot(
   snapshot: DbTelemetrySnapshot
 ): Promise<PersistenceResult<DbTelemetrySnapshot>> {
   const effectivePlantId = plantId || snapshot.plantId || DEFAULT_PRIMARY_PLANT_ID;
-  const ownerUid = uid || DEFAULT_DEVICE_USER;
+  const authRes = resolveAuthorizedUid(uid);
+  if (authRes.error) {
+    return {
+      status: 'FAILED',
+      data: snapshot,
+      plantId: effectivePlantId,
+      error: authRes.error,
+    };
+  }
+  const ownerUid = authRes.uid;
   const snapId = snapshot.id || `snap_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
   const normalizedSnap: DbTelemetrySnapshot = {
     ...snapshot,
@@ -356,7 +432,7 @@ export async function saveTelemetrySnapshot(
   }
 
   // Update local cache
-  const localKey = getLocalKey('telemetry', effectivePlantId);
+  const localKey = getLocalKey('telemetry', effectivePlantId, ownerUid);
   const currentList = readFromLocalCache<DbTelemetrySnapshot[]>(localKey) || [];
   const updatedList = [normalizedSnap, ...currentList.filter(s => s.id !== snapId)].slice(0, 120);
   writeToLocalCache(localKey, updatedList);
@@ -418,8 +494,13 @@ export async function getTelemetryHistory(
   limitCount = 60
 ): Promise<DbTelemetrySnapshot[]> {
   const effectivePlantId = plantId || DEFAULT_PRIMARY_PLANT_ID;
-  const ownerUid = uid || DEFAULT_DEVICE_USER;
-  const localKey = getLocalKey('telemetry', effectivePlantId);
+  const authRes = resolveAuthorizedUid(uid);
+  if (authRes.error) {
+    console.warn('[DatabaseService] getTelemetryHistory unauthorized:', authRes.error);
+    return [];
+  }
+  const ownerUid = authRes.uid;
+  const localKey = getLocalKey('telemetry', effectivePlantId, ownerUid);
 
   if (isFirebaseConfigured && firestore) {
     try {
@@ -463,7 +544,16 @@ export async function saveReasoningEvent(
   event: DbPlantReasoningEvent
 ): Promise<PersistenceResult<DbPlantReasoningEvent>> {
   const effectivePlantId = plantId || event.plantId || DEFAULT_PRIMARY_PLANT_ID;
-  const ownerUid = uid || DEFAULT_DEVICE_USER;
+  const authRes = resolveAuthorizedUid(uid);
+  if (authRes.error) {
+    return {
+      status: 'FAILED',
+      data: event,
+      plantId: effectivePlantId,
+      error: authRes.error,
+    };
+  }
+  const ownerUid = authRes.uid;
   const eventId = event.id || `re_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
   const normalizedEvent: DbPlantReasoningEvent = {
     ...event,
@@ -471,7 +561,7 @@ export async function saveReasoningEvent(
     plantId: effectivePlantId,
   };
 
-  const localKey = getLocalKey('reasoning', effectivePlantId);
+  const localKey = getLocalKey('reasoning', effectivePlantId, ownerUid);
   const currentList = readFromLocalCache<DbPlantReasoningEvent[]>(localKey) || [];
   // Prevent identical duplicate events
   if (
@@ -548,8 +638,13 @@ export async function getReasoningHistory(
   limitCount = 30
 ): Promise<DbPlantReasoningEvent[]> {
   const effectivePlantId = plantId || DEFAULT_PRIMARY_PLANT_ID;
-  const ownerUid = uid || DEFAULT_DEVICE_USER;
-  const localKey = getLocalKey('reasoning', effectivePlantId);
+  const authRes = resolveAuthorizedUid(uid);
+  if (authRes.error) {
+    console.warn('[DatabaseService] getReasoningHistory unauthorized:', authRes.error);
+    return [];
+  }
+  const ownerUid = authRes.uid;
+  const localKey = getLocalKey('reasoning', effectivePlantId, ownerUid);
 
   if (isFirebaseConfigured && firestore) {
     try {
@@ -593,7 +688,16 @@ export async function saveChangeEvent(
   event: DbPlantChangeEvent
 ): Promise<PersistenceResult<DbPlantChangeEvent>> {
   const effectivePlantId = plantId || event.plantId || DEFAULT_PRIMARY_PLANT_ID;
-  const ownerUid = uid || DEFAULT_DEVICE_USER;
+  const authRes = resolveAuthorizedUid(uid);
+  if (authRes.error) {
+    return {
+      status: 'FAILED',
+      data: event,
+      plantId: effectivePlantId,
+      error: authRes.error,
+    };
+  }
+  const ownerUid = authRes.uid;
   const eventId = event.id || `change_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
   const normalizedEvent: DbPlantChangeEvent = {
     ...event,
@@ -601,7 +705,7 @@ export async function saveChangeEvent(
     plantId: effectivePlantId,
   };
 
-  const localKey = getLocalKey('changes', effectivePlantId);
+  const localKey = getLocalKey('changes', effectivePlantId, ownerUid);
   const currentList = readFromLocalCache<DbPlantChangeEvent[]>(localKey) || [];
   const updatedList = [normalizedEvent, ...currentList.filter(c => c.id !== eventId)].slice(0, 50);
   writeToLocalCache(localKey, updatedList);
@@ -663,8 +767,13 @@ export async function getChangeHistory(
   limitCount = 30
 ): Promise<DbPlantChangeEvent[]> {
   const effectivePlantId = plantId || DEFAULT_PRIMARY_PLANT_ID;
-  const ownerUid = uid || DEFAULT_DEVICE_USER;
-  const localKey = getLocalKey('changes', effectivePlantId);
+  const authRes = resolveAuthorizedUid(uid);
+  if (authRes.error) {
+    console.warn('[DatabaseService] getChangeHistory unauthorized:', authRes.error);
+    return [];
+  }
+  const ownerUid = authRes.uid;
+  const localKey = getLocalKey('changes', effectivePlantId, ownerUid);
 
   if (isFirebaseConfigured && firestore) {
     try {
@@ -708,7 +817,16 @@ export async function saveAssociation(
   association: DbEnvironmentPlantAssociation
 ): Promise<PersistenceResult<DbEnvironmentPlantAssociation>> {
   const effectivePlantId = plantId || association.plantId || DEFAULT_PRIMARY_PLANT_ID;
-  const ownerUid = uid || DEFAULT_DEVICE_USER;
+  const authRes = resolveAuthorizedUid(uid);
+  if (authRes.error) {
+    return {
+      status: 'FAILED',
+      data: association,
+      plantId: effectivePlantId,
+      error: authRes.error,
+    };
+  }
+  const ownerUid = authRes.uid;
   const assocId = association.id || `assoc_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
   const normalizedAssoc: DbEnvironmentPlantAssociation = {
     ...association,
@@ -716,7 +834,7 @@ export async function saveAssociation(
     plantId: effectivePlantId,
   };
 
-  const localKey = getLocalKey('correlations', effectivePlantId);
+  const localKey = getLocalKey('correlations', effectivePlantId, ownerUid);
   const currentList = readFromLocalCache<DbEnvironmentPlantAssociation[]>(localKey) || [];
   const updatedList = [normalizedAssoc, ...currentList.filter(a => a.id !== assocId)].slice(0, 50);
   writeToLocalCache(localKey, updatedList);
@@ -778,8 +896,13 @@ export async function getAssociations(
   limitCount = 30
 ): Promise<DbEnvironmentPlantAssociation[]> {
   const effectivePlantId = plantId || DEFAULT_PRIMARY_PLANT_ID;
-  const ownerUid = uid || DEFAULT_DEVICE_USER;
-  const localKey = getLocalKey('correlations', effectivePlantId);
+  const authRes = resolveAuthorizedUid(uid);
+  if (authRes.error) {
+    console.warn('[DatabaseService] getAssociations unauthorized:', authRes.error);
+    return [];
+  }
+  const ownerUid = authRes.uid;
+  const localKey = getLocalKey('correlations', effectivePlantId, ownerUid);
 
   if (isFirebaseConfigured && firestore) {
     try {
@@ -823,7 +946,16 @@ export async function saveAlert(
   alert: DbPlantAlert
 ): Promise<PersistenceResult<DbPlantAlert>> {
   const effectivePlantId = plantId || alert.plantId || DEFAULT_PRIMARY_PLANT_ID;
-  const ownerUid = uid || DEFAULT_DEVICE_USER;
+  const authRes = resolveAuthorizedUid(uid);
+  if (authRes.error) {
+    return {
+      status: 'FAILED',
+      data: alert,
+      plantId: effectivePlantId,
+      error: authRes.error,
+    };
+  }
+  const ownerUid = authRes.uid;
   const alertId = alert.id || `alert_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
   const normalizedAlert: DbPlantAlert = {
     ...alert,
@@ -831,7 +963,7 @@ export async function saveAlert(
     plantId: effectivePlantId,
   };
 
-  const localKey = getLocalKey('alerts', effectivePlantId);
+  const localKey = getLocalKey('alerts', effectivePlantId, ownerUid);
   const currentList = readFromLocalCache<DbPlantAlert[]>(localKey) || [];
   const updatedList = [normalizedAlert, ...currentList.filter(a => a.id !== alertId)].slice(0, 50);
   writeToLocalCache(localKey, updatedList);
@@ -892,8 +1024,13 @@ export async function getAlerts(
   plantId: string
 ): Promise<DbPlantAlert[]> {
   const effectivePlantId = plantId || DEFAULT_PRIMARY_PLANT_ID;
-  const ownerUid = uid || DEFAULT_DEVICE_USER;
-  const localKey = getLocalKey('alerts', effectivePlantId);
+  const authRes = resolveAuthorizedUid(uid);
+  if (authRes.error) {
+    console.warn('[DatabaseService] getAlerts unauthorized:', authRes.error);
+    return [];
+  }
+  const ownerUid = authRes.uid;
+  const localKey = getLocalKey('alerts', effectivePlantId, ownerUid);
 
   if (isFirebaseConfigured && firestore) {
     try {
@@ -933,8 +1070,17 @@ export async function updateAlertStatus(
   newStatus: PlantAlertStatus
 ): Promise<PersistenceResult<DbPlantAlert | null>> {
   const effectivePlantId = plantId || DEFAULT_PRIMARY_PLANT_ID;
-  const ownerUid = uid || DEFAULT_DEVICE_USER;
-  const localKey = getLocalKey('alerts', effectivePlantId);
+  const authRes = resolveAuthorizedUid(uid);
+  if (authRes.error) {
+    return {
+      status: 'FAILED',
+      data: null,
+      plantId: effectivePlantId,
+      error: authRes.error,
+    };
+  }
+  const ownerUid = authRes.uid;
+  const localKey = getLocalKey('alerts', effectivePlantId, ownerUid);
   const currentList = readFromLocalCache<DbPlantAlert[]>(localKey) || [];
 
   const now = Date.now();
@@ -1027,7 +1173,16 @@ export async function saveCalibration(
   calibration: DbSensorCalibrationProfile
 ): Promise<PersistenceResult<DbSensorCalibrationProfile>> {
   const effectivePlantId = plantId || calibration.plantId || DEFAULT_PRIMARY_PLANT_ID;
-  const ownerUid = uid || DEFAULT_DEVICE_USER;
+  const authRes = resolveAuthorizedUid(uid);
+  if (authRes.error) {
+    return {
+      status: 'FAILED',
+      data: calibration,
+      plantId: effectivePlantId,
+      error: authRes.error,
+    };
+  }
+  const ownerUid = authRes.uid;
   const profileId = calibration.id || `cal_${stationId || DEFAULT_STATION_ID}_v11`;
   const normalizedCal: DbSensorCalibrationProfile = {
     ...calibration,
@@ -1036,7 +1191,7 @@ export async function saveCalibration(
     stationId: stationId || DEFAULT_STATION_ID,
   };
 
-  const localKey = getLocalKey('calibration', effectivePlantId);
+  const localKey = getLocalKey('calibration', effectivePlantId, ownerUid);
   writeToLocalCache(localKey, normalizedCal);
 
   if (!isFirebaseConfigured || !firestore) {
@@ -1095,8 +1250,13 @@ export async function getCalibration(
   plantId: string
 ): Promise<DbSensorCalibrationProfile | null> {
   const effectivePlantId = plantId || DEFAULT_PRIMARY_PLANT_ID;
-  const ownerUid = uid || DEFAULT_DEVICE_USER;
-  const localKey = getLocalKey('calibration', effectivePlantId);
+  const authRes = resolveAuthorizedUid(uid);
+  if (authRes.error) {
+    console.warn('[DatabaseService] getCalibration unauthorized:', authRes.error);
+    return null;
+  }
+  const ownerUid = authRes.uid;
+  const localKey = getLocalKey('calibration', effectivePlantId, ownerUid);
 
   if (isFirebaseConfigured && firestore) {
     try {
@@ -1127,7 +1287,21 @@ export async function getCalibration(
   return readFromLocalCache<DbSensorCalibrationProfile>(localKey);
 }
 
-// Testing / Reset utility
+// User memory state reset utility
+export function clearUserInMemoryState(userId?: string): void {
+  if (!userId) {
+    clearInMemoryDbCache();
+    return;
+  }
+  const prefix = `${STORAGE_PREFIX}${userId}_`;
+  for (const k of Object.keys(memoryStore)) {
+    if (k.startsWith(prefix)) {
+      delete memoryStore[k];
+    }
+  }
+}
+
+// Global Testing / Reset utility
 export function clearInMemoryDbCache(): void {
   for (const k of Object.keys(memoryStore)) {
     delete memoryStore[k];

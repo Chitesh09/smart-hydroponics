@@ -80,6 +80,7 @@ import {
   clearStoredObservations,
   fetchObservationsFromCloud,
   persistObservationToCloud,
+  clearMemoryObservationCache,
 } from './observationStore';
 import { ensureDefaultHierarchy } from '@/lib/firebase/firestore';
 import {
@@ -301,6 +302,10 @@ export function PlantIntelligenceProvider({ children }: { children: React.ReactN
     async function syncCloudData() {
       if (!currentUser?.uid) {
         setSyncStatus('offline');
+        setObservations([]);
+        setReasoningHistory([]);
+        setStoredAlerts([]);
+        clearMemoryObservationCache();
         // Execute local migration and hydrate local database state
         executeSafeLocalStorageMigration(null, farmId, stationId, plantProfile.plantId).catch(() => {});
         getReasoningHistory(null, farmId, stationId, plantProfile.plantId).then(history => {

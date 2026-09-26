@@ -17,7 +17,11 @@ import {
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, firestore, isFirebaseConfigured } from '@/lib/firebase';
 
+import { clearInMemoryDbCache } from '@/lib/backend/databaseService';
+
 const DEMO_SESSION_KEY = 'hydrosmart_demo_session_v1';
+
+export type AuthState = 'LOADING' | 'AUTHENTICATED' | 'UNAUTHENTICATED';
 
 export interface UserProfile {
   uid: string;
@@ -32,6 +36,7 @@ export interface AuthContextValue {
   userProfile: UserProfile | null;
   loading: boolean;
   isAuthenticated: boolean;
+  authState: AuthState;
   authError: string | null;
   signIn: (email: string, pass: string) => Promise<User>;
   signUp: (email: string, pass: string, name: string) => Promise<User>;
@@ -313,23 +318,40 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     }
     if (typeof window !== 'undefined') {
-      sessionStorage.removeItem(DEMO_SESSION_KEY);
+      try {
+        sessionStorage.removeItem(DEMO_SESSION_KEY);
+        localStorage.removeItem('hydro_user_email');
+        localStorage.removeItem('hydrosmart_user');
+        localStorage.removeItem('hydrosmart_session');
+      } catch {
+        // Safe no-op
+      }
+    }
+    try {
+      clearInMemoryDbCache();
+    } catch {
+      // Safe no-op
     }
     setCurrentUser(null);
     setUserProfile(null);
   }, []);
+
+  const authState: AuthState = loading
+    ? 'LOADING'
+    : (currentUser ? 'AUTHENTICATED' : 'UNAUTHENTICATED');
 
   const value = useMemo<AuthContextValue>(() => ({
     currentUser,
     userProfile,
     loading,
     isAuthenticated: !!currentUser,
+    authState,
     authError,
     signIn,
     signUp,
     signOut,
     clearAuthError,
-  }), [currentUser, userProfile, loading, authError, signIn, signUp, signOut, clearAuthError]);
+  }), [currentUser, userProfile, loading, authState, authError, signIn, signUp, signOut, clearAuthError]);
 
   return (
     <AuthContext.Provider value={value}>
