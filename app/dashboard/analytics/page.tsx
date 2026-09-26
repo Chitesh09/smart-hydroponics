@@ -10,6 +10,7 @@ import { StatusBadge } from '@/components/ui/StatusBadge';
 import { ModeToggle } from '@/components/ui/ModeToggle';
 import { LanguageToggle } from '@/components/ui/LanguageToggle';
 import { PlantProfileCard } from '@/components/ui/PlantProfileCard';
+import { WhatChangedCard } from '@/components/ui/WhatChangedCard';
 import {
   Compass,
   Download,
@@ -25,7 +26,17 @@ import {
 
 export default function AnalyticsPage() {
   const { history, mode, isStale, latestReading } = useESP32Serial();
-  const { observations, cropIdentity, plantProfile, predictiveAnalytics, userMode, setUserMode, language, setLanguage } = usePlantIntelligence();
+  const {
+    observations,
+    cropIdentity,
+    plantProfile,
+    predictiveAnalytics,
+    userMode,
+    setUserMode,
+    language,
+    setLanguage,
+    whatChangedSummary
+  } = usePlantIntelligence();
 
   const copy = useMemo(() => getFarmerCopy(language), [language]);
   const isKn = language === 'kn';
@@ -382,6 +393,18 @@ export default function AnalyticsPage() {
           </span>
         </div>
       </div>
+
+      {/* ============================================================ */}
+      {/* 3B. "WHAT CHANGED?" INTELLIGENCE                             */}
+      {/* ============================================================ */}
+      {whatChangedSummary && (
+        <WhatChangedCard
+          summary={whatChangedSummary}
+          language={language}
+          userMode={userMode}
+          onUserModeChange={setUserMode}
+        />
+      )}
 
       {/* ============================================================ */}
       {/* 4. CHRONOLOGICAL MILESTONE TIMELINE                         */}

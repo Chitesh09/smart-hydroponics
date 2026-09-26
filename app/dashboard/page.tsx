@@ -13,6 +13,7 @@ import { DataSourceBadge } from '@/components/ui/DataSourceBadge';
 import { ModeToggle } from '@/components/ui/ModeToggle';
 import { LanguageToggle } from '@/components/ui/LanguageToggle';
 import { FarmerActionCard } from '@/components/ui/FarmerActionCard';
+import { WhatChangedCard } from '@/components/ui/WhatChangedCard';
 import { WhatChanged, MetricDelta } from '@/components/ui/WhatChanged';
 import { getFarmerCopy } from '@/lib/intelligence/farmerSemanticLayer';
 import {
@@ -52,6 +53,7 @@ export default function Dashboard() {
     isIdentifying,
     identificationResult,
     latestReasoningEvent,
+    whatChangedSummary,
   } = usePlantIntelligence();
 
   const [selectedMetric, setSelectedMetric] = useState<'ph' | 'tds' | 'waterLevel' | 'distance'>('ph');
@@ -558,6 +560,18 @@ export default function Dashboard() {
         recommendations={activeRecommendations}
         reasoningEvent={latestReasoningEvent}
       />
+
+      {/* ============================================================ */}
+      {/* 3B. LONGITUDINAL "WHAT CHANGED?" INTELLIGENCE                */}
+      {/* ============================================================ */}
+      {whatChangedSummary && (
+        <WhatChangedCard
+          summary={whatChangedSummary}
+          language={language}
+          userMode={userMode}
+          onUserModeChange={setUserMode}
+        />
+      )}
 
       {/* ============================================================ */}
       {/* 4. SECONDARY: WHAT NEEDS YOUR ATTENTION                       */}

@@ -12,6 +12,8 @@ import {
   StructuredHealthState,
   AnomalyReport,
   MultimodalScenarioCode,
+  WhatChangedSummary,
+  PlantChangeEvent,
 } from './types';
 import { SupportedLanguageCode } from '@/lib/assistant/assistantConfig';
 
@@ -1253,5 +1255,162 @@ export function deriveFarmerSemanticState({
     cameraColor,
     actionableSummary,
     hasSufficientData,
+  };
+}
+
+// ============================================================================
+// PHASE 7: "WHAT CHANGED?" BILINGUAL LOCALIZATION
+// ============================================================================
+
+/**
+ * Returns localized farmer copy for the WhatChangedSummary in English or natural Kannada.
+ */
+export function getLocalizedWhatChangedCopy(
+  summary: WhatChangedSummary,
+  lang: SupportedLanguageCode = 'en'
+): { headline: string; why: string; action: string } {
+  const isKn = lang === 'kn';
+  if (!isKn) {
+    return {
+      headline: summary.farmerHeadline,
+      why: summary.farmerWhy,
+      action: summary.farmerAction,
+    };
+  }
+
+  switch (summary.status) {
+    case 'insufficient_history':
+      return {
+        headline: 'ಹೆಚ್ಚಿನ ಅವಲೋಕನ ಇತಿಹಾಸಕ್ಕಾಗಿ ಕಾಯಲಾಗುತ್ತಿದೆ.',
+        why: 'ಬದಲಾವಣೆಗಳನ್ನು ಗುರುತಿಸಲು ಕಾಲಾನಂತರದಲ್ಲಿ ಕನಿಷ್ಠ ಎರಡು ತಪಾಸಣೆಗಳು ಅಥವಾ ವಾಚನಗಳು ಬೇಕಾಗುತ್ತವೆ.',
+        action: 'ಗಿಡದ ಮೂಲ ಇತಿಹಾಸವನ್ನು ನಿರ್ಮಿಸಲು ವ್ಯವಸ್ಥೆಯನ್ನು ಚಾಲನೆಯಲ್ಲಿಡಿ.',
+      };
+    case 'sensor_unavailable':
+      return {
+        headline: 'ಸಂವೇದಕಗಳ ಮಾಹಿತಿ ಪ್ರಸ್ತುತ ಲಭ್ಯವಿಲ್ಲ.',
+        why: 'ಸಂವೇದಕಗಳು ಆಫ್‌ಲೈನ್‌ನಲ್ಲಿವೆ ಅಥವಾ ನಿಯತಾಂಕಗಳನ್ನು ಕಳುಹಿಸುತ್ತಿಲ್ಲ.',
+        action: 'IoT ಸಾಧನದ ಶಕ್ತಿ ಮತ್ತು ಸಂವೇದಕಗಳ ಸಂಪರ್ಕವನ್ನು ಪರಿಶೀಲಿಸಿ.',
+      };
+    case 'stable_no_change':
+      return {
+        headline: 'ಎಲ್ಲವೂ ಸ್ಥಿರವಾಗಿದೆ — ಯಾವುದೇ ಗಮನಾರ್ಹ ಬದಲಾವಣೆ ಇಲ್ಲ.',
+        why: 'ಹಿಂದಿನ ತಪಾಸಣೆಯಿಂದ ನೀರು, ಪೋಷಕಾಂಶಗಳು ಮತ್ತು ಎಲೆಗಳ ಸ್ಥಿತಿಯಲ್ಲಿ ಯಾವುದೇ ವ್ಯತ್ಯಾಸವಾಗಿಲ್ಲ.',
+        action: 'ಯಾವುದೇ ತುರ್ತು ಕ್ರಮ ಅಗತ್ಯವಿಲ್ಲ. ಪ್ರಸ್ತುತ ನಿರ್ವಹಣೆಯನ್ನು ಮುಂದುವರಿಸಿ.',
+      };
+    case 'meaningful_changes':
+    default:
+      if (summary.reviewRequiredItems && summary.reviewRequiredItems.length > 0) {
+        return {
+          headline: 'ಗಿಡದ ಗುರುತಿಸುವಿಕೆಯಲ್ಲಿ ಬದಲಾವಣೆ — ಪರಿಶೀಲನೆ ಅಗತ್ಯವಿದೆ.',
+          why: 'ಕ್ಯಾಮೆರಾ ಗುರುತಿಸಿದ ಗಿಡದ ತಳಿ ಹಿಂದಿನ ಪ್ರೊಫೈಲ್‌ಗಿಂತ ಭಿನ್ನವಾಗಿದೆ.',
+          action: 'ಸೆಟ್ಟಿಂಗ್ಸ್‌ನಲ್ಲಿ ಸಸ್ಯದ ತಳಿಯನ್ನು ದೃಢೀಕರಿಸಿ ಅಥವಾ ಕ್ಯಾಮೆರಾವನ್ನು ಸರಿಯಾಗಿ ಜೋಡಿಸಿ.',
+        };
+      }
+      if (summary.overallDirection === 'improved' || summary.overallDirection === 'recovered') {
+        return {
+          headline: 'ಗಿಡದ ಸ್ಥಿತಿ ಸುಧಾರಿಸಿದೆ ಅಥವಾ ಚೇತರಿಸಿಕೊಳ್ಳುತ್ತಿದೆ.',
+          why: 'ಎಲೆಗಳ ಹಸಿರು ಮತ್ತು ಪರಿಸರದ ಸಮತೋಲನವು ಉತ್ತಮ ಮಟ್ಟಕ್ಕೆ ಮರಳಿದೆ.',
+          action: 'ಪ್ರಸ್ತುತ ಪೋಷಕಾಂಶ ಮತ್ತು ನೀರಿನ ವೇಳಾಪಟ್ಟಿಯನ್ನು ಮುಂದುವರಿಸಿ.',
+        };
+      }
+      if (summary.overallDirection === 'declined') {
+        return {
+          headline: 'ಗಿಡ ಅಥವಾ ನೀರಿನ ನಿಯತಾಂಕಗಳಲ್ಲಿ ಇಳಿಕೆ ಕಂಡುಬಂದಿದೆ.',
+          why: 'ಕಳೆದ ಅವಲೋಕನದಿಂದ ನೀರು, pH ಅಥವಾ ಎಲೆಗಳ ಆರೋಗ್ಯದಲ್ಲಿ ಬದಲಾವಣೆ ಉಂಟಾಗಿದೆ.',
+          action: 'ಕೆಳಗಿನ ವಿವರಗಳನ್ನು ಪರಿಶೀಲಿಸಿ ಮತ್ತು ಸೂಕ್ತ ಕ್ರಮ ಕೈಗೊಳ್ಳಿ.',
+        };
+      }
+      return {
+        headline: 'ಕಳೆದ ತಪಾಸಣೆಯಿಂದ ಕೆಲವು ಬದಲಾವಣೆಗಳು ಕಂಡುಬಂದಿವೆ.',
+        why: 'ಕೆಲವು ನಿಯತಾಂಕಗಳು ಸಾಮಾನ್ಯ ಮಿತಿಗಿಂತ ವ್ಯತ್ಯಾಸವಾಗಿವೆ.',
+        action: 'ಸಂವೇದಕಗಳು ಮತ್ತು ಗಿಡದ ಎಲೆಗಳನ್ನು ಗಮನಿಸಿ.',
+      };
+  }
+}
+
+/**
+ * Returns localized farmer copy for an individual PlantChangeEvent in English or natural Kannada.
+ */
+export function getLocalizedChangeEvent(
+  event: PlantChangeEvent,
+  lang: SupportedLanguageCode = 'en'
+): { headline: string; why: string; action: string } {
+  const isKn = lang === 'kn';
+  if (!isKn) {
+    return {
+      headline: event.farmerHeadline,
+      why: event.farmerWhy,
+      action: event.farmerAction,
+    };
+  }
+
+  if (event.direction === 'unavailable') {
+    return {
+      headline: `${event.label} ಮಾಹಿತಿ ಲಭ್ಯವಿಲ್ಲ`,
+      why: 'ಸಂವೇದಕವು ಆಫ್‌ಲೈನ್‌ನಲ್ಲಿದೆ ಅಥವಾ ಸಂಪರ್ಕ ಕಡಿತಗೊಂಡಿದೆ.',
+      action: 'ಸಂವೇದಕದ ವೈರಿಂಗ್ ಮತ್ತು ಪವರ್ ಪರಿಶೀಲಿಸಿ.',
+    };
+  }
+
+  if (event.metric === 'ph') {
+    return {
+      headline: (event.delta ?? 0) > 0 ? 'ನೀರಿನ pH ಮಟ್ಟ ಹೆಚ್ಚಾಗಿದೆ' : 'ನೀರಿನ pH ಮಟ್ಟ ಕಡಿಮೆಯಾಗಿದೆ',
+      why: `ನೀರಿನ ಆಮ್ಲೀಯತೆ ${Math.abs(event.delta ?? 0)} ಪಾಯಿಂಟ್‌ಗಳಷ್ಟು ಬದಲಾಗಿದೆ.`,
+      action: (event.currentValue as number) > 6.5
+        ? 'pH Down ಸೇರಿಸಿ pH ಮಟ್ಟವನ್ನು 5.5–6.5 ಗೆ ತನ್ನಿ.'
+        : 'pH Up ಸೇರಿಸಿ ಅಥವಾ ತಾಜಾ ನೀರನ್ನು ಸೇರಿಸಿ.',
+    };
+  }
+
+  if (event.metric === 'tds') {
+    return {
+      headline: (event.delta ?? 0) > 0 ? 'ಪೋಷಕಾಂಶಗಳ ಸಾಂದ್ರತೆ ಹೆಚ್ಚಾಗಿದೆ' : 'ಪೋಷಕಾಂಶಗಳ ಸಾಂದ್ರತೆ ಕಡಿಮೆಯಾಗಿದೆ',
+      why: (event.delta ?? 0) > 0
+        ? 'ನೀರು ಆವಿಯಾಗಿ ಲವಣಗಳ ಸಾಂದ್ರತೆ ಹೆಚ್ಚಾಗಿದೆ.'
+        : 'ಗಿಡಗಳು ಪೋಷಕಾಂಶಗಳನ್ನು ಹೀರಿಕೊಂಡಿವೆ ಅಥವಾ ನೀರನ್ನು ಸೇರಿಸಲಾಗಿದೆ.',
+      action: (event.delta ?? 0) > 0 ? 'ತಾಜಾ ನೀರನ್ನು ಸೇರಿಸಿ ಸಾಂದ್ರತೆಯನ್ನು ಕಡಿಮೆ ಮಾಡಿ.' : 'ಪೋಷಕಾಂಶಗಳ ದ್ರಾವಣವನ್ನು ಸೇರಿಸಿ.',
+    };
+  }
+
+  if (event.metric === 'waterLevel') {
+    return {
+      headline: (event.delta ?? 0) < 0 ? 'ನೀರಿನ ಮಟ್ಟ ಗಣನೀಯವಾಗಿ ಕಡಿಮೆಯಾಗಿದೆ' : 'ನೀರಿನ ತೊಟ್ಟಿಯನ್ನು ಮರುತುಂಬಿಸಲಾಗಿದೆ',
+      why: (event.delta ?? 0) < 0
+        ? `ಗಿಡದ ಬಳಕೆಯಿಂದ ನೀರಿನ ಮಟ್ಟ ${Math.abs(event.delta ?? 0)}% ರಷ್ಟು ಇಳಿಕೆಯಾಗಿದೆ.`
+        : 'ಹೊಸ ದ್ರಾವಣ ಅಥವಾ ನೀರನ್ನು ಸೇರಿಸಲಾಗಿದೆ.',
+      action: (event.currentValue as number) < 35 ? 'ಪಂಪ್ ಸುರಕ್ಷತೆಗಾಗಿ ಕೂಡಲೇ ನೀರನ್ನು ಸೇರಿಸಿ.' : 'ನಿಯಮಿತ ನೀರಾವರಿ ಮುಂದುವರಿಸಿ.',
+    };
+  }
+
+  if (event.metric === 'canopyCoveragePercent') {
+    return {
+      headline: (event.delta ?? 0) > 0 ? 'ಗಿಡದ ಎಲೆಗಳು ಬೆಳೆಯುತ್ತಿವೆ' : 'ಎಲೆಗಳ ವ್ಯಾಪ್ತಿ ಕಡಿಮೆಯಾಗಿದೆ',
+      why: (event.delta ?? 0) > 0
+        ? `ಆರೋಗ್ಯಕರ ಬೆಳವಣಿಗೆಯಿಂದ ಎಲೆಗಳ ವ್ಯಾಪ್ತಿ +${event.delta}% ಹೆಚ್ಚಾಗಿದೆ.`
+        : 'ಎಲೆಗಳು ಬಾಡಿರಬಹುದು ಅಥವಾ ಕತ್ತರಿಸಿರಬಹುದು.',
+      action: 'ಪ್ರಸ್ತುತ ಬೆಳಕು ಮತ್ತು ಪೋಷಕಾಂಶಗಳ ವ್ಯವಸ್ಥೆ ಮುಂದುವರಿಸಿ.',
+    };
+  }
+
+  if (event.metric === 'chlorosis') {
+    return {
+      headline: (event.delta ?? 0) > 0 ? 'ಎಲೆಗಳಲ್ಲಿ ಹಳದಿ ಬಣ್ಣ ಹೆಚ್ಚಾಗಿದೆ' : 'ಎಲೆಗಳ ಹಳದಿ ಬಣ್ಣ ಕಡಿಮೆಯಾಗಿದೆ',
+      why: 'ಎಲೆಗಳ ಅಂಗಾಂಶದಲ್ಲಿ ಕ್ಲೋರೊಫಿಲ್ ಪ್ರಮಾಣದಲ್ಲಿ ವ್ಯತ್ಯಾಸವಾಗಿದೆ.',
+      action: 'ದ್ರಾವಣದ pH ಪರಿಶೀಲಿಸಿ ಮತ್ತು ನೈಟ್ರೋಜನ್/ಕಬ್ಬಿಣದ ಲಭ್ಯತೆಯನ್ನು ಖಚಿತಪಡಿಸಿಕೊಳ್ಳಿ.',
+    };
+  }
+
+  if (event.metric === 'species') {
+    return {
+      headline: `ಸಸ್ಯದ ತಳಿ ಬದಲಾಗಿದೆ: ${event.currentValue}`,
+      why: `ಕ್ಯಾಮೆರಾ ಮಾದರಿಯು ${event.currentValue} ತಳಿಯನ್ನು ಗುರುತಿಸಿದೆ.`,
+      action: 'ಸೆಟ್ಟಿಂಗ್ಸ್‌ನಲ್ಲಿ ಸಸ್ಯದ ತಳಿಯನ್ನು ಪರಿಶೀಲಿಸಿ.',
+    };
+  }
+
+  return {
+    headline: event.farmerHeadline,
+    why: event.farmerWhy,
+    action: event.farmerAction,
   };
 }

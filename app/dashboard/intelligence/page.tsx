@@ -9,6 +9,7 @@ import { EvidenceChain, EvidenceStep } from '@/components/ui/EvidenceChain';
 import { ModeToggle } from '@/components/ui/ModeToggle';
 import { LanguageToggle } from '@/components/ui/LanguageToggle';
 import { getFarmerCopy } from '@/lib/intelligence/farmerSemanticLayer';
+import { WhatChangedCard } from '@/components/ui/WhatChangedCard';
 import {
   Brain,
   Layers,
@@ -62,6 +63,7 @@ export default function IntelligencePage() {
     language,
     setLanguage,
     latestReasoningEvent,
+    whatChangedSummary,
   } = usePlantIntelligence();
 
   const { mode, isStale, latestReading } = useESP32Serial();
@@ -587,6 +589,18 @@ export default function IntelligencePage() {
           <span>{isKn ? 'ಇತಿಹಾಸ:' : 'History:'} <strong style={{ color: 'var(--text-primary)' }}>{isKn ? `${observations.length} ದಾಖಲೆಗಳು` : `${observations.length} checkpoints`}</strong></span>
         </div>
       </div>
+
+      {/* ============================================================ */}
+      {/* SECTION 1C: "WHAT CHANGED?" LONGITUDINAL INTELLIGENCE        */}
+      {/* ============================================================ */}
+      {whatChangedSummary && (
+        <WhatChangedCard
+          summary={whatChangedSummary}
+          language={language}
+          userMode={userMode}
+          onUserModeChange={setUserMode}
+        />
+      )}
 
       {/* ============================================================ */}
       {/* SECTION 2: EVIDENCE CHAIN (THE 5 INPUTS)                     */}

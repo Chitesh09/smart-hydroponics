@@ -572,3 +572,111 @@ export interface PlantReasoningEvent {
   };
   sensorAvailable?: boolean;
 }
+
+// ============================================================================
+// PHASE 7: "WHAT CHANGED?" INTELLIGENCE ENGINE TYPES
+// ============================================================================
+
+export type ChangeCategory =
+  | 'visual'
+  | 'sensor'
+  | 'health'
+  | 'growth'
+  | 'identity'
+  | 'anomaly'
+  | 'reasoning'
+  | 'combined';
+
+export type ChangeDirection =
+  | 'improved'
+  | 'declined'
+  | 'stable'
+  | 'changed'
+  | 'recovered'
+  | 'unavailable'
+  | 'unknown';
+
+export type ChangeSignificance =
+  | 'NONE'
+  | 'MINOR'
+  | 'MODERATE'
+  | 'SIGNIFICANT'
+  | 'CRITICAL';
+
+export type ChangeConfidence =
+  | 'HIGH'
+  | 'MODERATE'
+  | 'LOW'
+  | 'INSUFFICIENT_DATA';
+
+export type TemporalComparisonWindow =
+  | 'vs_previous'
+  | 'vs_baseline'
+  | 'vs_trend';
+
+export interface PlantChangeEvent {
+  id: string;
+  plantId: string;
+  category: ChangeCategory;
+  metric: string;
+  label: string;
+  previousValue?: number | string | boolean | null;
+  currentValue?: number | string | boolean | null;
+  baselineValue?: number | string | boolean | null;
+  delta?: number;
+  percentDelta?: number;
+  unit?: string;
+  direction: ChangeDirection;
+  significance: ChangeSignificance;
+  confidence: ChangeConfidence;
+  isMeaningful: boolean;
+  temporalWindow: TemporalComparisonWindow;
+  summary: string;
+  farmerHeadline: string;
+  farmerWhy: string;
+  farmerAction: string;
+  whyItMatters: string;
+  suggestedCheck: string;
+  requiresReview?: boolean;
+  timestamp: number;
+  evidenceSource: 'camera' | 'esp32' | 'multimodal' | 'history' | 'system';
+}
+
+export type WhatChangedStatus =
+  | 'meaningful_changes'
+  | 'stable_no_change'
+  | 'insufficient_history'
+  | 'sensor_unavailable';
+
+export interface WhatChangedSummary {
+  plantId: string;
+  timestamp: number;
+  timeframeDescription: string;
+  hasMeaningfulChange: boolean;
+  status: WhatChangedStatus;
+  overallSignificance: ChangeSignificance;
+  overallDirection: ChangeDirection;
+  summaryHeadline: string;
+  summaryExplanation: string;
+  farmerHeadline: string;
+  farmerWhy: string;
+  farmerAction: string;
+  events: PlantChangeEvent[];
+  visualChanges: PlantChangeEvent[];
+  sensorChanges: PlantChangeEvent[];
+  healthChanges: PlantChangeEvent[];
+  growthChanges: PlantChangeEvent[];
+  anomalyChanges: PlantChangeEvent[];
+  identityChanges: PlantChangeEvent[];
+  reasoningChanges: PlantChangeEvent[];
+  reviewRequiredItems: PlantChangeEvent[];
+  sensorAvailability: {
+    ph: SensorAvailabilityState;
+    tds: SensorAvailabilityState;
+    waterLevel: SensorAvailabilityState;
+  };
+  cameraConfidence: ChangeConfidence;
+  observationCount: number;
+  timeDeltaHours?: number;
+  limitations: string[];
+}

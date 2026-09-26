@@ -35,7 +35,9 @@ import {
   StructuredPlantContext,
   AIPlantMessage,
   PlantReasoningEvent,
+  WhatChangedSummary,
 } from './types';
+import { evaluateWhatChanged } from './whatChangedEngine';
 import { CloudSyncStatus } from '@/lib/firebase/types';
 import {
   DEFAULT_CROP_PROFILE,
@@ -121,6 +123,7 @@ interface PlantIntelligenceContextType {
   plantId: string;
   latestReasoningEvent: PlantReasoningEvent | null;
   reasoningHistory: PlantReasoningEvent[];
+  whatChangedSummary: WhatChangedSummary;
 }
 
 const PlantIntelligenceContext = createContext<PlantIntelligenceContextType | undefined>(undefined);
@@ -847,6 +850,11 @@ export function PlantIntelligenceProvider({ children }: { children: React.ReactN
 
   const latestObservation = observations.length > 0 ? observations[0] : null;
 
+  // 9. Longitudinal "What Changed?" Intelligence Engine
+  const whatChangedSummary = useMemo(() => {
+    return evaluateWhatChanged(latestObservation, observations, plantProfile);
+  }, [latestObservation, observations, plantProfile]);
+
   return (
     <PlantIntelligenceContext.Provider
       value={{
@@ -894,7 +902,8 @@ export function PlantIntelligenceProvider({ children }: { children: React.ReactN
         stationId,
         plantId,
         latestReasoningEvent,
-        reasoningHistory
+        reasoningHistory,
+        whatChangedSummary,
       }}
     >
       {children}
