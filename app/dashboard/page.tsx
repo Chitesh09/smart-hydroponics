@@ -15,7 +15,7 @@ import { LanguageToggle } from '@/components/ui/LanguageToggle';
 import { FarmerActionCard } from '@/components/ui/FarmerActionCard';
 import { WhatChangedCard } from '@/components/ui/WhatChangedCard';
 import { WhatChanged, MetricDelta } from '@/components/ui/WhatChanged';
-import { getFarmerCopy } from '@/lib/intelligence/farmerSemanticLayer';
+import { getFarmerCopy, getLocalizedLifecycleState } from '@/lib/intelligence/farmerSemanticLayer';
 import {
   FlaskConical,
   Sparkles,
@@ -39,6 +39,7 @@ export default function Dashboard() {
   const {
     cropIdentity,
     plantProfile,
+    digitalProfile,
     latestDetection,
     latestVisualHealth,
     multimodalAssessment,
@@ -162,26 +163,28 @@ export default function Dashboard() {
     return () => clearInterval(interval);
   }, [reading.timestamp]);
 
+  const activeProfile = digitalProfile || plantProfile;
+
   const isPlantIdentified = Boolean(
-    (plantProfile.species && plantProfile.species !== 'Unknown Plant' && plantProfile.species !== 'unknown_plant') ||
+    (activeProfile.species && activeProfile.species !== 'Unknown Plant' && activeProfile.species !== 'unknown_plant') ||
     (cropIdentity.commonName && cropIdentity.commonName !== 'Plant' && cropIdentity.commonName !== 'Unknown Plant' && cropIdentity.cropKey !== 'unknown_plant' && cropIdentity.cropKey !== 'unclassified_plant')
   );
   const plantDisplayName = isPlantIdentified
-    ? (plantProfile.commonName || plantProfile.species || cropIdentity.commonName)
+    ? (activeProfile.commonName || activeProfile.species || cropIdentity.commonName)
     : (isKn ? 'ಗಿಡ' : 'Plant');
   const botanicalScientific = isPlantIdentified
-    ? (plantProfile.scientificName || cropIdentity.scientificName || (isKn ? 'ವರ್ಗೀಕರಿಸದ ಪ್ರಭೇದ' : 'Species Unclassified'))
+    ? (activeProfile.scientificName || cropIdentity.scientificName || (isKn ? 'ವರ್ಗೀಕರಿಸದ ಪ್ರಭೇದ' : 'Species Unclassified'))
     : (isKn ? copy.ui.plantNotIdentified : 'Plant type not identified yet');
 
   const [ageDays, setAgeDays] = useState<number>(1);
   useEffect(() => {
     const timer = setTimeout(() => {
-      if (plantProfile.createdAt) {
-        setAgeDays(Math.max(1, Math.round((Date.now() - plantProfile.createdAt) / 86400000) + 1));
+      if (activeProfile.createdAt) {
+        setAgeDays(Math.max(1, Math.round((Date.now() - activeProfile.createdAt) / 86400000) + 1));
       }
     }, 0);
     return () => clearTimeout(timer);
-  }, [plantProfile.createdAt]);
+  }, [activeProfile.createdAt]);
 
   // Real historical deltas calculation for "WHAT CHANGED TODAY"
   const calculatedDeltas = useMemo((): MetricDelta[] => {
@@ -474,7 +477,7 @@ export default function Dashboard() {
                 {isKn ? 'ಪರಿಶೀಲಿಸುತ್ತಿರುವ ಗಿಡ' : 'Monitored Specimen'}
               </span>
               <span className="scientific-meta" style={{ color: 'var(--color-green)', fontSize: '10px' }}>
-                {isKn ? `ದಿನ ${ageDays}` : `Day ${ageDays}`} · {plantProfile.observationCount} {isKn ? 'ತಪಾಸಣೆ' : 'checks'}
+                {isKn ? `ದಿನ ${ageDays}` : `Day ${ageDays}`} · {activeProfile.observationCount} {isKn ? 'ತಪಾಸಣೆ' : 'checks'}
               </span>
             </div>
             <div className={styles.speciesBlock} style={{ marginTop: '4px' }}>
@@ -482,8 +485,39 @@ export default function Dashboard() {
               <div className={styles.scientificName}>{botanicalScientific}</div>
             </div>
 
-            <div className={styles.stateRow}>
+            <div className={styles.stateRow} style={{ flexWrap: 'wrap', gap: '6px' }}>
               <StatusBadge status={farmerSemanticState.plantStatus.toLowerCase()} label={farmerSemanticState.visualHealthMessage || farmerSemanticState.plantMessage} size="md" />
+              <span
+                style={{
+                  fontSize: '11px',
+                  fontWeight: 600,
+                  padding: '2px 8px',
+                  borderRadius: 'var(--radius-xs)',
+                  background: 'rgba(28, 167, 160, 0.12)',
+                  color: 'var(--color-teal)',
+                  border: '1px solid rgba(28, 167, 160, 0.25)',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                }}
+                title={getLocalizedLifecycleState(activeProfile.lifecycleState || 'MONITORING', language)}
+              >
+                <span>🌱</span>
+                <span>{getLocalizedLifecycleState(activeProfile.lifecycleState || 'MONITORING', language)}</span>
+              </span>
+              {activeProfile.completeness && (
+                <span
+                  style={{
+                    fontSize: '10.5px',
+                    fontFamily: 'var(--font-mono)',
+                    color: 'var(--text-muted)',
+                    alignSelf: 'center',
+                  }}
+                  title={isKn ? `ಪ್ರೊಫೈಲ್ ಪೂರ್ಣತೆ: ${activeProfile.completeness.score}%` : `Profile Completeness: ${activeProfile.completeness.score}%`}
+                >
+                  {activeProfile.completeness.score}% {isKn ? 'ಪೂರ್ಣ' : 'complete'}
+                </span>
+              )}
               {isTelemetryAvailable && userMode === 'technical' && (
                 <div className={styles.conditionScoreDisplay}>
                   <span className={styles.scoreNumber}>{multimodalAssessment.overallScore}</span>
@@ -494,7 +528,7 @@ export default function Dashboard() {
 
             {userMode === 'technical' && (
               <div style={{ fontSize: '10.5px', fontFamily: 'var(--font-mono)', color: 'var(--text-muted)', marginTop: '4px' }}>
-                plantId: <span style={{ color: 'var(--color-teal)' }}>{plantProfile.plantId}</span>
+                plantId: <span style={{ color: 'var(--color-teal)' }}>{activeProfile.plantId}</span>
               </div>
             )}
           </div>

@@ -80,7 +80,7 @@ export interface PlantProfile {
   modelVersion?: string;
   createdAt: number;
   lastObservedAt?: number;
-  monitoringStatus: 'active' | 'archived' | 'completed';
+  monitoringStatus: 'active' | 'archived' | 'completed' | MonitoringState;
   currentHealthStatus: StructuredHealthState | 'optimal' | 'warning' | 'critical' | 'unknown';
   observationCount: number;
   growthStage?: 'germination' | 'seedling' | 'vegetative' | 'flowering' | 'fruiting' | 'harvest_ready';
@@ -90,6 +90,20 @@ export interface PlantProfile {
   healthConfidence?: 'high' | 'moderate' | 'low' | 'unknown';
   activeAnomaly?: string;
   recoveryStatus?: 'recovering' | 'stable' | 'deteriorating' | 'none';
+
+  // Phase 8 Digital Profile Extended Structures
+  lifecycleState?: PlantLifecycleState;
+  identificationStatus?: PlantIdentificationStatus;
+  baselineStatus?: BaselineStatus;
+  identity?: PlantProfileIdentity;
+  lifecycle?: PlantProfileLifecycle;
+  currentState?: PlantProfileCurrentState;
+  statistics?: PlantProfileStatistics;
+  baseline?: PlantProfileBaseline;
+  growth?: PlantProfileGrowth;
+  environment?: PlantProfileEnvironment;
+  completeness?: ProfileCompleteness;
+  metadata?: PlantProfileMetadata;
 }
 
 export interface VisualAnomaly {
@@ -680,3 +694,169 @@ export interface WhatChangedSummary {
   timeDeltaHours?: number;
   limitations: string[];
 }
+
+// ============================================================================
+// PHASE 8: PLANT DIGITAL PROFILE & LIFECYCLE INTELLIGENCE TYPES
+// ============================================================================
+
+export type PlantIdentificationStatus =
+  | 'UNKNOWN'
+  | 'IDENTIFIED'
+  | 'LOW_CONFIDENCE'
+  | 'REVIEW_REQUIRED';
+
+export type PlantLifecycleState =
+  | 'CREATED'
+  | 'BASELINE_PENDING'
+  | 'MONITORING'
+  | 'GROWING'
+  | 'ATTENTION'
+  | 'RECOVERING'
+  | 'STABLE'
+  | 'INACTIVE'
+  | 'ARCHIVED';
+
+export type MonitoringState = 'ACTIVE' | 'PAUSED' | 'OFFLINE';
+
+export type BaselineStatus =
+  | 'BASELINE_PENDING'
+  | 'BASELINE_ESTABLISHED'
+  | 'INSUFFICIENT_QUALITY';
+
+export type ProfileCompletenessStatus =
+  | 'COMPLETE'
+  | 'PARTIAL'
+  | 'LIMITED'
+  | 'INSUFFICIENT_DATA';
+
+export interface ProfileCompletenessCategory {
+  available: boolean;
+  label: string;
+  details: string;
+}
+
+export interface ProfileCompleteness {
+  status: ProfileCompletenessStatus;
+  score: number; // 0 - 100
+  overallScore?: number; // 0 - 100
+  categories: {
+    identity: ProfileCompletenessCategory;
+    baseline: ProfileCompletenessCategory;
+    healthHistory: ProfileCompletenessCategory;
+    growthHistory: ProfileCompletenessCategory;
+    environmentalHistory: ProfileCompletenessCategory;
+  };
+  missingItems: string[];
+  explanation: string;
+}
+
+export type PlantMilestoneType =
+  | 'CREATED'
+  | 'BASELINE_ESTABLISHED'
+  | 'SPECIES_IDENTIFIED'
+  | 'HEALTH_CHANGE'
+  | 'ANOMALY_DETECTED'
+  | 'GROWTH_DETECTED'
+  | 'RECOVERY_DETECTED'
+  | 'ENVIRONMENTAL_CHANGE'
+  | 'REASONING_EVENT';
+
+export interface PlantMilestone {
+  id: string;
+  plantId: string;
+  type: PlantMilestoneType;
+  timestamp: number;
+  dateString: string;
+  dayNumber: number;
+  dayLabel: string;
+  title: string;
+  description: string;
+  evidenceIds?: string[];
+  observationId?: string;
+  reasoningEventId?: string;
+  confidence: 'HIGH' | 'MODERATE' | 'LOW';
+  status?: 'optimal' | 'warning' | 'critical' | 'stable';
+  sourceMetric?: string;
+  metricDelta?: string;
+}
+
+export interface PlantProfileIdentity {
+  plantId: string;
+  species?: string;
+  commonName?: string;
+  scientificName?: string;
+  family?: string;
+  speciesConfidence?: number;
+  identificationStatus: PlantIdentificationStatus;
+  identifiedAt?: number;
+}
+
+export interface PlantProfileLifecycle {
+  createdAt: number;
+  lastObservedAt?: number;
+  monitoringStartedAt: number;
+  monitoringStatus: MonitoringState;
+  lifecycleState: PlantLifecycleState;
+}
+
+export interface PlantProfileCurrentState {
+  healthStatus: StructuredHealthState | 'optimal' | 'warning' | 'critical' | 'unknown';
+  healthConfidence: 'high' | 'moderate' | 'low' | 'unknown';
+  currentAnomaly?: string;
+  activeAnomaly?: string;
+  latestReasoningEventId?: string;
+  reasoningSummary?: string;
+  currentGrowthState?: 'expanding' | 'steady' | 'contracting' | 'insufficient_data';
+  visualHealthScore?: number;
+}
+
+export interface PlantProfileStatistics {
+  observationCount: number;
+  totalObservationCount?: number;
+  reasoningEventCount: number;
+  changeEventCount: number;
+  daysMonitored: number;
+}
+
+export interface PlantProfileBaseline {
+  baselineObservationId?: string;
+  baselineCreatedAt?: number;
+  baselineStatus: BaselineStatus;
+  isEstablished: boolean;
+  initialCanopyCoverage?: number;
+  initialHealthScore?: number;
+  initialPH?: number;
+  initialTDS?: number;
+  initialWaterLevel?: number;
+}
+
+export interface PlantProfileGrowth {
+  latestCanopyCoverage?: number;
+  latestPlantArea?: number;
+  cumulativeGrowthDelta?: number;
+  growthTrend: 'expanding' | 'steady' | 'contracting' | 'insufficient_data';
+  growthConfidence: 'HIGH' | 'MODERATE' | 'LOW';
+  dailyGrowthVelocity?: number;
+  disclaimer: string;
+}
+
+export interface PlantProfileEnvironment {
+  latestPH?: number;
+  latestTDS?: number;
+  latestWaterLevel?: number;
+  sensorAvailability: {
+    ph: SensorAvailabilityState;
+    tds: SensorAvailabilityState;
+    waterLevel: SensorAvailabilityState;
+  };
+  phTrend?: 'rising' | 'falling' | 'stable' | 'unknown';
+  tdsTrend?: 'rising' | 'falling' | 'stable' | 'unknown';
+  waterTrend?: 'rising' | 'falling' | 'stable' | 'unknown';
+}
+
+export interface PlantProfileMetadata {
+  profileVersion: string;
+  createdBy: string;
+  updatedAt: number;
+}
+

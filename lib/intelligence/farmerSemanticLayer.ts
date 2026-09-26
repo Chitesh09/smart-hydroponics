@@ -14,6 +14,12 @@ import {
   MultimodalScenarioCode,
   WhatChangedSummary,
   PlantChangeEvent,
+  PlantLifecycleState,
+  MonitoringState,
+  ProfileCompletenessStatus,
+  PlantIdentificationStatus,
+  PlantMilestone,
+  PlantProfile,
 } from './types';
 import { SupportedLanguageCode } from '@/lib/assistant/assistantConfig';
 
@@ -1414,3 +1420,237 @@ export function getLocalizedChangeEvent(
     action: event.farmerAction,
   };
 }
+
+// ============================================================================
+// PHASE 8: PLANT DIGITAL PROFILE & LIFECYCLE LOCALIZATION
+// ============================================================================
+
+export function getLocalizedLifecycleState(
+  state?: PlantLifecycleState,
+  lang: SupportedLanguageCode = 'en'
+): string {
+  const isKn = lang === 'kn';
+  switch (state) {
+    case 'CREATED':
+      return isKn ? 'ಪ್ರೊಫೈಲ್ ಆರಂಭಿಸಲಾಗಿದೆ' : 'Profile Initialized';
+    case 'BASELINE_PENDING':
+      return isKn ? 'ಮೂಲ ಮಾಪನಾಂಕ ಬಾಕಿ ಇದೆ' : 'Baseline Pending';
+    case 'MONITORING':
+      return isKn ? 'ನಿರಂತರ ಮೇಲ್ವಿಚಾರಣೆ' : 'Actively Monitored';
+    case 'GROWING':
+      return isKn ? 'ಬೆಳೆಯುತ್ತಿದೆ 🌱' : 'Vegetative Growth 🌱';
+    case 'ATTENTION':
+      return isKn ? 'ಗಮನ ಅಗತ್ಯವಿದೆ ⚠️' : 'Needs Attention ⚠️';
+    case 'RECOVERING':
+      return isKn ? 'ಚೇತರಿಸಿಕೊಳ್ಳುತ್ತಿದೆ 🌿' : 'Recovering 🌿';
+    case 'STABLE':
+      return isKn ? 'ಸ್ಥಿರವಾಗಿದೆ ಹಾಗೂ ಆರೋಗ್ಯಕರ' : 'Stable & Healthy';
+    case 'INACTIVE':
+      return isKn ? 'ನಿಷ್ಕ್ರಿಯವಾಗಿದೆ' : 'Inactive';
+    case 'ARCHIVED':
+      return isKn ? 'ಸಂಗ್ರಹಿಸಲಾಗಿದೆ' : 'Archived';
+    default:
+      return isKn ? 'ಸ್ಥಿರವಾಗಿದೆ' : 'Stable';
+  }
+}
+
+export function getLocalizedMonitoringStatus(
+  status?: MonitoringState | string,
+  lang: SupportedLanguageCode = 'en'
+): string {
+  const isKn = lang === 'kn';
+  switch (status?.toUpperCase()) {
+    case 'ACTIVE':
+      return isKn ? 'ಸಕ್ರಿಯವಾಗಿದೆ' : 'Active';
+    case 'PAUSED':
+      return isKn ? 'ವಿರಾಮಗೊಳಿಸಲಾಗಿದೆ' : 'Paused';
+    case 'OFFLINE':
+      return isKn ? 'ಆಫ್‌ಲೈನ್‌ನಲ್ಲಿದೆ' : 'Offline';
+    default:
+      return isKn ? 'ಸಕ್ರಿಯ' : 'Active';
+  }
+}
+
+export function getLocalizedIdentificationStatus(
+  status?: PlantIdentificationStatus,
+  lang: SupportedLanguageCode = 'en'
+): string {
+  const isKn = lang === 'kn';
+  switch (status) {
+    case 'IDENTIFIED':
+      return isKn ? 'ದೃಢೀಕೃತ ಸಸ್ಯ' : 'Identified Specimen';
+    case 'UNKNOWN':
+      return isKn ? 'ಗುರುತಿಸಲಾಗದ ಸಸ್ಯ' : 'Unknown Specimen';
+    case 'LOW_CONFIDENCE':
+      return isKn ? 'ಕಡಿಮೆ ವಿಶ್ವಾಸಾರ್ಹತೆ' : 'Tentative Identification';
+    case 'REVIEW_REQUIRED':
+      return isKn ? 'ಪರಿಶೀಲನೆ ಅಗತ್ಯವಿದೆ' : 'Review Required';
+    default:
+      return isKn ? 'ಪರಿಶೀಲನೆ ಬಾಕಿ' : 'Pending';
+  }
+}
+
+export function getLocalizedCompletenessStatus(
+  status?: ProfileCompletenessStatus,
+  lang: SupportedLanguageCode = 'en'
+): string {
+  const isKn = lang === 'kn';
+  switch (status) {
+    case 'COMPLETE':
+      return isKn ? 'ಸಂಪೂರ್ಣ ಮಾಹಿತಿ (೧೦೦%)' : 'Complete Profile (100%)';
+    case 'PARTIAL':
+      return isKn ? 'ಭಾಗಶಃ ಮಾಹಿತಿ' : 'Partial Profile';
+    case 'LIMITED':
+      return isKn ? 'ಸೀಮಿತ ಮಾಹಿತಿ' : 'Limited Data';
+    case 'INSUFFICIENT_DATA':
+      return isKn ? 'ಅಪೂರ್ಣ ಮಾಹಿತಿ' : 'Insufficient Data';
+    default:
+      return isKn ? 'ಮಾಹಿತಿ' : 'Profile';
+  }
+}
+
+export function getLocalizedMilestone(
+  milestone: PlantMilestone,
+  lang: SupportedLanguageCode = 'en'
+): { title: string; description: string; dayLabel: string } {
+  const isKn = lang === 'kn';
+  if (!isKn) {
+    return {
+      title: milestone.title,
+      description: milestone.description,
+      dayLabel: milestone.dayLabel,
+    };
+  }
+
+  const dayLabel = `ದಿನ ${milestone.dayNumber}`;
+
+  switch (milestone.type) {
+    case 'CREATED':
+      return {
+        title: 'ಸಸ್ಯ ಪ್ರೊಫೈಲ್ ರಚಿಸಲಾಗಿದೆ',
+        description: `ಗಿಡದ ನಿರಂತರ ಮೇಲ್ವಿಚಾರಣೆ ಪ್ರಾರಂಭವಾಗಿದೆ (ID: ${milestone.plantId}).`,
+        dayLabel: `${dayLabel} · ಆರಂಭ`,
+      };
+    case 'BASELINE_ESTABLISHED':
+      return {
+        title: 'ಆರಂಭಿಕ ಮೂಲ ಮಾಪನಾಂಕ ಸ್ಥಾಪಿಸಲಾಗಿದೆ',
+        description: 'ಕ್ಯಾಮೆರಾ ಮತ್ತು ಸಂವೇದಕಗಳ ಮೊದಲ ಸಮತೋಲಿತ ದಾಖಲೆ ಸಂಗ್ರಹಿಸಲಾಗಿದೆ.',
+        dayLabel: `${dayLabel} · ಮೂಲ ಮಾಪನಾಂಕ`,
+      };
+    case 'SPECIES_IDENTIFIED':
+      return {
+        title: milestone.title.includes('Review') ? 'ಸಸ್ಯದ ತಳಿ ಪರಿಶೀಲನೆ ಅಗತ್ಯವಿದೆ' : 'ಸಸ್ಯದ ತಳಿ ದೃಢಪಟ್ಟಿದೆ',
+        description: milestone.description,
+        dayLabel: `${dayLabel} · ಸಸ್ಯ ವರ್ಗೀಕರಣ`,
+      };
+    case 'HEALTH_CHANGE':
+      return {
+        title: 'ಆರೋಗ್ಯ ಸ್ಥಿತಿಯಲ್ಲಿ ಬದಲಾವಣೆ',
+        description: milestone.description,
+        dayLabel: `${dayLabel} · ಆರೋಗ್ಯ ಬದಲಾವಣೆ`,
+      };
+    case 'RECOVERY_DETECTED':
+      return {
+        title: 'ಒತ್ತಡದಿಂದ ಸಸ್ಯ ಚೇತರಿಸಿಕೊಂಡಿದೆ',
+        description: 'ಎಲೆಗಳ ಹಸಿರು ಹಾಗೂ ಸಂವೇದಕಗಳ ಮಟ್ಟ ಸಾಮಾನ್ಯ ಸ್ಥಿತಿಗೆ ಮರಳಿವೆ.',
+        dayLabel: `${dayLabel} · ಚೇತರಿಕೆ`,
+      };
+    case 'GROWTH_DETECTED':
+      return {
+        title: 'ಗಮನಾರ್ಹ ಎಲೆಗಳ ಬೆಳವಣಿಗೆ',
+        description: milestone.description,
+        dayLabel: `${dayLabel} · ಬೆಳವಣಿಗೆ`,
+      };
+    case 'REASONING_EVENT':
+      return {
+        title: 'ತಾರ್ಕಿಕ ಪರಸ್ಪರ ಸಂಬಂಧ ಪತ್ತೆಯಾಗಿದೆ',
+        description: milestone.description,
+        dayLabel: `${dayLabel} · ತಾರ್ಕಿಕ ವಿಶ್ಲೇಷಣೆ`,
+      };
+    default:
+      return {
+        title: milestone.title,
+        description: milestone.description,
+        dayLabel: milestone.dayLabel,
+      };
+  }
+}
+
+export function getLocalizedDigitalProfileSummary(
+  profile: PlantProfile,
+  lang: SupportedLanguageCode = 'en'
+): { story: string; stateLabel: string; growthLabel: string; action: string } {
+  const isKn = lang === 'kn';
+  const state = profile.lifecycle?.lifecycleState || 'STABLE';
+  const stateLabel = getLocalizedLifecycleState(state, lang);
+
+  const growthTrend = profile.growth?.growthTrend || 'steady';
+  const growthLabel = isKn
+    ? growthTrend === 'expanding' ? 'ಚೆನ್ನಾಗಿ ಬೆಳೆಯುತ್ತಿದೆ 🌱' : growthTrend === 'contracting' ? 'ಎಲೆಗಳ ಗಾತ್ರ ಕುಗ್ಗಿದೆ' : 'ಸ್ಥಿರವಾದ ಬೆಳವಣಿಗೆ'
+    : growthTrend === 'expanding' ? 'Expanding steadily 🌱' : growthTrend === 'contracting' ? 'Canopy contracted' : 'Steady canopy';
+
+  if (!isKn) {
+    if (state === 'ATTENTION') {
+      return {
+        story: `Your ${profile.commonName || 'plant'} is experiencing physiological stress. Review latest sensor readings and foliage.`,
+        stateLabel,
+        growthLabel,
+        action: 'Inspect reservoir levels and pH balance.',
+      };
+    }
+    if (state === 'RECOVERING') {
+      return {
+        story: `Your ${profile.commonName || 'plant'} is recovering well from recent environmental stress.`,
+        stateLabel,
+        growthLabel,
+        action: 'Maintain current nutrient and light schedules.',
+      };
+    }
+    if (state === 'GROWING') {
+      return {
+        story: `Your ${profile.commonName || 'plant'} is expanding its canopy with vibrant foliage.`,
+        stateLabel,
+        growthLabel,
+        action: 'Keep up current cultivation routine.',
+      };
+    }
+    return {
+      story: `Your ${profile.commonName || 'plant'} is in stable physiological equilibrium.`,
+      stateLabel,
+      growthLabel,
+      action: 'No urgent intervention needed right now.',
+    };
+  }
+
+  if (state === 'ATTENTION') {
+    return {
+      story: `ನಿಮ್ಮ ${profile.commonName || 'ಗಿಡ'} ಒತ್ತಡವನ್ನು ಎದುರಿಸುತ್ತಿದೆ. ನೀರಿನ ಮಟ್ಟ ಮತ್ತು ಎಲೆಗಳನ್ನು ಪರಿಶೀಲಿಸಿ.`,
+      stateLabel,
+      growthLabel,
+      action: 'ನೀರಿನ ತೊಟ್ಟಿ ಮತ್ತು pH ಮಟ್ಟವನ್ನು ತಕ್ಷಣವೇ ಪರಿಶೀಲಿಸಿ.',
+    };
+  }
+  if (state === 'RECOVERING') {
+    return {
+      story: `ನಿಮ್ಮ ${profile.commonName || 'ಗಿಡ'} ಇತ್ತೀಚಿನ ಒತ್ತಡದಿಂದ ಚೇತರಿಸಿಕೊಳ್ಳುತ್ತಿದೆ.`,
+      stateLabel,
+      growthLabel,
+      action: 'ಪ್ರಸ್ತುತ ಪೋಷಕಾಂಶಗಳ ವೇಳಾಪಟ್ಟಿಯನ್ನು ಮುಂದುವರಿಸಿ.',
+    };
+  }
+  if (state === 'GROWING') {
+    return {
+      story: `ನಿಮ್ಮ ${profile.commonName || 'ಗಿಡ'} ಆರೋಗ್ಯಕರವಾಗಿ ಎಲೆಗಳನ್ನು ಹರಡಿಕೊಳ್ಳುತ್ತಿದೆ.`,
+      stateLabel,
+      growthLabel,
+      action: 'ನಿಯಮಿತ ಬೆಳಕು ಮತ್ತು ಪೋಷಕಾಂಶಗಳ ನಿರ್ವಹಣೆ ಮುಂದುವರಿಸಿ.',
+    };
+  }
+  return {
+    story: `ನಿಮ್ಮ ${profile.commonName || 'ಗಿಡ'} ಸಮತೋಲಿತ ಮತ್ತು ಸ್ಥಿರವಾಗಿದೆ.`,
+    stateLabel,
+    growthLabel,
+    action: 'ಯಾವುದೇ ತುರ್ತು ಕ್ರಮ ಅಗತ್ಯವಿಲ್ಲ. ನಿಯಮಿತವಾಗಿ ಗಮನಿಸಿ.',
+  };
+}
+

@@ -3,7 +3,7 @@
 import { useMemo } from 'react';
 import { useESP32Serial } from '@/lib/esp32/ESP32SerialContext';
 import { usePlantIntelligence } from '@/lib/intelligence/PlantIntelligenceContext';
-import { getFarmerCopy } from '@/lib/intelligence/farmerSemanticLayer';
+import { getFarmerCopy, getLocalizedMilestone } from '@/lib/intelligence/farmerSemanticLayer';
 import { LiveLineChart } from '@/components/LiveLineChart';
 import { DataSourceBadge } from '@/components/ui/DataSourceBadge';
 import { StatusBadge } from '@/components/ui/StatusBadge';
@@ -30,6 +30,8 @@ export default function AnalyticsPage() {
     observations,
     cropIdentity,
     plantProfile,
+    digitalProfile,
+    lifecycleMilestones,
     predictiveAnalytics,
     userMode,
     setUserMode,
@@ -38,19 +40,20 @@ export default function AnalyticsPage() {
     whatChangedSummary
   } = usePlantIntelligence();
 
+  const activeProfile = digitalProfile || plantProfile;
   const copy = useMemo(() => getFarmerCopy(language), [language]);
   const isKn = language === 'kn';
   const isFarmer = userMode === 'farmer';
 
   const isPlantIdentified = Boolean(
-    (plantProfile.species && plantProfile.species !== 'Unknown Plant' && plantProfile.species !== 'unknown_plant') ||
+    (activeProfile.species && activeProfile.species !== 'Unknown Plant' && activeProfile.species !== 'unknown_plant') ||
     (cropIdentity.commonName && cropIdentity.commonName !== 'Plant' && cropIdentity.commonName !== 'Unknown Plant' && cropIdentity.cropKey !== 'unknown_plant' && cropIdentity.cropKey !== 'unclassified_plant')
   );
   const plantDisplayName = isPlantIdentified
-    ? (plantProfile.commonName || plantProfile.species || cropIdentity.commonName)
+    ? (activeProfile.commonName || activeProfile.species || cropIdentity.commonName)
     : (isKn ? 'ಪರಿಶೀಲಿಸುತ್ತಿರುವ ಗಿಡ' : 'Monitored Specimen');
   const botanicalScientific = isPlantIdentified
-    ? (plantProfile.scientificName || cropIdentity.scientificName || (isKn ? 'ವರ್ಗೀಕರಿಸದ ಪ್ರಭೇದ' : 'Species Unclassified'))
+    ? (activeProfile.scientificName || cropIdentity.scientificName || (isKn ? 'ವರ್ಗೀಕರಿಸದ ಪ್ರಭೇದ' : 'Species Unclassified'))
     : (isKn ? copy.ui.plantNotIdentified : 'Plant type not identified yet');
 
   // Format historical chart labels across telemetry history
@@ -85,17 +88,44 @@ export default function AnalyticsPage() {
     };
   }, [history]);
 
-  // Generate plant chronological milestones from observations
-  const plantMilestones = useMemo(() => {
+  // Generate plant chronological milestones from Phase 8 lifecycle intelligence
+  const displayMilestones = useMemo(() => {
+    if (lifecycleMilestones && lifecycleMilestones.length > 0) {
+      return lifecycleMilestones.map((m) => {
+        const localized = getLocalizedMilestone(m, language);
+        const statusLabel = m.status === 'optimal'
+          ? copy.analytics.statusHealthy
+          : m.status === 'critical'
+            ? (isKn ? 'ಗಮನ ಬೇಕು' : 'Attention')
+            : m.status === 'warning'
+              ? (isKn ? 'ಎಚ್ಚರಿಕೆ' : 'Warning')
+              : copy.analytics.statusStable;
+
+        const badgeStatus = (m.status === 'optimal' ? 'healthy' : m.status || 'stable') as 'healthy' | 'warning' | 'critical' | 'stable';
+
+        return {
+          id: m.id,
+          date: `${m.dateString} · ${localized.dayLabel}`,
+          title: localized.title,
+          description: localized.description,
+          status: badgeStatus,
+          statusLabel,
+          confidence: m.confidence,
+          type: m.type,
+        };
+      });
+    }
+
     if (observations.length === 0) {
       return [
         {
+          id: 'baseline-default',
           date: isKn ? 'ದಿನ 1 · ಆರಂಭಿಕ ದಾಖಲೆ' : 'Day 1 · Baseline',
           title: copy.analytics.milestoneBaselineTitle,
           description: isFarmer
             ? copy.analytics.milestoneBaselineDescFarmer
             : copy.analytics.milestoneBaselineDescTech,
-          status: 'stable',
+          status: 'stable' as const,
           statusLabel: copy.analytics.statusStable,
         },
       ];
@@ -119,14 +149,15 @@ export default function AnalyticsPage() {
         : (reasoning?.observations && reasoning.observations.length > 0
             ? `${reasoning.scenarioCode}: ${reasoning.observations.slice(0, 2).join('; ')}`
             : (isKn
-                ? `ಸಂವೇದಕಗಳು [${obs.plantId || plantProfile.plantId}] pH ${obs.ph?.toFixed(2) || '--'} ಮತ್ತು TDS ${Math.round(obs.tds || 0)} PPM (${Math.round(obs.waterLevel || 0)}% ನೀರಿನ ಮಟ್ಟ) ದಾಖಲಿಸಿವೆ.`
-                : `Sensors [${obs.plantId || plantProfile.plantId}] recorded pH ${obs.ph?.toFixed(2) || '--'} and TDS ${Math.round(obs.tds || 0)} PPM with ${obs.waterLevel || 0}% reservoir level.`));
+                ? `ಸಂವೇದಕಗಳು [${obs.plantId || activeProfile.plantId}] pH ${obs.ph?.toFixed(2) || '--'} ಮತ್ತು TDS ${Math.round(obs.tds || 0)} PPM (${Math.round(obs.waterLevel || 0)}% ನೀರಿನ ಮಟ್ಟ) ದಾಖಲಿಸಿವೆ.`
+                : `Sensors [${obs.plantId || activeProfile.plantId}] recorded pH ${obs.ph?.toFixed(2) || '--'} and TDS ${Math.round(obs.tds || 0)} PPM with ${obs.waterLevel || 0}% reservoir level.`));
 
       const isHealthy = reasoning ? reasoning.plantState === 'HEALTHY' : (obs.overallHealthScore && obs.overallHealthScore >= 80);
       const isUrgent = reasoning ? reasoning.plantState === 'CRITICAL' : false;
       const isAttention = reasoning ? reasoning.plantState === 'ATTENTION' : false;
-      const status = isUrgent ? 'attention' : isAttention ? 'warning' : isHealthy ? 'healthy' : 'stable';
+      const status = (isUrgent ? 'attention' : isAttention ? 'warning' : isHealthy ? 'healthy' : 'stable') as 'healthy' | 'attention' | 'warning' | 'stable';
       return {
+        id: `obs-${obs.id || idx}`,
         date: `${timeStr} · ${cycleText}`,
         title,
         description,
@@ -134,7 +165,7 @@ export default function AnalyticsPage() {
         statusLabel: isHealthy ? copy.analytics.statusHealthy : copy.analytics.statusStable,
       };
     });
-  }, [observations, isKn, isFarmer, copy, isPlantIdentified, plantDisplayName, plantProfile.plantId]);
+  }, [lifecycleMilestones, observations, language, isKn, isFarmer, copy, isPlantIdentified, plantDisplayName, activeProfile.plantId]);
 
   const exportToCSV = () => {
     if (history.length === 0 && observations.length === 0) return;
@@ -145,14 +176,14 @@ export default function AnalyticsPage() {
     // Export observations first
     observations.forEach((obs) => {
       const timeStr = new Date(obs.timestamp).toLocaleString();
-      const row = `"${timeStr}","${obs.plantId || plantProfile.plantId}","Observation Checkpoint",${obs.ph?.toFixed(2) || ''},${obs.tds?.toFixed(1) || ''},${obs.waterLevel?.toFixed(1) || ''},"${obs.plantSpecies || plantDisplayName}",${obs.visualHealthScore || ''}`;
+      const row = `"${timeStr}","${obs.plantId || activeProfile.plantId}","Observation Checkpoint",${obs.ph?.toFixed(2) || ''},${obs.tds?.toFixed(1) || ''},${obs.waterLevel?.toFixed(1) || ''},"${obs.plantSpecies || plantDisplayName}",${obs.visualHealthScore || ''}`;
       csvContent += row + '\n';
     });
 
     // Export history intervals
     history.forEach((item) => {
       const timeStr = new Date(item.timestamp).toLocaleString();
-      const row = `"${timeStr}","${plantProfile.plantId}","Telemetry Interval",${item.ph.toFixed(2)},${item.tds.toFixed(1)},${item.waterLevel.toFixed(1)},"${plantDisplayName}",`;
+      const row = `"${timeStr}","${activeProfile.plantId}","Telemetry Interval",${item.ph.toFixed(2)},${item.tds.toFixed(1)},${item.waterLevel.toFixed(1)},"${plantDisplayName}",`;
       csvContent += row + '\n';
     });
 
@@ -192,7 +223,7 @@ export default function AnalyticsPage() {
 
       {/* 2. Primary Plant Profile */}
       <PlantProfileCard
-        profile={plantProfile}
+        profile={activeProfile}
         observationsCount={observations.length}
         language={language}
         userMode={userMode}
@@ -435,9 +466,9 @@ export default function AnalyticsPage() {
             gap: '14px',
           }}
         >
-          {plantMilestones.map((milestone, idx) => (
+          {displayMilestones.map((milestone, idx) => (
             <div
-              key={idx}
+              key={milestone.id || idx}
               style={{
                 display: 'flex',
                 flexDirection: 'column',

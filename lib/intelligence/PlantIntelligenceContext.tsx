@@ -36,8 +36,10 @@ import {
   AIPlantMessage,
   PlantReasoningEvent,
   WhatChangedSummary,
+  PlantMilestone,
 } from './types';
 import { evaluateWhatChanged } from './whatChangedEngine';
+import { deriveDigitalPlantProfile, compilePlantLifecycleMilestones } from './plantDigitalProfile';
 import { CloudSyncStatus } from '@/lib/firebase/types';
 import {
   DEFAULT_CROP_PROFILE,
@@ -124,6 +126,8 @@ interface PlantIntelligenceContextType {
   latestReasoningEvent: PlantReasoningEvent | null;
   reasoningHistory: PlantReasoningEvent[];
   whatChangedSummary: WhatChangedSummary;
+  digitalProfile: PlantProfile;
+  lifecycleMilestones: PlantMilestone[];
 }
 
 const PlantIntelligenceContext = createContext<PlantIntelligenceContextType | undefined>(undefined);
@@ -855,6 +859,42 @@ export function PlantIntelligenceProvider({ children }: { children: React.ReactN
     return evaluateWhatChanged(latestObservation, observations, plantProfile);
   }, [latestObservation, observations, plantProfile]);
 
+  // 10. Plant Digital Profile & Lifecycle Intelligence Engine (Phase 8)
+  const digitalProfile = useMemo(() => {
+    return deriveDigitalPlantProfile({
+      storedProfile: plantProfile,
+      observations,
+      latestReading,
+      latestDetection,
+      latestVisualHealth,
+      latestReasoningEvent,
+      whatChangedSummary,
+      isCameraActive: cameraStatus === 'connected',
+      isTelemetryStale: isStale,
+      telemetryMode: mode,
+    });
+  }, [
+    plantProfile,
+    observations,
+    latestReading,
+    latestDetection,
+    latestVisualHealth,
+    latestReasoningEvent,
+    whatChangedSummary,
+    cameraStatus,
+    isStale,
+    mode,
+  ]);
+
+  const lifecycleMilestones = useMemo(() => {
+    return compilePlantLifecycleMilestones(
+      observations,
+      reasoningHistory,
+      whatChangedSummary,
+      plantProfile
+    );
+  }, [observations, reasoningHistory, whatChangedSummary, plantProfile]);
+
   return (
     <PlantIntelligenceContext.Provider
       value={{
@@ -904,6 +944,8 @@ export function PlantIntelligenceProvider({ children }: { children: React.ReactN
         latestReasoningEvent,
         reasoningHistory,
         whatChangedSummary,
+        digitalProfile,
+        lifecycleMilestones,
       }}
     >
       {children}
