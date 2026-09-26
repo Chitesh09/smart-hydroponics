@@ -10,6 +10,7 @@ import { ModeToggle } from '@/components/ui/ModeToggle';
 import { LanguageToggle } from '@/components/ui/LanguageToggle';
 import { getFarmerCopy } from '@/lib/intelligence/farmerSemanticLayer';
 import { WhatChangedCard } from '@/components/ui/WhatChangedCard';
+import { EnvironmentPlantCard } from '@/components/ui/EnvironmentPlantCard';
 import {
   Brain,
   Layers,
@@ -64,6 +65,8 @@ export default function IntelligencePage() {
     setLanguage,
     latestReasoningEvent,
     whatChangedSummary,
+    correlationSummary,
+    correlations,
   } = usePlantIntelligence();
 
   const { mode, isStale, latestReading } = useESP32Serial();
@@ -596,6 +599,19 @@ export default function IntelligencePage() {
       {whatChangedSummary && (
         <WhatChangedCard
           summary={whatChangedSummary}
+          language={language}
+          userMode={userMode}
+          onUserModeChange={setUserMode}
+        />
+      )}
+
+      {/* ============================================================ */}
+      {/* SECTION 1D: ENVIRONMENT ↔ PLANT CORRELATION (Phase 9)        */}
+      {/* ============================================================ */}
+      {correlationSummary && (
+        <EnvironmentPlantCard
+          summary={correlationSummary}
+          associations={correlations}
           language={language}
           userMode={userMode}
           onUserModeChange={setUserMode}

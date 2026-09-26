@@ -20,6 +20,10 @@ import {
   PlantIdentificationStatus,
   PlantMilestone,
   PlantProfile,
+  EnvironmentPlantAssociation,
+  EnvironmentAssociationType,
+  AssociationStrength,
+  CorrelationAnalysisSummary,
 } from './types';
 import { SupportedLanguageCode } from '@/lib/assistant/assistantConfig';
 
@@ -1567,6 +1571,12 @@ export function getLocalizedMilestone(
         description: milestone.description,
         dayLabel: `${dayLabel} · ತಾರ್ಕಿಕ ವಿಶ್ಲೇಷಣೆ`,
       };
+    case 'CORRELATION_DETECTED':
+      return {
+        title: 'ಪರಿಸರ ↔ ಸಸ್ಯ ಪರಸ್ಪರ ಸಂಬಂಧ',
+        description: milestone.description,
+        dayLabel: `${dayLabel} · ಪರಿಸರ ಸಂಬಂಧ`,
+      };
     default:
       return {
         title: milestone.title,
@@ -1653,4 +1663,206 @@ export function getLocalizedDigitalProfileSummary(
     action: 'ಯಾವುದೇ ತುರ್ತು ಕ್ರಮ ಅಗತ್ಯವಿಲ್ಲ. ನಿಯಮಿತವಾಗಿ ಗಮನಿಸಿ.',
   };
 }
+
+// ============================================================================
+// PHASE 9: ENVIRONMENT <-> PLANT CORRELATION LOCALIZATION
+// ============================================================================
+
+export function getLocalizedAssociationType(
+  type: EnvironmentAssociationType,
+  lang: SupportedLanguageCode = 'en'
+): string {
+  const isKn = lang === 'kn';
+  switch (type) {
+    case 'ENVIRONMENT_ONLY_CHANGE':
+      return isKn ? 'ಪರಿಸರ ಬದಲಾವಣೆ ಮಾತ್ರ' : 'Environmental Shift Only';
+    case 'PLANT_ONLY_CHANGE':
+      return isKn ? 'ಗಿಡದ ಎಲೆಗಳಲ್ಲಿ ಮಾತ್ರ ಬದಲಾವಣೆ' : 'Plant Visual Shift Only';
+    case 'COINCIDENT_CHANGE':
+      return isKn ? 'ಏಕಕಾಲಿಕ ಬದಲಾವಣೆಗಳು' : 'Coincident Shifts';
+    case 'TEMPORAL_ASSOCIATION':
+      return isKn ? 'ಕಾಲಾನುಕ್ರಮ ಪರಸ್ಪರ ಸಂಬಂಧ' : 'Temporal Association';
+    case 'LAGGED_ASSOCIATION':
+      return isKn ? 'ವಿಳಂಬಿತ ಪರಿಸರ ಪರಿಣಾಮ' : 'Delayed Environmental Response';
+    case 'CONFLICTING_EVIDENCE':
+      return isKn ? 'ಪರಸ್ಪರ ವಿರುದ್ಧ ಪುರಾವೆಗಳು' : 'Conflicting Evidence';
+    case 'INSUFFICIENT_DATA':
+      return isKn ? 'ಸಾಕಷ್ಟು ಇತಿಹಾಸವಿಲ್ಲ' : 'Insufficient History';
+    case 'NO_CLEAR_ASSOCIATION':
+    default:
+      return isKn ? 'ಯಾವುದೇ ನೇರ ಸಂಬಂಧವಿಲ್ಲ' : 'No Clear Association';
+  }
+}
+
+export function getLocalizedAssociationStrength(
+  strength: AssociationStrength,
+  lang: SupportedLanguageCode = 'en'
+): string {
+  const isKn = lang === 'kn';
+  switch (strength) {
+    case 'strong':
+      return isKn ? 'ದೃಢವಾದ ಸಂಬಂಧ' : 'Strong Association';
+    case 'moderate':
+      return isKn ? 'ಮಧ್ಯಮ ಸಂಬಂಧ' : 'Moderate Association';
+    case 'weak':
+      return isKn ? 'ದುರ್ಬಲ ಸಂಬಂಧ' : 'Weak Association';
+    case 'none':
+    default:
+      return isKn ? 'ಸಂಬಂಧವಿಲ್ಲ' : 'No Statistical Association';
+  }
+}
+
+export function getLocalizedAssociation(
+  assoc: EnvironmentPlantAssociation,
+  lang: SupportedLanguageCode = 'en'
+): {
+  headline: string;
+  summary: string;
+  whatChanged: string;
+  whatHappenedTogether: string;
+  whatItMeans: string;
+  whatToDo: string;
+} {
+  const isKn = lang === 'kn';
+  if (!isKn) {
+    return {
+      headline: `${assoc.environmentLabel} & ${assoc.plantLabel}`,
+      summary: assoc.summary,
+      whatChanged: assoc.farmerSummary.whatChanged,
+      whatHappenedTogether: assoc.farmerSummary.whatHappenedTogether,
+      whatItMeans: assoc.farmerSummary.whatItMeans,
+      whatToDo: assoc.farmerSummary.whatToDo,
+    };
+  }
+
+  // Kannada translations
+  let whatChanged = assoc.farmerSummary.whatChanged;
+  let whatHappenedTogether = assoc.farmerSummary.whatHappenedTogether;
+  let whatItMeans = assoc.farmerSummary.whatItMeans;
+  let whatToDo = assoc.farmerSummary.whatToDo;
+
+  const env = assoc.environmentMetric;
+  const envDir = assoc.environmentDirection;
+  const plantDir = assoc.plantDirection;
+
+  if (env === 'tds') {
+    whatChanged = envDir === 'rising'
+      ? `ಪೋಷಕಾಂಶಗಳ ಸಾಂದ್ರತೆ (TDS) ಹೆಚ್ಚಾಗಿದೆ (${Math.round(assoc.environmentValue || 0)} PPM).`
+      : envDir === 'falling'
+      ? `ಪೋಷಕಾಂಶಗಳ ಸಾಂದ್ರತೆ (TDS) ಕಡಿಮೆಯಾಗಿದೆ (${Math.round(assoc.environmentValue || 0)} PPM).`
+      : `ಪೋಷಕಾಂಶಗಳ ಸಾಂದ್ರತೆ ಸ್ಥಿರವಾಗಿದೆ.`;
+  } else if (env === 'waterLevel') {
+    whatChanged = envDir === 'falling'
+      ? `ತೊಟ್ಟಿಯಲ್ಲಿ ನೀರಿನ ಮಟ್ಟ ಕಡಿಮೆಯಾಗಿದೆ (${Math.round(assoc.environmentValue || 0)}%).`
+      : envDir === 'rising'
+      ? `ತೊಟ್ಟಿಗೆ ನೀರು ಸೇರಿಸಲಾಗಿದೆ (${Math.round(assoc.environmentValue || 0)}%).`
+      : `ನೀರಿನ ಮಟ್ಟ ಸ್ಥಿರವಾಗಿದೆ.`;
+  } else if (env === 'ph') {
+    whatChanged = `ನೀರಿನ pH ಮಟ್ಟ ${assoc.environmentValue ? assoc.environmentValue.toFixed(2) : ''} ಕ್ಕೆ ಬದಲಾಗಿದೆ.`;
+  }
+
+  if (assoc.associationType === 'ENVIRONMENT_ONLY_CHANGE') {
+    whatHappenedTogether = 'ಆದರೆ ಗಿಡದ ಎಲೆಗಳು ಯಾವುದೇ ಒತ್ತಡವಿಲ್ಲದೆ ಹಸಿರಾಗಿಯೇ ಉಳಿದಿವೆ.';
+    whatItMeans = 'ನೀರಿನಲ್ಲಿ ಬದಲಾವಣೆಯಾಗಿದ್ದರೂ ಗಿಡದ ಮೇಲೆ ಸದ್ಯಕ್ಕೆ ಯಾವುದೇ ಪರಿಣಾಮ ಬೀರಿಲ್ಲ.';
+    whatToDo = 'ನೀರಿನ ಮಟ್ಟವನ್ನು ನಿಯಮಿತವಾಗಿ ಗಮನಿಸುತ್ತಿರಿ.';
+  } else if (assoc.associationType === 'PLANT_ONLY_CHANGE') {
+    whatChanged = plantDir === 'declined' ? 'ಗಿಡದ ಎಲೆಗಳಲ್ಲಿ ಕೊಂಚ ಬಣ್ಣ ಬದಲಾವಣೆ ಅಥವಾ ಒತ್ತಡ ಕಂಡುಬಂದಿದೆ.' : 'ಗಿಡದ ಎಲೆಗಳ ಬೆಳವಣಿಗೆ ಹೆಚ್ಚಾಗಿದೆ.';
+    whatHappenedTogether = 'ಆದರೆ ನೀರಿನ ಸಂವೇದಕಗಳ ಮಟ್ಟ ಸಾಮಾನ್ಯವಾಗಿದೆ.';
+    whatItMeans = 'ನೀರಿನಲ್ಲಿ ಯಾವುದೇ ವ್ಯತ್ಯಾಸವಿಲ್ಲದಿದ್ದರೂ ಎಲೆಗಳಲ್ಲಿ ಸಣ್ಣ ಬದಲಾವಣೆ ಕಂಡುಬಂದಿದೆ.';
+    whatToDo = 'ಬೆಳಕು ಮತ್ತು ಗಾಳಿಯ ಪ್ರಸರಣವನ್ನು ಪರಿಶೀಲಿಸಿ.';
+  } else if (assoc.associationType === 'CONFLICTING_EVIDENCE') {
+    whatHappenedTogether = 'ಸಂವೇದಕಗಳು ಎಚ್ಚರಿಕೆ ತೋರಿಸುತ್ತಿದ್ದರೂ ಗಿಡವು ಆರೋಗ್ಯಕರವಾಗಿದೆ.';
+    whatItMeans = 'ಸಂವೇದಕ ಮತ್ತು ಕ್ಯಾಮೆರಾ ನಡುವೆ ಭಿನ್ನತೆ ಇದೆ. ಸಂವೇದಕ ಸರಿಯಾಗಿ ಕೆಲಸ ಮಾಡುತ್ತಿದೆಯೇ ಪರೀಕ್ಷಿಸಿ.';
+    whatToDo = 'ಸಂವೇದಕಗಳ ಶುದ್ಧತೆ ಹಾಗೂ ನೀರಿನ ನೈಜ ಮಟ್ಟವನ್ನು ಕೈಯಾರೆ ಪರಿಶೀಲಿಸಿ.';
+  } else if (assoc.associationType === 'LAGGED_ASSOCIATION') {
+    whatChanged = `${assoc.lagHours || 24} ಗಂಟೆಗಳ ಹಿಂದೆ ನೀರಿನ ಪರಿಸ್ಥಿತಿಯಲ್ಲಿ ಬದಲಾವಣೆಯಾಗಿತ್ತು.`;
+    whatHappenedTogether = 'ಅದರ ನಂತರ ಈಗ ಗಿಡದ ಎಲೆಗಳಲ್ಲಿ ಬದಲಾವಣೆ ಕಂಡುಬರುತ್ತಿದೆ.';
+    whatItMeans = 'ನೀರಿನ ವ್ಯತ್ಯಾಸವಾದ ಕೆಲ ಗಂಟೆಗಳ ನಂತರ ಗಿಡದ ಮೇಲೆ ಪರಿಣಾಮ ಕಾಣಿಸಿಕೊಳ್ಳುವುದು ಸಹಜ.';
+    whatToDo = 'ತೊಟ್ಟಿಯ ಸಮತೋಲನವನ್ನು ಸರಿಪಡಿಸಿ ಮತ್ತು ಮುಂದಿನ ಅವಲೋಕನ ಗಮನಿಸಿ.';
+  } else {
+    whatHappenedTogether = plantDir === 'declined'
+      ? 'ಅದೇ ಸಮಯದಲ್ಲಿ ಗಿಡದ ಎಲೆಗಳು ಕೊಂಚ ಬಾಡಿದ ಅಥವಾ ಹಳದಿಯಾದ ಲಕ್ಷಣ ತೋರಿಸಿವೆ.'
+      : plantDir === 'improved'
+      ? 'ಅದೇ ಸಮಯದಲ್ಲಿ ಗಿಡದ ಎಲೆಗಳು ಇನ್ನಷ್ಟು ಹಸಿರಾಗಿ ಬೆಳೆದಿವೆ.'
+      : 'ಗಿಡದ ಸ್ಥಿತಿ ಸ್ಥಿರವಾಗಿದೆ.';
+    whatItMeans = 'ನೀರಿನ ಪರಿಸ್ಥಿತಿ ಮತ್ತು ಗಿಡದ ನೋಟ ಎರಡೂ ಒಂದೇ ಕಾಲದಲ್ಲಿ ಬದಲಾಗಿವೆ.';
+    whatToDo = 'ನೀರು ಮತ್ತು ಪೋಷಕಾಂಶಗಳ ಸಮತೋಲನ ಪರಿಶೀಲಿಸಿ.';
+  }
+
+  return {
+    headline: `${getLocalizedAssociationType(assoc.associationType, lang)}`,
+    summary: isKn ? `${getLocalizedAssociationStrength(assoc.associationStrength, lang)} · ${whatChanged}` : assoc.summary,
+    whatChanged,
+    whatHappenedTogether,
+    whatItMeans,
+    whatToDo,
+  };
+}
+
+export function getLocalizedCorrelationSummary(
+  summary: CorrelationAnalysisSummary,
+  lang: SupportedLanguageCode = 'en'
+): {
+  headline: string;
+  why: string;
+  action: string;
+  statusLabel: string;
+} {
+  const isKn = lang === 'kn';
+  if (!isKn) {
+    return {
+      headline: summary.farmerHeadline,
+      why: summary.farmerWhy,
+      action: summary.farmerAction,
+      statusLabel: summary.status === 'active_associations'
+        ? 'Active Associations Detected'
+        : summary.status === 'insufficient_history'
+        ? 'Collecting Historical Data'
+        : summary.status === 'sensor_unavailable'
+        ? 'Sensors Offline'
+        : 'Stable Equilibrium',
+    };
+  }
+
+  let statusLabel = 'ಸ್ಥಿರ ಸಮತೋಲನ';
+  if (summary.status === 'active_associations') statusLabel = 'ಪರಿಸರ ↔ ಗಿಡ ಸಂಬಂಧ ಪತ್ತೆಯಾಗಿದೆ';
+  else if (summary.status === 'insufficient_history') statusLabel = 'ಇತಿಹಾಸ ಸಂಗ್ರಹಿಸಲಾಗುತ್ತಿದೆ';
+  else if (summary.status === 'sensor_unavailable') statusLabel = 'ಸಂವೇದಕಗಳು ಆಫ್‌ಲೈನ್‌ನಲ್ಲಿವೆ';
+
+  if (summary.status === 'insufficient_history') {
+    return {
+      headline: 'ಪರಿಸರ ಸಂಬಂಧ ತಿಳಿಯಲು ಹೆಚ್ಚಿನ ಇತಿಹಾಸ ಬೇಕು',
+      why: 'ಗಿಡ ಮತ್ತು ನೀರಿನ ಸಂಬಂಧವನ್ನು ನಿಖರವಾಗಿ ವಿಶ್ಲೇಷಿಸಲು ಕನಿಷ್ಠ 3 ಅವಲೋಕನಗಳು ಅಗತ್ಯ.',
+      action: 'ದಿನವಿಡೀ ವ್ಯವಸ್ಥೆಯನ್ನು ಚಾಲನೆಯಲ್ಲಿರಿಸಿ.',
+      statusLabel,
+    };
+  }
+
+  if (summary.status === 'sensor_unavailable') {
+    return {
+      headline: 'ನೀರಿನ ಸಂವೇದಕಗಳು ಆಫ್‌ಲೈನ್‌ನಲ್ಲಿವೆ',
+      why: 'ಸಂವೇದಕಗಳ ಮಾಹಿತಿಯಿಲ್ಲದೆ ಪರಿಸರದ ಪ್ರಭಾವವನ್ನು ಅಳೆಯಲು ಸಾಧ್ಯವಿಲ್ಲ.',
+      action: 'ESP32 ಸಂವೇದಕಗಳ ಸಂಪರ್ಕವನ್ನು ಪರಿಶೀಲಿಸಿ.',
+      statusLabel,
+    };
+  }
+
+  if (summary.primaryAssociation) {
+    const loc = getLocalizedAssociation(summary.primaryAssociation, lang);
+    return {
+      headline: loc.whatHappenedTogether || loc.whatChanged,
+      why: loc.whatItMeans,
+      action: loc.whatToDo,
+      statusLabel,
+    };
+  }
+
+  return {
+    headline: 'ಗಿಡ ಮತ್ತು ಪರಿಸರ ಸ್ಥಿರವಾಗಿವೆ',
+    why: 'ನೀರಿನ ಮಟ್ಟ ಹಾಗೂ ಎಲೆಗಳ ಆರೋಗ್ಯ ಎರಡೂ ಸಾಮಾನ್ಯ ಸ್ಥಿತಿಯಲ್ಲಿವೆ.',
+    action: 'ನಿಯಮಿತ ಮೇಲ್ವಿಚಾರಣೆಯನ್ನು ಮುಂದುವರಿಸಿ.',
+    statusLabel,
+  };
+}
+
 

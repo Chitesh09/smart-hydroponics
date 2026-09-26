@@ -11,6 +11,7 @@ import { ModeToggle } from '@/components/ui/ModeToggle';
 import { LanguageToggle } from '@/components/ui/LanguageToggle';
 import { PlantProfileCard } from '@/components/ui/PlantProfileCard';
 import { WhatChangedCard } from '@/components/ui/WhatChangedCard';
+import { EnvironmentPlantCard } from '@/components/ui/EnvironmentPlantCard';
 import {
   Compass,
   Download,
@@ -37,7 +38,9 @@ export default function AnalyticsPage() {
     setUserMode,
     language,
     setLanguage,
-    whatChangedSummary
+    whatChangedSummary,
+    correlationSummary,
+    correlations,
   } = usePlantIntelligence();
 
   const activeProfile = digitalProfile || plantProfile;
@@ -431,6 +434,19 @@ export default function AnalyticsPage() {
       {whatChangedSummary && (
         <WhatChangedCard
           summary={whatChangedSummary}
+          language={language}
+          userMode={userMode}
+          onUserModeChange={setUserMode}
+        />
+      )}
+
+      {/* ============================================================ */}
+      {/* 3C. ENVIRONMENT ↔ PLANT CORRELATION INTELLIGENCE (Phase 9)   */}
+      {/* ============================================================ */}
+      {correlationSummary && (
+        <EnvironmentPlantCard
+          summary={correlationSummary}
+          associations={correlations}
           language={language}
           userMode={userMode}
           onUserModeChange={setUserMode}

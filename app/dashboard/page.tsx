@@ -14,6 +14,7 @@ import { ModeToggle } from '@/components/ui/ModeToggle';
 import { LanguageToggle } from '@/components/ui/LanguageToggle';
 import { FarmerActionCard } from '@/components/ui/FarmerActionCard';
 import { WhatChangedCard } from '@/components/ui/WhatChangedCard';
+import { EnvironmentPlantCard } from '@/components/ui/EnvironmentPlantCard';
 import { WhatChanged, MetricDelta } from '@/components/ui/WhatChanged';
 import { getFarmerCopy, getLocalizedLifecycleState } from '@/lib/intelligence/farmerSemanticLayer';
 import {
@@ -55,6 +56,8 @@ export default function Dashboard() {
     identificationResult,
     latestReasoningEvent,
     whatChangedSummary,
+    correlationSummary,
+    correlations,
   } = usePlantIntelligence();
 
   const [selectedMetric, setSelectedMetric] = useState<'ph' | 'tds' | 'waterLevel' | 'distance'>('ph');
@@ -601,6 +604,19 @@ export default function Dashboard() {
       {whatChangedSummary && (
         <WhatChangedCard
           summary={whatChangedSummary}
+          language={language}
+          userMode={userMode}
+          onUserModeChange={setUserMode}
+        />
+      )}
+
+      {/* ============================================================ */}
+      {/* 3C. ENVIRONMENT ↔ PLANT CORRELATION INTELLIGENCE (Phase 9)   */}
+      {/* ============================================================ */}
+      {correlationSummary && (
+        <EnvironmentPlantCard
+          summary={correlationSummary}
+          associations={correlations}
           language={language}
           userMode={userMode}
           onUserModeChange={setUserMode}

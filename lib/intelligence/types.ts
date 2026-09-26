@@ -759,7 +759,8 @@ export type PlantMilestoneType =
   | 'GROWTH_DETECTED'
   | 'RECOVERY_DETECTED'
   | 'ENVIRONMENTAL_CHANGE'
-  | 'REASONING_EVENT';
+  | 'REASONING_EVENT'
+  | 'CORRELATION_DETECTED';
 
 export interface PlantMilestone {
   id: string;
@@ -858,5 +859,107 @@ export interface PlantProfileMetadata {
   profileVersion: string;
   createdBy: string;
   updatedAt: number;
+}
+
+// ============================================================================
+// PHASE 9: ENVIRONMENT <-> PLANT CORRELATION INTELLIGENCE TYPES
+// ============================================================================
+
+export type EnvironmentAssociationType =
+  | 'ENVIRONMENT_ONLY_CHANGE'
+  | 'PLANT_ONLY_CHANGE'
+  | 'COINCIDENT_CHANGE'
+  | 'TEMPORAL_ASSOCIATION'
+  | 'LAGGED_ASSOCIATION'
+  | 'NO_CLEAR_ASSOCIATION'
+  | 'INSUFFICIENT_DATA'
+  | 'CONFLICTING_EVIDENCE';
+
+export type AssociationConfidenceLevel =
+  | 'HIGH'
+  | 'MODERATE'
+  | 'LOW'
+  | 'INSUFFICIENT';
+
+export type AssociationStrength =
+  | 'none'
+  | 'weak'
+  | 'moderate'
+  | 'strong';
+
+export type CorrelationMethod =
+  | 'pearson'
+  | 'spearman'
+  | 'qualitative_pairing'
+  | 'none';
+
+export type CorrelationTimeWindow =
+  | 'immediate'
+  | 'same_day'
+  | 'recent_trend'
+  | 'baseline_comparison';
+
+export interface EnvironmentPlantAssociation {
+  id: string;
+  plantId: string;
+  timestamp: number;
+  environmentMetric: 'ph' | 'tds' | 'waterLevel' | 'multiple';
+  environmentLabel: string;
+  environmentValue?: number;
+  environmentBaseline?: number;
+  environmentDirection: 'rising' | 'falling' | 'stable' | 'unavailable';
+  plantMetric: 'visualHealthScore' | 'canopyCoverage' | 'chlorosis' | 'necrosis' | 'healthState';
+  plantLabel: string;
+  plantValue?: number | string;
+  plantBaseline?: number | string;
+  plantDirection: 'improved' | 'declined' | 'stable' | 'unknown';
+  timeWindow: CorrelationTimeWindow;
+  lagHours?: number;
+  associationType: EnvironmentAssociationType;
+  associationStrength: AssociationStrength;
+  correlationCoefficient?: number; // Validly calculated Pearson r or Spearman rho
+  correlationMethod: CorrelationMethod;
+  sampleSize: number;
+  confidence: AssociationConfidenceLevel;
+  confidenceReason: string;
+  dataQuality: 'good' | 'degraded' | 'poor';
+  confoundingFactors: string[];
+  evidenceIds: string[];
+  relatedObservationIds: string[];
+  relatedReasoningEventIds?: string[];
+  summary: string;
+  farmerSummary: {
+    whatChanged: string;
+    whatHappenedTogether: string;
+    whatItMeans: string;
+    whatToDo: string;
+  };
+  createdAt: number;
+}
+
+export type CorrelationAnalysisStatus =
+  | 'active_associations'
+  | 'no_clear_association'
+  | 'insufficient_history'
+  | 'sensor_unavailable';
+
+export interface CorrelationAnalysisSummary {
+  plantId: string;
+  timestamp: number;
+  status: CorrelationAnalysisStatus;
+  primaryAssociation: EnvironmentPlantAssociation | null;
+  associations: EnvironmentPlantAssociation[];
+  multiSensorAnalysis?: {
+    isMultiSensorEvent: boolean;
+    environmentalFactors: string[];
+    summary: string;
+  };
+  laggedAssociations: EnvironmentPlantAssociation[];
+  confoundingFactors: string[];
+  sampleSize: number;
+  limitations: string[];
+  farmerHeadline: string;
+  farmerWhy: string;
+  farmerAction: string;
 }
 

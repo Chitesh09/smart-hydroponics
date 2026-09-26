@@ -37,9 +37,12 @@ import {
   PlantReasoningEvent,
   WhatChangedSummary,
   PlantMilestone,
+  CorrelationAnalysisSummary,
+  EnvironmentPlantAssociation,
 } from './types';
 import { evaluateWhatChanged } from './whatChangedEngine';
 import { deriveDigitalPlantProfile, compilePlantLifecycleMilestones } from './plantDigitalProfile';
+import { evaluateEnvironmentPlantCorrelation } from './environmentPlantCorrelation';
 import { CloudSyncStatus } from '@/lib/firebase/types';
 import {
   DEFAULT_CROP_PROFILE,
@@ -128,6 +131,8 @@ interface PlantIntelligenceContextType {
   whatChangedSummary: WhatChangedSummary;
   digitalProfile: PlantProfile;
   lifecycleMilestones: PlantMilestone[];
+  correlationSummary: CorrelationAnalysisSummary;
+  correlations: EnvironmentPlantAssociation[];
 }
 
 const PlantIntelligenceContext = createContext<PlantIntelligenceContextType | undefined>(undefined);
@@ -886,14 +891,57 @@ export function PlantIntelligenceProvider({ children }: { children: React.ReactN
     mode,
   ]);
 
+  // 11. Environment ↔ Plant Correlation Intelligence Engine (Phase 9)
+  const correlationSummary = useMemo(() => {
+    return evaluateEnvironmentPlantCorrelation({
+      plantId: plantProfile.plantId,
+      observations,
+      sensorHistory,
+      latestReading,
+      plantProfile,
+      whatChangedSummary,
+    });
+  }, [plantProfile, observations, sensorHistory, latestReading, whatChangedSummary]);
+
   const lifecycleMilestones = useMemo(() => {
-    return compilePlantLifecycleMilestones(
+    const baseMilestones = compilePlantLifecycleMilestones(
       observations,
       reasoningHistory,
       whatChangedSummary,
       plantProfile
     );
-  }, [observations, reasoningHistory, whatChangedSummary, plantProfile]);
+
+    if (
+      correlationSummary.primaryAssociation &&
+      (correlationSummary.primaryAssociation.associationType === 'TEMPORAL_ASSOCIATION' ||
+        correlationSummary.primaryAssociation.associationType === 'LAGGED_ASSOCIATION')
+    ) {
+      const assoc = correlationSummary.primaryAssociation;
+      const dayNumber = Math.max(
+        1,
+        Math.round((assoc.timestamp - (plantProfile.createdAt || assoc.timestamp)) / 86400000) + 1
+      );
+      const isAlreadyIncluded = baseMilestones.some(m => m.id === `milestone_corr_${assoc.id}`);
+      if (!isAlreadyIncluded) {
+        baseMilestones.push({
+          id: `milestone_corr_${assoc.id}`,
+          plantId: assoc.plantId,
+          type: 'CORRELATION_DETECTED',
+          timestamp: assoc.timestamp,
+          dateString: new Date(assoc.timestamp).toLocaleDateString(),
+          dayNumber,
+          dayLabel: `Day ${dayNumber} · Environment Association`,
+          title: `${assoc.environmentLabel} Coincided with Visual Shift`,
+          description: assoc.summary,
+          confidence: assoc.confidence === 'HIGH' ? 'HIGH' : assoc.confidence === 'MODERATE' ? 'MODERATE' : 'LOW',
+          status: assoc.plantDirection === 'declined' ? 'warning' : 'optimal',
+          sourceMetric: assoc.environmentMetric,
+        });
+      }
+    }
+
+    return baseMilestones.sort((a, b) => b.timestamp - a.timestamp);
+  }, [observations, reasoningHistory, whatChangedSummary, plantProfile, correlationSummary]);
 
   return (
     <PlantIntelligenceContext.Provider
@@ -946,6 +994,8 @@ export function PlantIntelligenceProvider({ children }: { children: React.ReactN
         whatChangedSummary,
         digitalProfile,
         lifecycleMilestones,
+        correlationSummary,
+        correlations: correlationSummary.associations,
       }}
     >
       {children}
