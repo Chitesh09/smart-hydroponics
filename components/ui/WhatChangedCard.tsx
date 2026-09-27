@@ -2,20 +2,7 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import {
-  TrendingUp,
-  TrendingDown,
-  Minus,
-  CheckCircle2,
-  HelpCircle,
-  Clock,
-  Sparkles,
-  ArrowRight,
-  Activity,
-  ShieldAlert,
-  ChevronDown,
-  ChevronUp
-} from 'lucide-react';
+
 import { WhatChangedSummary, PlantChangeEvent } from '@/lib/intelligence/types';
 import { SupportedLanguageCode, AssistantMode } from '@/lib/assistant/assistantConfig';
 import { getLocalizedWhatChangedCopy, getLocalizedChangeEvent } from '@/lib/intelligence/farmerSemanticLayer';
@@ -36,12 +23,17 @@ export function WhatChangedCard({
   className = '',
 }: WhatChangedCardProps) {
   const [isExpanded, setIsExpanded] = React.useState(false);
+  const [activeTab, setActiveTab] = React.useState<'all' | 'sensor' | 'visual' | 'growth'>('all');
   const isKn = language === 'kn';
 
   const localizedCopy = getLocalizedWhatChangedCopy(summary, language);
 
-  // Show all events instead of filtering by tab
-  const filteredEvents = summary.events;
+  const filteredEvents = summary.events.filter(e => {
+    if (activeTab === 'sensor') return e.category === 'sensor';
+    if (activeTab === 'visual') return e.category === 'visual';
+    if (activeTab === 'growth') return e.category === 'growth';
+    return true;
+  });
 
   const getSignificanceColor = (sig: string) => {
     switch (sig) {
@@ -62,35 +54,35 @@ export function WhatChangedCard({
     switch (dir) {
       case 'improved':
       case 'recovered':
-        return <TrendingUp className="w-4 h-4 text-emerald-400" />;
+        return <span className="text-emerald-400 font-bold">↗</span>;
       case 'declined':
-        return <TrendingDown className="w-4 h-4 text-rose-400" />;
+        return <span className="text-rose-400 font-bold">↘</span>;
       case 'changed':
-        return <Activity className="w-4 h-4 text-amber-400" />;
+        return <span className="text-amber-400 font-bold">≈</span>;
       case 'unavailable':
-        return <HelpCircle className="w-4 h-4 text-slate-400" />;
+        return <span className="text-slate-400 font-bold">?</span>;
       default:
-        return <Minus className="w-4 h-4 text-slate-400" />;
+        return <span className="text-slate-400 font-bold">−</span>;
     }
   };
 
   return (
     <div
-      className={`rounded-2xl border bg-slate-900/90 backdrop-blur-md shadow-xl overflow-hidden transition-all duration-300 ${
+      className={`rounded-md border bg-surface overflow-hidden transition-all duration-300 ${
         summary.reviewRequiredItems.length > 0
-          ? 'border-amber-500/50 shadow-amber-950/20'
+          ? 'border-amber-700/50'
           : summary.status === 'meaningful_changes' && summary.overallSignificance === 'CRITICAL'
-          ? 'border-rose-500/40 shadow-rose-950/20'
+          ? 'border-rose-700/50'
           : summary.hasMeaningfulChange
-          ? 'border-emerald-500/40 shadow-emerald-950/10'
-          : 'border-slate-800 shadow-slate-950/30'
+          ? 'border-emerald-700/50'
+          : 'border-slate-800'
       } ${className}`}
     >
       {/* Top Banner / Review Alert */}
       {summary.reviewRequiredItems.length > 0 && (
         <div className="bg-amber-950/80 border-b border-amber-600/50 px-4 py-2.5 flex items-center justify-between text-amber-200 text-xs">
           <div className="flex items-center gap-2">
-            <ShieldAlert className="w-4 h-4 text-amber-400 shrink-0" />
+            <span className="text-amber-400 font-bold shrink-0">⚠</span>
             <span className="font-semibold">
               {isKn ? 'ಪರಿಶೀಲನೆ ಅಗತ್ಯವಿದೆ:' : 'Review Required:'} {summary.reviewRequiredItems[0].summary}
             </span>
@@ -105,7 +97,7 @@ export function WhatChangedCard({
       <div className="p-4 sm:p-5 border-b border-slate-800/80 flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <div
-            className={`w-10 h-10 rounded-xl flex items-center justify-center border ${
+            className={`w-10 h-10 rounded-md flex items-center justify-center border ${
               summary.status === 'stable_no_change'
                 ? 'bg-emerald-950/60 border-emerald-700/50 text-emerald-400'
                 : summary.status === 'insufficient_history'
@@ -114,11 +106,11 @@ export function WhatChangedCard({
             }`}
           >
             {summary.status === 'stable_no_change' ? (
-              <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+              <span className="text-emerald-400 font-bold">✓</span>
             ) : summary.status === 'insufficient_history' ? (
-              <Clock className="w-5 h-5 text-slate-400" />
+              <span className="text-slate-400 font-bold">⏱</span>
             ) : (
-              <Sparkles className="w-5 h-5 text-emerald-400" />
+              <span className="text-emerald-400 font-bold">★</span>
             )}
           </div>
           <div>
@@ -143,7 +135,7 @@ export function WhatChangedCard({
               </span>
             </div>
             <p className="text-xs text-slate-400 flex items-center gap-1.5 mt-0.5">
-              <Clock className="w-3.5 h-3.5 text-slate-500" />
+              <span className="text-slate-500 font-bold">⏱</span>
               <span>
                 {isKn
                   ? `ಅವಲೋಕನ: ${summary.timeframeDescription}`
@@ -232,16 +224,55 @@ export function WhatChangedCard({
         {summary.events.length > 0 && (
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 overflow-x-auto pb-2 pt-1 px-1 text-[11px]">
-                <span className="text-slate-400 font-medium">{summary.events.length} {isKn ? 'ದಾಖಲಾದ ಬದಲಾವಣೆಗಳು' : 'Changes Logged'}</span>
+              <div className="flex items-center gap-1 overflow-x-auto pb-2 pt-1 px-1">
+                <button
+                  onClick={() => setActiveTab('all')}
+                  className={`px-3 py-1.5 rounded-sm font-medium transition-colors border ${
+                    activeTab === 'all'
+                      ? 'bg-slate-800 border-slate-600 text-champagne'
+                      : 'bg-transparent border-transparent text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+                  }`}
+                >
+                  {isKn ? 'ಎಲ್ಲಾ ಬದಲಾವಣೆಗಳು' : 'All Events'} {summary.events.length}
+                </button>
+                <button
+                  onClick={() => setActiveTab('sensor')}
+                  className={`px-3 py-1.5 rounded-sm font-medium transition-colors border ${
+                    activeTab === 'sensor'
+                      ? 'bg-slate-800 border-slate-600 text-champagne'
+                      : 'bg-transparent border-transparent text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+                  }`}
+                >
+                  {isKn ? 'ಸಂವೇದಕಗಳು' : 'Sensors'} {summary.sensorChanges.length}
+                </button>
+                <button
+                  onClick={() => setActiveTab('visual')}
+                  className={`px-3 py-1.5 rounded-sm font-medium transition-colors border ${
+                    activeTab === 'visual'
+                      ? 'bg-slate-800 border-slate-600 text-champagne'
+                      : 'bg-transparent border-transparent text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+                  }`}
+                >
+                  {isKn ? 'ದೃಶ್ಯ' : 'Visual'} {summary.visualChanges.length}
+                </button>
+                <button
+                  onClick={() => setActiveTab('growth')}
+                  className={`px-3 py-1.5 rounded-sm font-medium transition-colors border ${
+                    activeTab === 'growth'
+                      ? 'bg-slate-800 border-slate-600 text-champagne'
+                      : 'bg-transparent border-transparent text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+                  }`}
+                >
+                  {isKn ? 'ಬೆಳವಣಿಗೆ' : 'Growth'} {summary.growthChanges.length}
+                </button>
               </div>
 
               <button
                 onClick={() => setIsExpanded(!isExpanded)}
-                className="text-xs text-emerald-400 hover:text-emerald-300 flex items-center gap-1 font-medium ml-2"
+                className="text-xs text-emerald-400 hover:text-emerald-300 flex items-center gap-1 font-medium ml-2 shrink-0"
               >
                 <span>{isExpanded ? (isKn ? 'ಕಡಿಮೆ ತೋರಿಸಿ' : 'Show less') : (isKn ? 'ವಿವರಗಳು' : 'Details')}</span>
-                {isExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                <span className="font-bold text-[10px]">{isExpanded ? '↑' : '↓'}</span>
               </button>
             </div>
 
@@ -252,12 +283,12 @@ export function WhatChangedCard({
                 return (
                   <div
                     key={event.id}
-                    className={`p-3 rounded-xl border transition-all ${
+                    className={`p-4 rounded-md border transition-all ${
                       event.requiresReview
-                        ? 'bg-amber-950/30 border-amber-700/50'
+                        ? 'bg-amber-950/20 border-amber-800/40'
                         : event.isMeaningful
-                        ? 'bg-slate-800/40 border-slate-700/60'
-                        : 'bg-slate-900/40 border-slate-800/50'
+                        ? 'bg-slate-800/30 border-slate-700/50'
+                        : 'bg-slate-900/30 border-slate-800/40'
                     }`}
                   >
                     <div className="flex items-start justify-between gap-3">
@@ -289,11 +320,17 @@ export function WhatChangedCard({
                           </p>
 
                           {isExpanded && (
-                            <div className="mt-3 pt-3 border-t border-slate-800/80 text-[11px] text-slate-400 space-y-2">
-                              <p className="text-amber-300/90 font-medium">
-                                <span className="font-semibold">{isKn ? 'ಕ್ರಮ:' : 'Action:'}</span>{' '}
-                                {userMode === 'farmer' ? eventCopy.action : event.farmerAction}
-                              </p>
+                            <div className="mt-3 pt-3 border-t border-slate-800/80 text-[12px] text-slate-400 space-y-2">
+                              <div className="flex flex-col gap-1">
+                                <span className="font-semibold text-[10px] uppercase tracking-wider text-slate-500">{isKn ? 'ಏಕೆ ಮುಖ್ಯ' : 'Why it matters'}</span>
+                                <span className="text-slate-300 leading-relaxed">{userMode === 'farmer' ? eventCopy.why : event.summary}</span>
+                              </div>
+                              <div className="flex flex-col gap-1 mt-2">
+                                <span className="font-semibold text-[10px] uppercase tracking-wider text-amber-500/80">{isKn ? 'ಕ್ರಮ:' : 'Related Action'}</span>
+                                <span className="text-amber-200/90 font-medium">
+                                  {userMode === 'farmer' ? eventCopy.action : event.farmerAction}
+                                </span>
+                              </div>
                               {userMode === 'technical' && (
                                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1 font-mono text-[10px] text-slate-400">
                                   <div>
@@ -349,14 +386,14 @@ export function WhatChangedCard({
             className="text-emerald-400 hover:text-emerald-300 flex items-center gap-1 font-medium transition-colors"
           >
             <span>{isKn ? 'ತಾರ್ಕಿಕ ಪ್ರಯೋಗಾಲಯಕ್ಕೆ ಹೋಗಿ' : 'Open Reasoning Lab'}</span>
-            <ArrowRight className="w-3.5 h-3.5" />
+            <span className="font-bold text-[14px] leading-none">→</span>
           </Link>
 
           <Link
             href="/dashboard/analytics"
             className="text-slate-400 hover:text-slate-200 flex items-center gap-1 transition-colors"
           >
-            <Activity className="w-3.5 h-3.5 text-slate-400" />
+            <span className="font-bold text-[14px] text-slate-400">~</span>
             <span>{isKn ? 'ಸಸ್ಯ ಪ್ರವಾಸ' : 'Plant Journey'}</span>
           </Link>
         </div>

@@ -2,19 +2,7 @@
 
 import React, { useState } from 'react';
 
-import {
-  Link2,
-  AlertTriangle,
-  Info,
-  Clock,
-  Sparkles,
-  HelpCircle,
-  ShieldCheck,
-  ChevronDown,
-  ChevronUp,
-  Layers,
-  Droplets,
-} from 'lucide-react';
+
 import {
   CorrelationAnalysisSummary,
   EnvironmentPlantAssociation,
@@ -85,22 +73,22 @@ export function EnvironmentPlantCard({
 
   return (
     <div
-      className={`rounded-2xl border bg-slate-900/90 backdrop-blur-md shadow-xl overflow-hidden transition-all duration-300 ${
+      className={`rounded-md border bg-surface overflow-hidden transition-all duration-300 ${
         summary.status === 'active_associations'
-          ? 'border-cyan-500/40 shadow-cyan-950/15'
+          ? 'border-cyan-700/50'
           : summary.status === 'sensor_unavailable'
-          ? 'border-rose-500/40 shadow-rose-950/15'
+          ? 'border-rose-700/50'
           : summary.status === 'insufficient_history'
-          ? 'border-amber-500/30 shadow-amber-950/10'
-          : 'border-slate-800 shadow-slate-950/30'
+          ? 'border-amber-700/50'
+          : 'border-slate-800'
       } ${className}`}
     >
       {/* CARD HEADER */}
       <div className="p-4 sm:p-5 border-b border-slate-800/80 bg-slate-950/40">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-xl bg-gradient-to-br from-cyan-500/20 to-emerald-500/20 border border-cyan-500/30 text-cyan-400 shadow-inner">
-              <Link2 className="w-5 h-5" />
+            <div className="p-2.5 rounded-sm bg-cyan-950/30 border border-cyan-800/40 text-cyan-400">
+              <span className="font-bold">≡</span>
             </div>
             <div>
               <div className="flex items-center gap-2">
@@ -156,7 +144,7 @@ export function EnvironmentPlantCard({
         {summary.status === 'sensor_unavailable' && (
           <div className="p-4 rounded-xl bg-rose-950/20 border border-rose-800/40 text-slate-300">
             <div className="flex items-start gap-3">
-              <AlertTriangle className="w-5 h-5 text-rose-400 shrink-0 mt-0.5" />
+              <span className="text-rose-400 font-bold shrink-0 mt-0.5">⚠</span>
               <div>
                 <h4 className="text-sm font-semibold text-rose-200">{localizedSummary.headline}</h4>
                 <p className="text-xs text-rose-300/80 mt-1 leading-relaxed">{localizedSummary.why}</p>
@@ -173,7 +161,7 @@ export function EnvironmentPlantCard({
         {summary.status === 'insufficient_history' && (
           <div className="p-4 rounded-xl bg-amber-950/20 border border-amber-800/40 text-slate-300">
             <div className="flex items-start gap-3">
-              <Clock className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
+              <span className="text-amber-400 font-bold shrink-0 mt-0.5">⏱</span>
               <div className="flex-1">
                 <h4 className="text-sm font-semibold text-amber-200">{localizedSummary.headline}</h4>
                 <p className="text-xs text-amber-300/80 mt-1 leading-relaxed">{localizedSummary.why}</p>
@@ -221,7 +209,7 @@ export function EnvironmentPlantCard({
 
                 {activeAssoc.lagHours && (
                   <span className="px-3 py-1 text-sm font-mono rounded-lg bg-purple-950/50 text-purple-300 border border-purple-800/60 flex items-center gap-1">
-                    <Clock className="w-4 h-4" />
+                    <span className="font-bold">⏱</span>
                     {activeAssoc.lagHours}h {isKn ? 'ವಿಳಂಬ' : 'Lag'}
                   </span>
                 )}
@@ -234,7 +222,7 @@ export function EnvironmentPlantCard({
                 {/* Step 1: Environment */}
                 <div className="p-4 rounded-xl bg-slate-950/60 border border-slate-800/80 hover:border-slate-700 transition-colors">
                   <div className="flex items-center gap-2 text-cyan-400 text-[11px] font-semibold uppercase tracking-wider mb-2">
-                    <Droplets className="w-4 h-4" />
+                    <span className="font-bold text-lg leading-none mt-[-2px]">≈</span>
                     <span>{isKn ? 'ಪರಿಸರ' : 'Environment'}</span>
                   </div>
                   <div className="text-base font-semibold text-white mb-0.5">{activeAssoc.environmentLabel}</div>
@@ -245,7 +233,7 @@ export function EnvironmentPlantCard({
                 {/* Step 2: Plant */}
                 <div className="p-4 rounded-xl bg-slate-950/60 border border-slate-800/80 hover:border-slate-700 transition-colors">
                   <div className="flex items-center gap-2 text-emerald-400 text-[11px] font-semibold uppercase tracking-wider mb-2">
-                    <Sparkles className="w-4 h-4" />
+                    <span className="font-bold text-lg leading-none mt-[-2px]">★</span>
                     <span>{isKn ? 'ಸಸ್ಯ' : 'Plant'}</span>
                   </div>
                   <div className="text-base font-semibold text-white mb-0.5">{activeAssoc.plantLabel}</div>
@@ -256,7 +244,7 @@ export function EnvironmentPlantCard({
                 {/* Step 3: What It Means */}
                 <div className="p-4 rounded-xl bg-slate-950/60 border border-slate-800/80 hover:border-slate-700 transition-colors">
                   <div className="flex items-center gap-2 text-amber-400 text-[11px] font-semibold uppercase tracking-wider mb-2">
-                    <Info className="w-4 h-4" />
+                    <span className="font-bold text-lg leading-none mt-[-2px]">ℹ</span>
                     <span>{isKn ? 'ಇದರ ಅರ್ಥವೇನು?' : 'What Does This Mean?'}</span>
                   </div>
                   <p className="text-sm text-slate-300 leading-relaxed">{localizedAssoc.whatItMeans}</p>
@@ -265,7 +253,7 @@ export function EnvironmentPlantCard({
                 {/* Step 4: What Should I Do? */}
                 <div className="p-4 rounded-xl bg-emerald-950/30 border border-emerald-800/50 hover:border-emerald-700/60 transition-colors">
                   <div className="flex items-center gap-2 text-emerald-300 text-[11px] font-semibold uppercase tracking-wider mb-2">
-                    <ShieldCheck className="w-4 h-4" />
+                    <span className="font-bold text-lg leading-none mt-[-2px]">✓</span>
                     <span>{isKn ? 'ನಾನು ಏನು ಮಾಡಬೇಕು?' : 'What Should I Do?'}</span>
                   </div>
                   <p className="text-sm font-medium text-emerald-200 leading-relaxed">{localizedAssoc.whatToDo}</p>
@@ -354,7 +342,7 @@ export function EnvironmentPlantCard({
         {summary.multiSensorAnalysis?.isMultiSensorEvent && (
           <div className="p-3.5 rounded-xl bg-amber-950/20 border border-amber-800/40 text-amber-200 text-xs">
             <div className="flex items-start gap-2.5">
-              <Layers className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+              <span className="font-bold text-amber-400 text-lg leading-none shrink-0 mt-0.5">≡</span>
               <div>
                 <span className="font-semibold text-amber-300">
                   {isKn ? 'ಬಹು-ಸಂವೇದಕ ಏಕಕಾಲಿಕ ಬದಲಾವಣೆ (Confounding Factors): ' : 'Concurrent Multi-Sensor Shift: '}
@@ -374,13 +362,13 @@ export function EnvironmentPlantCard({
               className="flex items-center justify-between w-full text-xs text-slate-400 hover:text-slate-200 transition-colors py-1"
             >
               <span className="flex items-center gap-1.5 font-medium">
-                <HelpCircle className="w-3.5 h-3.5 text-slate-500" />
-                {isKn ? 'ಡೇಟಾ ಗುಣಮಟ್ಟ, ಅಂತರಗಳು ಮತ್ತು ಇತಿಮಿತಿಗಳು' : 'Data Integrity, Gaps & Scientific Limitations'}
+                <span className="font-bold text-slate-500">?</span>
+                {isKn ? 'ಡೇಟಾ ಸಮಗ್ರತೆ ಮತ್ತು ಇತಿಮಿತಿಗಳು' : 'Data integrity and limitations'}
                 <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-slate-800 text-slate-400">
                   {summary.confoundingFactors.length + summary.limitations.length}
                 </span>
               </span>
-              {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+              <span className="font-bold text-[10px]">{isExpanded ? '↑' : '↓'}</span>
             </button>
 
             {isExpanded && (

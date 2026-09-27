@@ -18,18 +18,7 @@ import { EnvironmentPlantCard } from '@/components/ui/EnvironmentPlantCard';
 import { PlantAlertCard } from '@/components/ui/PlantAlertCard';
 import { WhatChanged, MetricDelta } from '@/components/ui/WhatChanged';
 import { getFarmerCopy, getLocalizedLifecycleState } from '@/lib/intelligence/farmerSemanticLayer';
-import {
-  FlaskConical,
-  Sparkles,
-  Droplets,
-  Ruler,
-  Camera,
-  CameraOff,
-  CheckCircle2,
-  Activity,
-  ArrowRight,
-  AlertTriangle
-} from 'lucide-react';
+
 import styles from './page.module.css';
 
 const DEFAULT_READING = { ph: 6.0, tds: 1000, waterLevel: 85, distance: 23.5, timestamp: 0 };
@@ -451,7 +440,7 @@ export default function Dashboard() {
             </>
           ) : (
             <div className={styles.cameraOfflinePlaceholder}>
-              <CameraOff size={32} style={{ color: 'var(--text-muted)' }} />
+              <span className="text-3xl font-bold font-mono text-slate-500 mb-2">×</span>
               <div>
                 <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)' }}>
                   {isKn ? copy.ui.cameraOffline : 'Live Plant Camera Offline'}
@@ -467,7 +456,7 @@ export default function Dashboard() {
                 style={{ fontSize: '11.5px', padding: '6px 14px', marginTop: '4px' }}
                 onClick={() => startCamera()}
               >
-                <Camera size={13} />
+                <span className="font-bold">[ + ]</span>
                 <span>{isKn ? copy.ui.startLiveCamera : 'Start Live Plant Camera'}</span>
               </button>
             </div>
@@ -518,7 +507,7 @@ export default function Dashboard() {
                     className="btn btn-secondary"
                     style={{ fontSize: '10.5px', padding: '4px 10px' }}
                   >
-                    <Camera size={12} />
+                    <span className="font-bold">[ + ]</span>
                     <span>{isKn ? 'ಕ್ಯಾಮೆರಾ ಮೂಲಕ ಗುರುತಿಸಿ' : 'Identify via Camera'}</span>
                   </button>
                   <Link
@@ -627,7 +616,7 @@ export default function Dashboard() {
             }}
           >
             <span>{isKn ? copy.ui.openReasoningLab : 'Open Plant Reasoning Lab'}</span>
-            <ArrowRight size={13} />
+            <span className="font-bold">→</span>
           </Link>
         </div>
 
@@ -695,7 +684,7 @@ export default function Dashboard() {
             }}
           >
             <span>{isKn ? 'ಎಲ್ಲಾ ಎಚ್ಚರಿಕೆಗಳನ್ನು ವೀಕ್ಷಿಸಿ' : 'View all alerts'}</span>
-            <ArrowRight size={13} />
+            <span className="font-bold">→</span>
           </Link>
         </div>
 
@@ -728,7 +717,9 @@ export default function Dashboard() {
         ) : (
           <div className={`${styles.attentionBanner} ${styles.attentionStable}`}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <CheckCircle2 size={16} style={{ color: 'var(--color-green)' }} />
+              <span style={{ fontSize: '10px', fontWeight: 800, color: 'var(--color-green)', padding: '2px 6px', border: '1px solid var(--border-accent-green)', borderRadius: 'var(--radius-xs)', background: 'var(--bg-tint-green)' }}>
+                OPTIMAL
+              </span>
               <span style={{ fontSize: '12.5px', fontWeight: 600, color: 'var(--text-primary)' }}>
                 {isKn ? copy.ui.everythingStable : 'Everything Looks Stable'}
               </span>
@@ -752,7 +743,7 @@ export default function Dashboard() {
           </span>
           {userMode === 'farmer' && (isStale || (latestReading?.quality && Object.values(latestReading.quality).some(q => q === 'INVALID' || q === 'OUT_OF_RANGE' || q === 'NOISY'))) && (
             <span style={{ fontSize: '11.5px', color: '#F2B84B', display: 'flex', alignItems: 'center', gap: '4px' }}>
-              <AlertTriangle size={12} />
+              <span className="font-bold">⚠</span>
               {copy.devices.farmerCheckNotice}
             </span>
           )}
@@ -766,7 +757,7 @@ export default function Dashboard() {
               <span className="section-label" style={{ fontSize: '9.5px' }}>
                 {isKn ? copy.ui.waterLevelLabel : 'Water Level'}
               </span>
-              <Droplets size={14} style={{ color: 'var(--color-teal)' }} />
+              <span className="text-teal-400 font-bold">≈</span>
             </div>
             <div className={styles.envValueRow}>
               <span className={styles.envValue}>
@@ -785,7 +776,7 @@ export default function Dashboard() {
               <span className="section-label" style={{ fontSize: '9.5px' }}>
                 {isKn ? copy.ui.nutrientLevelLabel : 'Nutrient Balance'}
               </span>
-              <Sparkles size={14} style={{ color: 'var(--color-green)' }} />
+              <span className="text-emerald-400 font-bold">★</span>
             </div>
             <div className={styles.envValueRow}>
               <span className={styles.envValue}>
@@ -804,7 +795,7 @@ export default function Dashboard() {
               <span className="section-label" style={{ fontSize: '9.5px' }}>
                 {isKn ? copy.ui.solutionAcidityLabel : 'Solution Acidity'}
               </span>
-              <FlaskConical size={14} style={{ color: 'var(--color-teal)' }} />
+              <span className="text-teal-400 font-bold">∆</span>
             </div>
             <div className={styles.envValueRow}>
               <span className={styles.envValue}>
@@ -823,7 +814,7 @@ export default function Dashboard() {
               <span className="section-label" style={{ fontSize: '9.5px' }}>
                 {isKn ? copy.ui.growingConditionsLabel : 'Growing Conditions'}
               </span>
-              <Ruler size={14} style={{ color: 'var(--color-amber)' }} />
+              <span className="text-amber-400 font-bold">↕</span>
             </div>
             <div className={styles.envValueRow}>
               <span className={styles.envValue}>
@@ -851,7 +842,7 @@ export default function Dashboard() {
         <div className={styles.instrumentationSection}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', flexWrap: 'wrap', gap: '8px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Activity size={15} style={{ color: 'var(--color-teal)' }} />
+              <span className="text-teal-400 font-bold text-lg leading-none mt-[-2px]">~</span>
               <span className="section-label">{isKn ? 'ತಾಂತ್ರಿಕ ಟೆಲಿಮೆಟ್ರಿ ಮತ್ತು ಪ್ರೋಬ್ ಇತಿಹಾಸ' : 'Technical Telemetry Sparkline & Probe History'}</span>
             </div>
 

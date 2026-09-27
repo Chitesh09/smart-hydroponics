@@ -14,18 +14,7 @@ import { WhatChangedCard } from '@/components/ui/WhatChangedCard';
 import { EnvironmentPlantCard } from '@/components/ui/EnvironmentPlantCard';
 import { PlantAlertCard } from '@/components/ui/PlantAlertCard';
 
-import {
-  Compass,
-  Download,
-  Calendar,
-  History,
-  TrendingUp,
-  TrendingDown,
-  Minus,
-  Sparkles,
-  Layers,
-  Droplets
-} from 'lucide-react';
+
 
 export default function AnalyticsPage() {
   const { history, mode, isStale, latestReading } = useESP32Serial();
@@ -214,7 +203,7 @@ export default function AnalyticsPage() {
             disabled={history.length === 0 && observations.length === 0}
             style={{ fontSize: '11.5px' }}
           >
-            <Download size={13} />
+            <span className="font-bold">↓</span>
             <span>{copy.analytics.exportCsv}</span>
           </button>
         </div>
@@ -243,7 +232,7 @@ export default function AnalyticsPage() {
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <Compass size={22} style={{ color: 'var(--color-green)' }} />
+          <span className="text-emerald-400 font-bold text-2xl">◓</span>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
               <span style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text-primary)' }}>
@@ -262,11 +251,11 @@ export default function AnalyticsPage() {
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <Calendar size={14} style={{ color: 'var(--text-muted)' }} />
+            <span className="font-bold text-slate-500">[Date]</span>
             <span className="scientific-meta">{observations.length} {copy.analytics.checkpointsCount}</span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <History size={14} style={{ color: 'var(--text-muted)' }} />
+            <span className="font-bold text-slate-500">[Log]</span>
             <span className="scientific-meta">{history.length} {copy.analytics.dataIntervalsCount}</span>
           </div>
         </div>
@@ -309,11 +298,11 @@ export default function AnalyticsPage() {
               {historicalDeltas.hasSufficientData ? (
                 <>
                   {historicalDeltas.phChange > 0.05 ? (
-                    <TrendingUp size={13} style={{ color: 'var(--color-amber)' }} />
+                    <span className="text-amber-400 font-bold">↗</span>
                   ) : historicalDeltas.phChange < -0.05 ? (
-                    <TrendingDown size={13} style={{ color: 'var(--color-teal)' }} />
+                    <span className="text-teal-400 font-bold">↘</span>
                   ) : (
-                    <Minus size={13} style={{ color: 'var(--color-green)' }} />
+                    <span className="text-emerald-400 font-bold">−</span>
                   )}
                   <span style={{ color: 'var(--text-secondary)' }}>
                     {historicalDeltas.phChange >= 0 ? '+' : ''}{historicalDeltas.phChange.toFixed(2)} {copy.analytics.netShift}
@@ -362,7 +351,7 @@ export default function AnalyticsPage() {
             <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px' }}>
               {historicalDeltas.hasSufficientData ? (
                 <>
-                  <TrendingDown size={13} style={{ color: 'var(--color-teal)' }} />
+                  <span className="text-teal-400 font-bold">↘</span>
                   <span style={{ color: 'var(--text-secondary)' }}>
                     {historicalDeltas.tdsChange >= 0 ? '+' : ''}{Math.round(historicalDeltas.tdsChange)} PPM {copy.analytics.netShift}
                   </span>
@@ -406,7 +395,7 @@ export default function AnalyticsPage() {
             <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px' }}>
               {historicalDeltas.hasSufficientData ? (
                 <>
-                  <Droplets size={13} style={{ color: 'var(--color-teal)' }} />
+                  <span className="text-teal-400 font-bold">≈</span>
                   <span style={{ color: 'var(--text-secondary)' }}>
                     {historicalDeltas.waterChange >= 0 ? '+' : ''}{historicalDeltas.waterChange.toFixed(1)}% {copy.analytics.netShift}
                   </span>
@@ -499,7 +488,7 @@ export default function AnalyticsPage() {
       >
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Calendar size={16} style={{ color: 'var(--color-teal)' }} />
+            <span className="font-bold text-slate-500">[Date]</span>
             <span className="section-label">{copy.analytics.milestonesTitle}</span>
           </div>
           <span className="scientific-meta">{copy.analytics.milestonesSubtitle}</span>
@@ -566,7 +555,7 @@ export default function AnalyticsPage() {
       <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Layers size={16} style={{ color: 'var(--color-green)' }} />
+            <span className="text-emerald-400 font-bold text-lg leading-none mt-[-2px]">≡</span>
             <span className="section-label">
               {isFarmer ? copy.analytics.chartSectionTitleFarmer : copy.analytics.chartSectionTitleTech}
             </span>
@@ -685,7 +674,7 @@ export default function AnalyticsPage() {
       >
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Sparkles size={16} style={{ color: 'var(--color-green)' }} />
+            <span className="text-emerald-400 font-bold text-lg">★</span>
             <span className="section-label">
               {isFarmer ? copy.analytics.archiveTitleFarmer : copy.analytics.archiveTitleTech}
             </span>
