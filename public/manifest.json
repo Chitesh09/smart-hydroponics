@@ -1,0 +1,16 @@
+{
+  "name": "HydroSmart Plant Intelligence",
+  "short_name": "HydroSmart",
+  "description": "Living Intelligence for Plants",
+  "start_url": "/dashboard",
+  "display": "standalone",
+  "background_color": "#051311",
+  "theme_color": "#051311",
+  "icons": [
+    {
+      "src": "/icon.png",
+      "sizes": "192x192 512x512",
+      "type": "image/png"
+    }
+  ]
+}

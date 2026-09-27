@@ -69,10 +69,11 @@ export function Sidebar({
       },
     ];
 
-    // IoT Station is strictly TECHNICAL MODE ONLY
+    // IoT Station and Research Metrics are strictly TECHNICAL MODE ONLY
     const systemItems = [];
     if (userMode === 'technical') {
       systemItems.push({ href: '/dashboard/devices', icon: Radio, label: copy.nav.iotStation });
+      systemItems.push({ href: '/dashboard/research', icon: BarChart3, label: language === 'kn' ? 'ಸಂಶೋಧನಾ ವರದಿ' : 'Research Metrics' });
     }
     systemItems.push({ href: '/dashboard/profile', icon: Settings, label: copy.nav.settings });
 

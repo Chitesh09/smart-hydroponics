@@ -28,12 +28,21 @@ export const metadata: Metadata = {
     shortcut: "/icon.png",
     apple: "/icon.png",
   },
+  manifest: "/manifest.json",
   openGraph: {
     title: "HydroSmart — Living Intelligence for Plants",
     description: "Automated, closed-loop hydroponics powered by ESP32 and Firebase",
     type: "website",
     images: ["/logo.png"],
   },
+};
+
+export const viewport: import("next").Viewport = {
+  themeColor: "#051311",
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
 };
 
 export default function RootLayout({
