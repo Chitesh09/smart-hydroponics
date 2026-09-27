@@ -38,15 +38,15 @@ export function WhatChangedCard({
   const getSignificanceColor = (sig: string) => {
     switch (sig) {
       case 'CRITICAL':
-        return 'text-rose-400 bg-rose-950/60 border-rose-800/80';
+        return 'text-[var(--color-red)] bg-[var(--bg-tint-red)] border-[var(--color-red)]/30';
       case 'SIGNIFICANT':
-        return 'text-amber-400 bg-amber-950/60 border-amber-800/80';
+        return 'text-[var(--color-amber)] bg-[var(--bg-tint-amber)] border-[var(--color-amber)]/30';
       case 'MODERATE':
-        return 'text-cyan-400 bg-cyan-950/60 border-cyan-800/80';
+        return 'text-[var(--color-teal)] bg-[var(--bg-tint-teal)] border-[var(--color-teal)]/30';
       case 'MINOR':
-        return 'text-emerald-400 bg-emerald-950/60 border-emerald-800/80';
+        return 'text-[var(--color-green)] bg-[var(--bg-tint-green)] border-[var(--color-green)]/30';
       default:
-        return 'text-slate-400 bg-slate-900 border-slate-800';
+        return 'text-[var(--text-muted)] bg-[var(--bg-canvas)] border-[var(--border-default)]';
     }
   };
 
@@ -54,76 +54,76 @@ export function WhatChangedCard({
     switch (dir) {
       case 'improved':
       case 'recovered':
-        return <span className="text-emerald-400 font-bold">↗</span>;
+        return <span className="text-[var(--color-green)] font-bold">↗</span>;
       case 'declined':
-        return <span className="text-rose-400 font-bold">↘</span>;
+        return <span className="text-[var(--color-red)] font-bold">↘</span>;
       case 'changed':
-        return <span className="text-amber-400 font-bold">≈</span>;
+        return <span className="text-[var(--color-amber)] font-bold">≈</span>;
       case 'unavailable':
-        return <span className="text-slate-400 font-bold">?</span>;
+        return <span className="text-[var(--text-muted)] font-bold">?</span>;
       default:
-        return <span className="text-slate-400 font-bold">−</span>;
+        return <span className="text-[var(--text-muted)] font-bold">−</span>;
     }
   };
 
   return (
     <div
-      className={`rounded-md border bg-surface overflow-hidden transition-all duration-300 ${
-        summary?.reviewRequiredItems?.length ? 'border-amber-700/50'
+      className={`rounded-md border bg-[var(--bg-surface)] overflow-hidden transition-all duration-300 ${
+        summary?.reviewRequiredItems?.length ? 'border-[var(--color-amber)]/50'
           : summary?.status === 'meaningful_changes' && summary?.overallSignificance === 'CRITICAL'
-          ? 'border-rose-700/50'
+          ? 'border-[var(--color-red)]/50'
           : summary?.hasMeaningfulChange
-          ? 'border-emerald-700/50'
-          : 'border-slate-800'
+          ? 'border-[var(--color-green)]/50'
+          : 'border-[var(--border-default)]'
       } ${className}`}
     >
       {/* Top Banner / Review Alert */}
       {summary?.reviewRequiredItems && summary.reviewRequiredItems.length > 0 && (
-        <div className="bg-amber-950/80 border-b border-amber-600/50 px-4 py-2.5 flex items-center justify-between text-amber-200 text-xs">
+        <div className="bg-[var(--bg-tint-amber)] border-b border-[var(--color-amber)]/50 px-4 py-2.5 flex items-center justify-between text-[var(--color-amber)] text-xs">
           <div className="flex items-center gap-2">
-            <span className="text-amber-400 font-bold shrink-0">⚠</span>
-            <span className="font-semibold">
+            <span className="text-[var(--color-amber)] font-bold shrink-0">⚠</span>
+            <span className="font-semibold text-[var(--text-primary)]">
               {isKn ? 'ಪರಿಶೀಲನೆ ಅಗತ್ಯವಿದೆ:' : 'Review Required:'} {summary.reviewRequiredItems[0].summary}
             </span>
           </div>
-          <span className="bg-amber-900/80 text-amber-300 px-2 py-0.5 rounded text-[11px] font-mono border border-amber-700/50">
+          <span className="bg-[var(--bg-canvas)] text-[var(--color-amber)] px-2 py-0.5 rounded text-[11px] font-mono border border-[var(--color-amber)]/50">
             {isKn ? 'ಸಸ್ಯದ ತಳಿ ಬದಲಾಗಿದೆ' : 'Identity Shift'}
           </span>
         </div>
       )}
 
       {/* Main Header */}
-      <div className="p-4 sm:p-5 border-b border-slate-800/80 flex flex-wrap items-center justify-between gap-3">
+      <div className="p-4 sm:p-5 border-b border-[var(--border-default)] flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <div
             className={`w-10 h-10 rounded-md flex items-center justify-center border ${
               !summary || summary.status === 'insufficient_history'
-                ? 'bg-slate-800/80 border-slate-700 text-slate-400'
+                ? 'bg-[var(--bg-canvas)] border-[var(--border-default)] text-[var(--text-muted)]'
                 : summary.status === 'stable_no_change'
-                ? 'bg-emerald-950/60 border-emerald-700/50 text-emerald-400'
-                : 'bg-emerald-950/80 border-emerald-600/60 text-emerald-400'
+                ? 'bg-[var(--bg-tint-green)] border-[var(--color-green)]/30 text-[var(--color-green)]'
+                : 'bg-[var(--bg-tint-amber)] border-[var(--color-amber)]/30 text-[var(--color-amber)]'
             }`}
           >
             {!summary || summary.status === 'insufficient_history' ? (
-              <span className="text-slate-400 font-bold text-xl leading-none">⏱</span>
+              <span className="text-[var(--text-muted)] font-bold text-xl leading-none">⏱</span>
             ) : summary.status === 'stable_no_change' ? (
-              <span className="text-emerald-400 font-bold text-xl leading-none">✓</span>
+              <span className="text-[var(--color-green)] font-bold text-xl leading-none">✓</span>
             ) : (
-              <span className="text-emerald-400 font-bold text-xl leading-none">∆</span>
+              <span className="text-[var(--color-amber)] font-bold text-xl leading-none">∆</span>
             )}
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h3 className="text-base sm:text-lg font-bold text-white tracking-tight">
+              <h3 className="text-base sm:text-lg font-bold text-[var(--text-primary)] tracking-tight">
                 {isKn ? 'ಏನು ಬದಲಾಗಿದೆ?' : 'What Changed?'}
               </h3>
               {summary && (
                 <span
                   className={`text-[10px] font-mono uppercase px-2 py-0.5 rounded-full border ${
                     summary.status === 'stable_no_change'
-                      ? 'bg-emerald-950/50 text-emerald-400 border-emerald-800/60'
+                      ? 'bg-[var(--bg-tint-green)] text-[var(--color-green)] border-[var(--color-green)]/30'
                       : summary.status === 'insufficient_history'
-                      ? 'bg-slate-800 text-slate-400 border-slate-700'
+                      ? 'bg-[var(--bg-canvas)] text-[var(--text-muted)] border-[var(--border-default)]'
                       : getSignificanceColor(summary.overallSignificance)
                   }`}
                 >
@@ -136,18 +136,18 @@ export function WhatChangedCard({
               )}
             </div>
             {summary ? (
-              <p className="text-xs text-slate-400 flex items-center gap-1.5 mt-0.5">
-                <span className="text-slate-500 font-bold">⏱</span>
+              <p className="text-xs text-[var(--text-muted)] flex items-center gap-1.5 mt-0.5">
+                <span className="text-[var(--text-secondary)] font-bold">⏱</span>
                 <span>
                   {isKn
                     ? `ಅವಲೋಕನ: ${summary.timeframeDescription}`
                     : `Comparison timeframe: ${summary.timeframeDescription}`}
                 </span>
-                <span className="text-slate-600">•</span>
+                <span className="text-[var(--text-dim)]">•</span>
                 <span>{summary.observationCount} {isKn ? 'ದಾಖಲೆಗಳು' : 'observations'}</span>
               </p>
             ) : (
-              <p className="text-xs text-slate-400 mt-0.5">
+              <p className="text-xs text-[var(--text-muted)] mt-0.5">
                 {isKn ? 'ಸಾಕಷ್ಟು ಡೇಟಾ ಇಲ್ಲ' : 'Insufficient historical data'}
               </p>
             )}
@@ -156,7 +156,7 @@ export function WhatChangedCard({
       </div>
 
       {!summary || !localizedCopy ? (
-        <div className="p-8 text-center flex flex-col items-center justify-center text-slate-400 bg-slate-950/20">
+        <div className="p-8 text-center flex flex-col items-center justify-center text-[var(--text-muted)] bg-[var(--bg-canvas)]">
           <span className="text-3xl mb-3 opacity-20">∆</span>
           <p className="text-sm font-medium">{isKn ? 'ಬದಲಾವಣೆಯನ್ನು ಗುರುತಿಸಲು ಸಾಕಷ್ಟು ಡೇಟಾ ಇಲ್ಲ.' : 'Not enough historical data to identify a meaningful change.'}</p>
           <p className="text-xs opacity-70 mt-1">{isKn ? 'ಹೆಚ್ಚಿನ ಡೇಟಾ ಲಭ್ಯವಾದಾಗ ಇದು ನವೀಕರಿಸಲ್ಪಡುತ್ತದೆ.' : 'This will populate as more observation cycles are completed.'}</p>

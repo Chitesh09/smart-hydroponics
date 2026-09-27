@@ -5,46 +5,53 @@
 
 
 :root {
-  /* HydroSmart Signature System (Phase 16 Refinement) */
+  /* HydroSmart Signature System (Phase 16 Refinement - Light Theme) */
   --color-emerald-ink:   #064E3B; /* Primary Structural & Brand */
   --color-champagne:     #F8E7C9; /* Primary Typographic Emphasis & Highlights */
 
-  /* Surface & Canvas System (Deep Botanical Forest & Mineral Slate) */
-  --bg-base:             #041510; /* Obsidian Deep Forest */
-  --bg-canvas:           #051A14; /* Botanical Canvas */
-  --bg-surface:          #08241D; /* Derived from Emerald Ink (#064E3B but darker for panels) */
-  --bg-surface-subtle:   rgba(8, 36, 29, 0.65);
-  --bg-surface-elevated: #0B3026; /* Elevated Instrument Surface */
-  --bg-tint-green:       rgba(46, 184, 114, 0.08);
-  --bg-tint-teal:        rgba(28, 167, 160, 0.08);
-  --bg-tint-amber:       rgba(229, 169, 60, 0.08);
-  --bg-tint-red:         rgba(217, 93, 98, 0.08);
+  /* Surface & Canvas System (Organic Print Aesthetic) */
+  --bg-base:             #F5EDE4; /* Light Champagne Canvas */
+  --bg-canvas:           #F5EDE4; /* Light Champagne Canvas */
+  --bg-surface:          #FDFBF8; /* Off-white / Cream for Panels */
+  --bg-surface-subtle:   rgba(253, 251, 248, 0.65);
+  --bg-surface-elevated: #FFFFFF; /* Pure White Elevated */
+  --bg-tint-green:       rgba(46, 184, 114, 0.12);
+  --bg-tint-teal:        rgba(28, 167, 160, 0.12);
+  --bg-tint-amber:       rgba(229, 169, 60, 0.12);
+  --bg-tint-red:         rgba(217, 93, 98, 0.12);
 
-  /* Editorial Borders & Dividers (Subtle, Restrained, Non-Glowing) */
-  --border-hairline:     rgba(255, 255, 255, 0.05);
-  --border-default:      #12362C; /* Derived from Emerald Ink */
-  --border-subtle:       #0A201A;
-  --border-strong:       #18483B;
+  /* Sidebar Tokens (Dark Emerald) */
+  --sidebar-bg:          #064E3B;
+  --sidebar-surface:     #043A2C;
+  --sidebar-text:        #F8E7C9;
+  --sidebar-text-muted:  #92BAA4;
+  --sidebar-border:      rgba(248, 231, 201, 0.15);
+
+  /* Editorial Borders & Dividers (Soft Beige) */
+  --border-hairline:     rgba(0, 0, 0, 0.05);
+  --border-default:      #E4D9CE; /* Soft Beige Border */
+  --border-subtle:       #EFE8E1;
+  --border-strong:       #D2C4B5;
   --border-accent-green: rgba(46, 184, 114, 0.35);
   --border-accent-teal:  rgba(28, 167, 160, 0.35);
 
-  /* Typography Palette (Natural Botanical & Instrument Milk White) */
-  --text-primary:        #F3F7F5; /* Pure Botanical White */
-  --text-secondary:      #9BB1AB; /* Sage / Soft Mineral */
-  --text-muted:          #5E7B74; /* Deep Chlorophyll Slate */
-  --text-dim:            #415B55; /* Hairline Label Slate */
+  /* Typography Palette (Dark Emerald / Charcoal) */
+  --text-primary:        #042B21; /* Deep Emerald Ink / Charcoal */
+  --text-secondary:      #2A4A41; /* Dark Sage */
+  --text-muted:          #517066; /* Mid Sage */
+  --text-dim:            #7B988E; /* Light Sage */
 
   /* Semantic Biological & Instrument Accents */
-  --color-green:         #2EB872; /* Living Biological Health */
-  --color-green-light:   #63D398;
-  --color-teal:          #1CA7A0; /* Instrument & Telemetry */
-  --color-amber:         #E5A93C; /* Botanical Attention */
-  --color-red:           #D95D62; /* Critical Threshold */
-  --color-neutral:       #829E97; /* Contextual Metadata */
+  --color-green:         #0C774C; /* Darker green for contrast on light */
+  --color-green-light:   #1E9D68;
+  --color-teal:          #0A7771; /* Darker teal for contrast */
+  --color-amber:         #B47514; /* Darker amber for contrast */
+  --color-red:           #B22222; /* Darker red for contrast */
+  --color-neutral:       #5C7971;
 
   /* Shadows (Calm & Organic) */
-  --shadow-subtle:       0 2px 10px rgba(0, 0, 0, 0.25);
-  --shadow-elevated:     0 8px 30px rgba(0, 0, 0, 0.35);
+  --shadow-subtle:       0 2px 10px rgba(0, 0, 0, 0.04);
+  --shadow-elevated:     0 8px 30px rgba(0, 0, 0, 0.08);
 
   /* Spacing */
   --space-xs:  4px;

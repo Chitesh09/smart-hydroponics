@@ -15,6 +15,7 @@ import { LanguageToggle } from '@/components/ui/LanguageToggle';
 import { FarmerActionCard } from '@/components/ui/FarmerActionCard';
 import { WhatChangedCard } from '@/components/ui/WhatChangedCard';
 import { EnvironmentPlantCard } from '@/components/ui/EnvironmentPlantCard';
+import { PlantEnvironmentGrid } from '@/components/ui/PlantEnvironmentGrid';
 import { PlantAlertCard } from '@/components/ui/PlantAlertCard';
 import { getFarmerCopy, getLocalizedLifecycleState } from '@/lib/intelligence/farmerSemanticLayer';
 
@@ -572,6 +573,11 @@ export default function Dashboard() {
         semanticState={farmerSemanticState}
         recommendations={activeRecommendations}
         reasoningEvent={latestReasoningEvent}
+      />
+
+      <PlantEnvironmentGrid 
+        semanticState={farmerSemanticState}
+        language={language}
       />
 
       {/* ============================================================ */}

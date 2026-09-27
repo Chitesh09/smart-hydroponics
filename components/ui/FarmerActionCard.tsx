@@ -130,39 +130,44 @@ export function FarmerActionCard({
 
   const variantStyles = {
     good: {
-      border: 'rgba(46, 184, 114, 0.35)',
-      bg: 'var(--bg-tint-green)',
-      badgeBg: 'rgba(46, 184, 114, 0.15)',
-      titleColor: 'var(--color-green)',
-      iconColor: 'var(--color-green)',
+      border: 'var(--border-default)',
+      bg: 'var(--bg-surface)',
+      badgeBg: '#F5EDE4',
+      titleColor: '#064E3B',
+      iconColor: '#F8E7C9',
+      iconBg: '#064E3B',
     },
     attention: {
-      border: 'rgba(229, 169, 60, 0.35)',
-      bg: 'var(--bg-tint-amber)',
-      badgeBg: 'rgba(229, 169, 60, 0.15)',
-      titleColor: 'var(--color-amber)',
-      iconColor: 'var(--color-amber)',
+      border: 'var(--border-default)',
+      bg: 'var(--bg-surface)',
+      badgeBg: '#F5EDE4',
+      titleColor: '#B47514',
+      iconColor: '#F8E7C9',
+      iconBg: '#B47514',
     },
     urgent: {
-      border: 'rgba(217, 93, 98, 0.45)',
-      bg: 'var(--bg-tint-red)',
-      badgeBg: 'rgba(217, 93, 98, 0.15)',
-      titleColor: 'var(--color-red)',
-      iconColor: 'var(--color-red)',
+      border: 'var(--border-default)',
+      bg: 'var(--bg-surface)',
+      badgeBg: '#F5EDE4',
+      titleColor: '#B22222',
+      iconColor: '#F8E7C9',
+      iconBg: '#B22222',
     },
     unknown: {
-      border: 'var(--border-subtle)',
+      border: 'var(--border-default)',
       bg: 'var(--bg-surface)',
-      badgeBg: 'rgba(255, 255, 255, 0.05)',
-      titleColor: 'var(--text-secondary)',
-      iconColor: 'var(--text-muted)',
+      badgeBg: '#F5EDE4',
+      titleColor: '#064E3B',
+      iconColor: '#F8E7C9',
+      iconBg: '#064E3B',
     },
     info: {
-      border: 'rgba(56, 189, 248, 0.35)',
-      bg: 'rgba(56, 189, 248, 0.05)',
-      badgeBg: 'rgba(56, 189, 248, 0.15)',
-      titleColor: '#38bdf8',
-      iconColor: '#38bdf8',
+      border: 'var(--border-default)',
+      bg: 'var(--bg-surface)',
+      badgeBg: '#F5EDE4',
+      titleColor: '#0A7771',
+      iconColor: '#F8E7C9',
+      iconBg: '#0A7771',
     },
   }[cardVariant];
 
@@ -180,7 +185,7 @@ export function FarmerActionCard({
         display: 'flex',
         flexDirection: 'column',
         gap: '14px',
-        boxShadow: 'var(--shadow-sm)',
+        boxShadow: 'var(--shadow-subtle)',
         position: 'relative',
       }}
     >
@@ -192,8 +197,7 @@ export function FarmerActionCard({
               width: '32px',
               height: '32px',
               borderRadius: 'var(--radius-sm)',
-              background: 'rgba(5, 19, 17, 0.6)',
-              border: `1px solid ${variantStyles.border}`,
+              background: variantStyles.iconBg,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -204,10 +208,10 @@ export function FarmerActionCard({
             <Icon size={18} />
           </div>
           <div style={{ display: 'flex', flexDirection: 'column' }}>
-            <span className="section-label" style={{ fontSize: '10px', letterSpacing: '0.08em' }}>
+            <span className="section-label" style={{ fontSize: '10px', letterSpacing: '0.08em', color: 'var(--text-muted)' }}>
               {isKn ? 'ಕಾರ್ಯಸಾಧ್ಯ ಮಾರ್ಗದರ್ಶನ' : 'MULTIMODAL REASONING ACTION'}
             </span>
-            <div style={{ fontSize: '16px', fontWeight: 800, color: variantStyles.titleColor }}>
+            <div style={{ fontSize: '18px', fontWeight: 800, color: variantStyles.titleColor }}>
               {isKn ? copy.actions.title : 'What Should I Do Now?'}
             </div>
           </div>
@@ -216,21 +220,20 @@ export function FarmerActionCard({
         {/* Condition Badge */}
         <div
           style={{
-            padding: '4px 10px',
+            padding: '6px 14px',
             borderRadius: '999px',
             fontSize: '11px',
             fontWeight: 700,
             letterSpacing: '0.04em',
-            textTransform: 'uppercase',
             background: variantStyles.badgeBg,
-            color: variantStyles.titleColor,
-            border: `1px solid ${variantStyles.border}`,
+            color: 'var(--text-primary)',
+            border: `1px solid var(--border-default)`,
             display: 'flex',
             alignItems: 'center',
-            gap: '5px',
+            gap: '8px',
           }}
         >
-          <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: variantStyles.titleColor }} />
+          <Icon size={14} style={{ color: 'var(--text-primary)' }} />
           {conditionLabel}
         </div>
       </div>
@@ -240,39 +243,53 @@ export function FarmerActionCard({
         style={{
           display: 'grid',
           gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
-          gap: '12px',
-          background: 'rgba(0, 0, 0, 0.25)',
-          padding: '14px',
+          background: 'var(--bg-surface)',
           borderRadius: 'var(--radius-md)',
-          border: '1px solid rgba(255, 255, 255, 0.04)',
+          borderTop: '1px solid var(--border-default)',
+          marginTop: '10px'
         }}
       >
         {/* 1. What's Happening */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-          <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-            {isKn ? '೧. ಏನಾಗುತ್ತಿದೆ?' : "1. What's happening?"}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '16px', borderRight: '1px solid var(--border-subtle)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <div style={{ background: 'var(--bg-canvas)', width: '28px', height: '28px', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+            </div>
+            <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              {isKn ? '೧. ಏನಾಗುತ್ತಿದೆ?' : "1. What's happening?"}
+            </div>
           </div>
-          <p style={{ fontSize: '13px', color: 'var(--text-primary)', margin: 0, lineHeight: 1.45, fontWeight: 500 }}>
+          <p style={{ fontSize: '13px', color: 'var(--text-primary)', margin: 0, lineHeight: 1.45, fontWeight: 500, paddingLeft: '38px' }}>
             {whatsHappening}
           </p>
         </div>
 
         {/* 2. Why (Non-causal factor) */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-          <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-            {isKn ? '೨. ಕಾರಣ / ಸಂಬಂಧಿತ ಅಂಶಗಳು' : '2. Why? (Associated factors)'}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '16px', borderRight: '1px solid var(--border-subtle)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <div style={{ background: 'var(--bg-canvas)', width: '28px', height: '28px', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
+            </div>
+            <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              {isKn ? '೨. ಕಾರಣ / ಸಂಬಂಧಿತ ಅಂಶಗಳು' : '2. Why? (Associated factors)'}
+            </div>
           </div>
-          <p style={{ fontSize: '13px', color: 'var(--text-secondary)', margin: 0, lineHeight: 1.45 }}>
+          <p style={{ fontSize: '13px', color: 'var(--text-secondary)', margin: 0, lineHeight: 1.45, paddingLeft: '38px' }}>
             {whyFactor}
           </p>
         </div>
 
         {/* 3. What to do */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-          <div style={{ fontSize: '11px', fontWeight: 700, color: variantStyles.titleColor, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-            {isKn ? '೩. ಏನು ಮಾಡಬೇಕು?' : '3. What to do?'}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '16px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <div style={{ background: 'var(--bg-canvas)', width: '28px', height: '28px', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"></path><path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"></path></svg>
+            </div>
+            <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              {isKn ? '೩. ಏನು ಮಾಡಬೇಕು?' : '3. What to do?'}
+            </div>
           </div>
-          <p style={{ fontSize: '13px', color: 'var(--text-primary)', margin: 0, lineHeight: 1.45, fontWeight: 600 }}>
+          <p style={{ fontSize: '13px', color: 'var(--text-primary)', margin: 0, lineHeight: 1.45, fontWeight: 600, paddingLeft: '38px' }}>
             {whatToDo}
           </p>
         </div>

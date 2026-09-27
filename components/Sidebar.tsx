@@ -99,10 +99,10 @@ export function Sidebar({
           style={{ '--status-color': statusConfig.color } as React.CSSProperties}
         />
         <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.2 }}>
-          <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-primary)' }}>
+          <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--sidebar-text)' }}>
             {statusConfig.label}
           </span>
-          <span style={{ fontSize: '9.5px', color: 'var(--text-muted)' }}>Station HS-ESP32</span>
+          <span style={{ fontSize: '9.5px', color: 'var(--sidebar-text-muted)' }}>Station HS-ESP32</span>
         </div>
       </div>
 
@@ -137,7 +137,7 @@ export function Sidebar({
                       {badge}
                     </span>
                   )}
-                  {isActive && <ChevronRight size={13} style={{ color: 'var(--text-dim)' }} />}
+                  {isActive && <ChevronRight size={13} style={{ color: 'var(--sidebar-text-muted)' }} />}
                 </Link>
               );
             })}
