@@ -47,21 +47,12 @@ export function EnvironmentPlantCard({
   onUserModeChange,
   className = '',
 }: EnvironmentPlantCardProps) {
-  const [internalMode, setInternalMode] = useState<AssistantMode>(userMode);
-  const [isExpanded, setIsExpanded] = useState(false);
-  const [selectedAssocIndex, setSelectedAssocIndex] = useState(0);
-
-  // Sync internal mode if prop changes
-  React.useEffect(() => {
-    setInternalMode(userMode);
-  }, [userMode]);
-
-  const effectiveMode = internalMode;
+  const [isExpanded, setIsExpanded] = React.useState(false);
   const isKn = language === 'kn';
 
   const localizedSummary = getLocalizedCorrelationSummary(summary, language);
   const primaryAssoc = summary.primaryAssociation || (associations.length > 0 ? associations[0] : null);
-  const activeAssoc = associations[selectedAssocIndex] || primaryAssoc;
+  const activeAssoc = primaryAssoc;
   const localizedAssoc = activeAssoc ? getLocalizedAssociation(activeAssoc, language) : null;
 
   const getStrengthBadgeClass = (strength: AssociationStrength) => {
@@ -155,37 +146,6 @@ export function EnvironmentPlantCard({
               {localizedSummary.statusLabel}
             </span>
 
-            {/* Farmer / Technical Mode Toggle */}
-            <div className="inline-flex p-0.5 rounded-lg bg-slate-950/80 border border-slate-800">
-              <button
-                type="button"
-                onClick={() => {
-                  setInternalMode('farmer');
-                  onUserModeChange?.('farmer');
-                }}
-                className={`px-2.5 py-1 text-xs font-medium rounded-md transition-all ${
-                  effectiveMode === 'farmer'
-                    ? 'bg-emerald-600 text-white shadow-sm'
-                    : 'text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                {isKn ? 'ರೈತ' : 'Farmer'}
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setInternalMode('technical');
-                  onUserModeChange?.('technical');
-                }}
-                className={`px-2.5 py-1 text-xs font-medium rounded-md transition-all ${
-                  effectiveMode === 'technical'
-                    ? 'bg-cyan-600 text-white shadow-sm'
-                    : 'text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                {isKn ? 'ತಾಂತ್ರಿಕ' : 'Technical'}
-              </button>
-            </div>
           </div>
         </div>
       </div>
@@ -233,80 +193,82 @@ export function EnvironmentPlantCard({
         {(summary.status === 'active_associations' || summary.status === 'no_clear_association') && activeAssoc && localizedAssoc && (
           <div className="space-y-4">
             {/* Association Badges Bar */}
-            <div className="flex flex-wrap items-center gap-2">
-              <span
-                className={`px-2.5 py-1 text-xs font-semibold rounded-lg border ${getStrengthBadgeClass(
-                  activeAssoc.associationStrength
-                )}`}
-              >
-                {getLocalizedAssociationStrength(activeAssoc.associationStrength, language)}
+            <div className="mb-4">
+              <span className="text-[11px] uppercase tracking-wider font-semibold text-slate-400 block mb-2">
+                {isKn ? 'ಸಂಬಂಧದ ಸ್ಥಿತಿ' : 'Association Status'}
               </span>
-
-              <span className="px-2.5 py-1 text-xs font-medium rounded-lg bg-slate-800/80 text-slate-300 border border-slate-700">
-                {getLocalizedAssociationType(activeAssoc.associationType, language)}
-              </span>
-
-              <span
-                className={`px-2.5 py-1 text-xs font-mono font-medium rounded-lg border ${getConfidenceBadgeClass(
-                  activeAssoc.confidence
-                )}`}
-              >
-                {isKn ? 'ವಿಶ್ವಾಸಾರ್ಹತೆ: ' : 'Confidence: '}
-                {activeAssoc.confidence}
-              </span>
-
-              {activeAssoc.lagHours && (
-                <span className="px-2.5 py-1 text-xs font-mono rounded-lg bg-purple-950/50 text-purple-300 border border-purple-800/60 flex items-center gap-1">
-                  <Clock className="w-3.5 h-3.5" />
-                  {activeAssoc.lagHours}h {isKn ? 'ವಿಳಂಬ' : 'Lag'}
+              <div className="flex flex-wrap items-center gap-2">
+                <span
+                  className={`px-3 py-1 text-sm font-semibold rounded-lg border ${getStrengthBadgeClass(
+                    activeAssoc.associationStrength
+                  )}`}
+                >
+                  {getLocalizedAssociationStrength(activeAssoc.associationStrength, language)}
                 </span>
-              )}
 
-              <span className="px-2 py-1 text-[11px] text-slate-400 ml-auto">
-                {isKn ? 'ಮಾದರಿ ಗಾತ್ರ: ' : 'N = '}
-                <strong>{activeAssoc.sampleSize}</strong>
-              </span>
+                <span className="px-3 py-1 text-sm font-medium rounded-lg bg-slate-800/80 text-slate-300 border border-slate-700">
+                  {getLocalizedAssociationType(activeAssoc.associationType, language)}
+                </span>
+
+                <span
+                  className={`px-3 py-1 text-sm font-mono font-medium rounded-lg border ${getConfidenceBadgeClass(
+                    activeAssoc.confidence
+                  )}`}
+                >
+                  {isKn ? 'ವಿಶ್ವಾಸಾರ್ಹತೆ: ' : 'Confidence: '}
+                  {activeAssoc.confidence}
+                </span>
+
+                {activeAssoc.lagHours && (
+                  <span className="px-3 py-1 text-sm font-mono rounded-lg bg-purple-950/50 text-purple-300 border border-purple-800/60 flex items-center gap-1">
+                    <Clock className="w-4 h-4" />
+                    {activeAssoc.lagHours}h {isKn ? 'ವಿಳಂಬ' : 'Lag'}
+                  </span>
+                )}
+              </div>
             </div>
 
             {/* FARMER MODE DISPLAY */}
-            {effectiveMode === 'farmer' ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {/* Step 1: What Changed? */}
-                <div className="p-3.5 rounded-xl bg-slate-950/60 border border-slate-800/80 hover:border-slate-700 transition-colors">
-                  <div className="flex items-center gap-2 text-cyan-400 text-xs font-semibold uppercase tracking-wider mb-1.5">
-                    <Droplets className="w-3.5 h-3.5" />
-                    <span>{isKn ? '೧. ನೀರಿನಲ್ಲಿ ಏನು ಬದಲಾಗಿದೆ?' : '1. What Changed in the Water?'}</span>
+            {userMode === 'farmer' ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Step 1: Environment */}
+                <div className="p-4 rounded-xl bg-slate-950/60 border border-slate-800/80 hover:border-slate-700 transition-colors">
+                  <div className="flex items-center gap-2 text-cyan-400 text-[11px] font-semibold uppercase tracking-wider mb-2">
+                    <Droplets className="w-4 h-4" />
+                    <span>{isKn ? 'ಪರಿಸರ' : 'Environment'}</span>
                   </div>
-                  <p className="text-sm font-medium text-slate-200 leading-snug">{localizedAssoc.whatChanged}</p>
+                  <div className="text-base font-semibold text-white mb-0.5">{activeAssoc.environmentLabel}</div>
+                  <div className="text-sm text-cyan-300 mb-2">{activeAssoc.environmentDirection}</div>
+                  <p className="text-xs text-slate-400 leading-snug pt-2 border-t border-slate-800">{localizedAssoc.whatChanged}</p>
                 </div>
 
-                {/* Step 2: What Happened Together? */}
-                <div className="p-3.5 rounded-xl bg-slate-950/60 border border-slate-800/80 hover:border-slate-700 transition-colors">
-                  <div className="flex items-center gap-2 text-emerald-400 text-xs font-semibold uppercase tracking-wider mb-1.5">
-                    <Sparkles className="w-3.5 h-3.5" />
-                    <span>{isKn ? '೨. ಅದೇ ಸಮಯದಲ್ಲಿ ಗಿಡ ಹೇಗಿದೆ?' : '2. What Happened to the Plant?'}</span>
+                {/* Step 2: Plant */}
+                <div className="p-4 rounded-xl bg-slate-950/60 border border-slate-800/80 hover:border-slate-700 transition-colors">
+                  <div className="flex items-center gap-2 text-emerald-400 text-[11px] font-semibold uppercase tracking-wider mb-2">
+                    <Sparkles className="w-4 h-4" />
+                    <span>{isKn ? 'ಸಸ್ಯ' : 'Plant'}</span>
                   </div>
-                  <p className="text-sm font-medium text-slate-200 leading-snug">
-                    {localizedAssoc.whatHappenedTogether}
-                  </p>
+                  <div className="text-base font-semibold text-white mb-0.5">{activeAssoc.plantLabel}</div>
+                  <div className="text-sm text-emerald-300 mb-2">{activeAssoc.plantDirection}</div>
+                  <p className="text-xs text-slate-400 leading-snug pt-2 border-t border-slate-800">{localizedAssoc.whatHappenedTogether}</p>
                 </div>
 
                 {/* Step 3: What It Means */}
-                <div className="p-3.5 rounded-xl bg-slate-950/60 border border-slate-800/80 hover:border-slate-700 transition-colors">
-                  <div className="flex items-center gap-2 text-amber-400 text-xs font-semibold uppercase tracking-wider mb-1.5">
-                    <Info className="w-3.5 h-3.5" />
-                    <span>{isKn ? '೩. ಇದರ ಅರ್ಥವೇನು?' : '3. What Does This Mean?'}</span>
+                <div className="p-4 rounded-xl bg-slate-950/60 border border-slate-800/80 hover:border-slate-700 transition-colors">
+                  <div className="flex items-center gap-2 text-amber-400 text-[11px] font-semibold uppercase tracking-wider mb-2">
+                    <Info className="w-4 h-4" />
+                    <span>{isKn ? 'ಇದರ ಅರ್ಥವೇನು?' : 'What Does This Mean?'}</span>
                   </div>
-                  <p className="text-xs text-slate-300 leading-relaxed">{localizedAssoc.whatItMeans}</p>
+                  <p className="text-sm text-slate-300 leading-relaxed">{localizedAssoc.whatItMeans}</p>
                 </div>
 
                 {/* Step 4: What Should I Do? */}
-                <div className="p-3.5 rounded-xl bg-emerald-950/30 border border-emerald-800/50 hover:border-emerald-700/60 transition-colors">
-                  <div className="flex items-center gap-2 text-emerald-300 text-xs font-semibold uppercase tracking-wider mb-1.5">
-                    <ShieldCheck className="w-3.5 h-3.5" />
-                    <span>{isKn ? '೪. ನಾನು ಏನು ಮಾಡಬೇಕು?' : '4. What Should I Do?'}</span>
+                <div className="p-4 rounded-xl bg-emerald-950/30 border border-emerald-800/50 hover:border-emerald-700/60 transition-colors">
+                  <div className="flex items-center gap-2 text-emerald-300 text-[11px] font-semibold uppercase tracking-wider mb-2">
+                    <ShieldCheck className="w-4 h-4" />
+                    <span>{isKn ? 'ನಾನು ಏನು ಮಾಡಬೇಕು?' : 'What Should I Do?'}</span>
                   </div>
-                  <p className="text-xs font-medium text-emerald-200 leading-relaxed">{localizedAssoc.whatToDo}</p>
+                  <p className="text-sm font-medium text-emerald-200 leading-relaxed">{localizedAssoc.whatToDo}</p>
                 </div>
               </div>
             ) : (
@@ -358,24 +320,31 @@ export function EnvironmentPlantCard({
 
             {/* Multiple Associations Selector (if > 1) */}
             {associations.length > 1 && (
-              <div className="pt-2 border-t border-slate-800/60 flex items-center gap-2 overflow-x-auto text-xs">
-                <span className="text-slate-400 text-[11px] shrink-0">
-                  {isKn ? 'ಇತರ ಸಂಭವನೀಯ ಸಂಬಂಧಗಳು:' : 'Other Associations:'}
+              <div className="pt-4 mt-2 border-t border-slate-800/60">
+                <span className="text-slate-400 text-[11px] uppercase tracking-wider font-semibold block mb-3">
+                  {isKn ? 'ಇತರ ಸಂಭವನೀಯ ಸಂಬಂಧಗಳು' : 'Other Associations'}
                 </span>
-                {associations.map((assoc, idx) => (
-                  <button
-                    key={assoc.id || idx}
-                    type="button"
-                    onClick={() => setSelectedAssocIndex(idx)}
-                    className={`px-2.5 py-1 rounded-md text-xs font-medium whitespace-nowrap transition-all ${
-                      selectedAssocIndex === idx
-                        ? 'bg-cyan-600 text-white shadow-sm'
-                        : 'bg-slate-800/60 text-slate-400 hover:text-slate-200'
-                    }`}
-                  >
-                    {assoc.environmentMetric.toUpperCase()} ↔ {assoc.plantMetric}
-                  </button>
-                ))}
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                  {associations.map((assoc, idx) => (
+                    <div
+                      key={assoc.id || idx}
+                      className={`p-3 rounded-xl border text-left flex flex-col gap-1.5 ${
+                        0 === idx
+                          ? 'bg-cyan-950/30 border-cyan-700/50 shadow-sm'
+                          : 'bg-slate-900/60 border-slate-800'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2 text-sm font-semibold text-slate-200 truncate">
+                        <span className="truncate">{assoc.environmentLabel}</span>
+                        <span className="text-slate-500 shrink-0">↔</span>
+                        <span className="truncate">{assoc.plantLabel}</span>
+                      </div>
+                      <div className="text-xs text-slate-400">
+                        {getLocalizedAssociationStrength(assoc.associationStrength, language)}
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
           </div>

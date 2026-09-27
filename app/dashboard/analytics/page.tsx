@@ -125,18 +125,7 @@ export default function AnalyticsPage() {
     }
 
     if (observations.length === 0) {
-      return [
-        {
-          id: 'baseline-default',
-          date: isKn ? 'ದಿನ 1 · ಆರಂಭಿಕ ದಾಖಲೆ' : 'Day 1 · Baseline',
-          title: copy.analytics.milestoneBaselineTitle,
-          description: isFarmer
-            ? copy.analytics.milestoneBaselineDescFarmer
-            : copy.analytics.milestoneBaselineDescTech,
-          status: 'stable' as const,
-          statusLabel: copy.analytics.statusStable,
-        },
-      ];
+      return [];
     }
 
     return observations.slice(0, 6).map((obs, idx) => {
@@ -168,7 +157,9 @@ export default function AnalyticsPage() {
         id: `obs-${obs.id || idx}`,
         date: `${timeStr} · ${cycleText}`,
         title,
-        description,
+        description: isFarmer ? (reasoning?.farmerCopy?.observableSummary || description) : (reasoning?.observations?.[0] || description),
+        context: isFarmer ? reasoning?.farmerCopy?.whySummary : (reasoning?.scenarioCode || 'Routine Check'),
+        significance: isHealthy ? 'Nominal' : isUrgent ? 'Critical Action Required' : 'Requires Attention',
         status,
         statusLabel: isHealthy ? copy.analytics.statusHealthy : copy.analytics.statusStable,
       };
@@ -514,44 +505,59 @@ export default function AnalyticsPage() {
           <span className="scientific-meta">{copy.analytics.milestonesSubtitle}</span>
         </div>
 
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-            gap: '14px',
-          }}
-        >
-          {displayMilestones.map((milestone, idx) => (
-            <div
-              key={milestone.id || idx}
-              style={{
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '4px',
-                padding: '14px 16px',
-                background: 'var(--bg-surface)',
-                border: '1px solid var(--border-subtle)',
-                borderRadius: 'var(--radius-sm)',
-                position: 'relative',
-              }}
-            >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span className="scientific-meta" style={{ fontSize: '10px', color: 'var(--color-green)' }}>
-                  {milestone.date}
-                </span>
-                <StatusBadge status={milestone.status} label={milestone.statusLabel} size="sm" />
-              </div>
+        {displayMilestones.length === 0 ? (
+          <div style={{ padding: '32px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '13px' }}>
+            {isKn ? 'ಇನ್ನೂ ಯಾವುದೇ ದಾಖಲೆಗಳಿಲ್ಲ. ಐತಿಹಾಸಿಕ ಡೇಟಾ ಸಂಗ್ರಹಿಸಲು ಗಿಡವನ್ನು ನಿಯಮಿತವಾಗಿ ಪರಿಶೀಲಿಸಿ.' : 'Not enough historical data to generate a timeline. Keep monitoring the plant to build its journey.'}
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0', position: 'relative', paddingLeft: '24px', marginLeft: '12px' }}>
+            <div style={{ position: 'absolute', left: '0', top: '8px', bottom: '8px', width: '2px', background: 'var(--border-subtle)', borderRadius: '1px' }} />
+            
+            {displayMilestones.map((milestone, idx) => (
+              <div
+                key={milestone.id || idx}
+                style={{
+                  position: 'relative',
+                  paddingBottom: idx !== displayMilestones.length - 1 ? '32px' : '0'
+                }}
+              >
+                <div style={{ position: 'absolute', left: '-29px', top: '6px', width: '12px', height: '12px', borderRadius: '50%', background: 'var(--bg-canvas)', border: `2px solid var(--color-${milestone.status === 'healthy' ? 'green' : milestone.status === 'attention' ? 'red' : milestone.status === 'warning' ? 'amber' : 'teal'})`, zIndex: 10 }} />
+                
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <span className="scientific-meta" style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
+                      {milestone.date}
+                    </span>
+                    <StatusBadge status={milestone.status} label={milestone.statusLabel} size="sm" />
+                  </div>
 
-              <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)', marginTop: '2px' }}>
-                {milestone.title}
-              </div>
+                  <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text-primary)' }}>
+                    {milestone.title}
+                  </div>
 
-              <div style={{ fontSize: '11.5px', color: 'var(--text-secondary)', lineHeight: 1.4 }}>
-                {milestone.description}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '4px', background: 'var(--bg-surface)', padding: '12px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-subtle)' }}>
+                    <div style={{ fontSize: '13px', color: 'var(--text-primary)' }}>
+                      <strong style={{ color: 'var(--color-teal)', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.05em', marginRight: '6px' }}>Observation:</strong>
+                      {milestone.description}
+                    </div>
+                    {('context' in milestone && milestone.context) && (
+                      <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
+                        <strong style={{ color: 'var(--color-emerald)', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.05em', marginRight: '6px' }}>Context:</strong>
+                        {(milestone as any).context}
+                      </div>
+                    )}
+                    {('significance' in milestone && milestone.significance) && (
+                      <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
+                        <strong style={{ color: 'var(--color-amber)', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.05em', marginRight: '6px' }}>Significance:</strong>
+                        {(milestone as any).significance}
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* ============================================================ */}

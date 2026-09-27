@@ -23,10 +23,10 @@ export type EvidenceStage =
   | 'ACTION';
 
 export interface EvidenceStep {
-  stage: EvidenceStage;
+  stage: string;
   stageLabel?: string;
   headline: string;
-  detail: string;
+  detail: React.ReactNode;
   status?: 'optimal' | 'warning' | 'critical' | 'neutral';
 }
 
@@ -38,28 +38,34 @@ interface EvidenceChainProps {
 }
 
 export function EvidenceChain({ steps, confidenceScore, confidenceText, confidenceLabel = 'Confidence' }: EvidenceChainProps) {
-  const getIconForStage = (stage: EvidenceStage) => {
+  const getIconForStage = (stage: string) => {
     switch (stage) {
+      case 'OBSERVATIONS':
       case 'CAMERA OBSERVATION':
-      case 'OBSERVATION':
         return Eye;
-      case 'SENSOR OBSERVATION':
       case 'ENVIRONMENT':
+      case 'SENSOR OBSERVATION':
         return Thermometer;
-      case 'HISTORICAL CHANGE':
+      case 'HISTORICAL CONTEXT':
       case 'HISTORICAL TREND':
+      case 'HISTORICAL CHANGE':
         return TrendingUp;
+      case 'ASSOCIATIONS':
+        return Brain;
+      case 'REASONING':
       case 'INTERPRETATION':
         return Brain;
       case 'RECOMMENDATION':
       case 'ACTION':
         return CheckCircle;
+      case 'LIMITATIONS':
+        return AlertCircle;
       default:
         return AlertCircle;
     }
   };
 
-  const getStageColor = (stage: EvidenceStage, status?: EvidenceStep['status']) => {
+  const getStageColor = (stage: string, status?: EvidenceStep['status']) => {
     if (status === 'critical') return 'var(--color-red)';
     if (status === 'warning') return 'var(--color-amber)';
     if (status === 'optimal') return 'var(--color-green)';

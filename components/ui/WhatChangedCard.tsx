@@ -35,27 +35,13 @@ export function WhatChangedCard({
   onUserModeChange,
   className = '',
 }: WhatChangedCardProps) {
-  const [activeTab, setActiveTab] = useState<'all' | 'sensor' | 'visual' | 'growth'>('all');
-  const [isExpanded, setIsExpanded] = useState(false);
-  const [internalMode, setInternalMode] = useState<AssistantMode>(userMode);
-
-  // Sync internal mode if prop changes
-  React.useEffect(() => {
-    setInternalMode(userMode);
-  }, [userMode]);
-
-  const effectiveMode = internalMode;
+  const [isExpanded, setIsExpanded] = React.useState(false);
   const isKn = language === 'kn';
 
   const localizedCopy = getLocalizedWhatChangedCopy(summary, language);
 
-  // Filter events based on active tab
-  const filteredEvents = summary.events.filter(e => {
-    if (activeTab === 'sensor') return e.category === 'sensor';
-    if (activeTab === 'visual') return e.category === 'visual';
-    if (activeTab === 'growth') return e.category === 'growth';
-    return true;
-  });
+  // Show all events instead of filtering by tab
+  const filteredEvents = summary.events;
 
   const getSignificanceColor = (sig: string) => {
     switch (sig) {
@@ -169,37 +155,6 @@ export function WhatChangedCard({
           </div>
         </div>
 
-        {/* Mode Toggle Button */}
-        <div className="flex items-center gap-2">
-          <div className="bg-slate-800/90 rounded-lg p-0.5 border border-slate-700/60 flex text-xs">
-            <button
-              onClick={() => {
-                setInternalMode('farmer');
-                onUserModeChange?.('farmer');
-              }}
-              className={`px-2.5 py-1 rounded-md font-medium transition-all ${
-                effectiveMode === 'farmer'
-                  ? 'bg-emerald-600 text-white shadow-sm'
-                  : 'text-slate-400 hover:text-slate-200'
-              }`}
-            >
-              {isKn ? 'ರೈತರ ಮೋಡ್' : 'Farmer'}
-            </button>
-            <button
-              onClick={() => {
-                setInternalMode('technical');
-                onUserModeChange?.('technical');
-              }}
-              className={`px-2.5 py-1 rounded-md font-medium transition-all ${
-                effectiveMode === 'technical'
-                  ? 'bg-emerald-600 text-white shadow-sm'
-                  : 'text-slate-400 hover:text-slate-200'
-              }`}
-            >
-              {isKn ? 'ತಾಂತ್ರಿಕ' : 'Technical'}
-            </button>
-          </div>
-        </div>
       </div>
 
       {/* Primary Intelligence Section */}
@@ -214,7 +169,7 @@ export function WhatChangedCard({
               : 'bg-slate-800/50 border-slate-700/60 text-slate-200'
           }`}
         >
-          {effectiveMode === 'farmer' ? (
+          {userMode === 'farmer' ? (
             <div className="space-y-3">
               <div>
                 <span className="text-[11px] uppercase tracking-wider font-semibold text-emerald-400 block mb-0.5">
@@ -277,47 +232,8 @@ export function WhatChangedCard({
         {summary.events.length > 0 && (
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs">
-                <button
-                  onClick={() => setActiveTab('all')}
-                  className={`px-2.5 py-1 rounded-lg font-medium transition-colors ${
-                    activeTab === 'all'
-                      ? 'bg-slate-700 text-white'
-                      : 'text-slate-400 hover:text-slate-300'
-                  }`}
-                >
-                  {isKn ? 'ಎಲ್ಲಾ ಬದಲಾವಣೆಗಳು' : 'All Events'} ({summary.events.length})
-                </button>
-                <button
-                  onClick={() => setActiveTab('sensor')}
-                  className={`px-2.5 py-1 rounded-lg font-medium transition-colors ${
-                    activeTab === 'sensor'
-                      ? 'bg-slate-700 text-white'
-                      : 'text-slate-400 hover:text-slate-300'
-                  }`}
-                >
-                  {isKn ? 'ಸಂವೇದಕಗಳು' : 'Sensors'} ({summary.sensorChanges.length})
-                </button>
-                <button
-                  onClick={() => setActiveTab('visual')}
-                  className={`px-2.5 py-1 rounded-lg font-medium transition-colors ${
-                    activeTab === 'visual'
-                      ? 'bg-slate-700 text-white'
-                      : 'text-slate-400 hover:text-slate-300'
-                  }`}
-                >
-                  {isKn ? 'ದೃಶ್ಯ ಪರಿಶೀಲನೆ' : 'Visual'} ({summary.visualChanges.length})
-                </button>
-                <button
-                  onClick={() => setActiveTab('growth')}
-                  className={`px-2.5 py-1 rounded-lg font-medium transition-colors ${
-                    activeTab === 'growth'
-                      ? 'bg-slate-700 text-white'
-                      : 'text-slate-400 hover:text-slate-300'
-                  }`}
-                >
-                  {isKn ? 'ಬೆಳವಣಿಗೆ' : 'Growth'} ({summary.growthChanges.length})
-                </button>
+              <div className="flex items-center gap-2 overflow-x-auto pb-2 pt-1 px-1 text-[11px]">
+                <span className="text-slate-400 font-medium">{summary.events.length} {isKn ? 'ದಾಖಲಾದ ಬದಲಾವಣೆಗಳು' : 'Changes Logged'}</span>
               </div>
 
               <button
@@ -351,8 +267,8 @@ export function WhatChangedCard({
                         </div>
                         <div>
                           <div className="flex items-center gap-2 flex-wrap">
-                            <span className="text-xs font-semibold text-white">
-                              {effectiveMode === 'farmer' ? eventCopy.headline : event.label}
+                            <span className="text-sm font-semibold text-white">
+                              {userMode === 'farmer' ? eventCopy.headline : event.label}
                             </span>
                             <span
                               className={`text-[9px] font-mono px-1.5 py-0.5 rounded border uppercase ${getSignificanceColor(
@@ -369,16 +285,16 @@ export function WhatChangedCard({
                           </div>
 
                           <p className="text-xs text-slate-300 mt-1 leading-relaxed">
-                            {effectiveMode === 'farmer' ? eventCopy.why : event.summary}
+                            {userMode === 'farmer' ? eventCopy.why : event.summary}
                           </p>
 
                           {isExpanded && (
-                            <div className="mt-2 pt-2 border-t border-slate-800 text-[11px] text-slate-400 space-y-1">
-                              <p className="text-amber-300/90">
+                            <div className="mt-3 pt-3 border-t border-slate-800/80 text-[11px] text-slate-400 space-y-2">
+                              <p className="text-amber-300/90 font-medium">
                                 <span className="font-semibold">{isKn ? 'ಕ್ರಮ:' : 'Action:'}</span>{' '}
-                                {effectiveMode === 'farmer' ? eventCopy.action : event.farmerAction}
+                                {userMode === 'farmer' ? eventCopy.action : event.farmerAction}
                               </p>
-                              {effectiveMode === 'technical' && (
+                              {userMode === 'technical' && (
                                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1 font-mono text-[10px] text-slate-400">
                                   <div>
                                     <span className="text-slate-500">Prev: </span>
