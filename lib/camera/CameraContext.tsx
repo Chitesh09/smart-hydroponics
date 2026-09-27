@@ -10,6 +10,9 @@ interface CameraContextType {
   availableDevices: CameraDevice[];
   errorMessage: string | null;
   videoRef: React.RefObject<HTMLVideoElement | null>;
+  attachVideoElement: (el: HTMLVideoElement | null) => void;
+  ensureCameraActive: () => Promise<boolean>;
+  isVideoReady: boolean;
   startCamera: (deviceId?: string) => Promise<boolean>;
   stopCamera: () => void;
   captureFrame: () => string | null;
@@ -18,15 +21,36 @@ interface CameraContextType {
 
 const CameraContext = createContext<CameraContextType | undefined>(undefined);
 
+// Helper to determine if a media stream is active and has live video tracks
+function isStreamLive(mediaStream: MediaStream | null): boolean {
+  if (!mediaStream || !mediaStream.active) return false;
+  const tracks = mediaStream.getVideoTracks();
+  if (tracks.length === 0) return false;
+  return tracks.every(track => track.readyState === 'live' && track.enabled);
+}
+
 export function CameraProvider({ children }: { children: React.ReactNode }) {
   const [status, setStatus] = useState<CameraStatus>('idle');
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [activeDeviceId, setActiveDeviceId] = useState<string | null>(null);
   const [availableDevices, setAvailableDevices] = useState<CameraDevice[]>([]);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [isVideoReady, setIsVideoReady] = useState<boolean>(false);
   
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const isUserDesiredRef = useRef<boolean>(false);
+
+  // Initialize user desired state from sessionStorage on mount (survives client-side route transitions)
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        if (sessionStorage.getItem('hydrosmart_camera_desired') === 'true') {
+          isUserDesiredRef.current = true;
+        }
+      } catch {}
+    }
+  }, []);
 
   // Enumerate video input devices safely
   const enumerateDevices = useCallback(async () => {
@@ -47,8 +71,25 @@ export function CameraProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  // Helper to attach stream to a video element and trigger play
+  const bindStreamToElement = useCallback((element: HTMLVideoElement, mediaStream: MediaStream) => {
+    if (element.srcObject !== mediaStream) {
+      element.srcObject = mediaStream;
+    }
+    element.play().catch(playErr => {
+      console.warn('[CameraProvider] Video autoplay warning:', playErr);
+    });
+  }, []);
+
   // Stop camera tracks cleanly
   const stopCamera = useCallback(() => {
+    isUserDesiredRef.current = false;
+    try {
+      if (typeof window !== 'undefined') {
+        sessionStorage.removeItem('hydrosmart_camera_desired');
+      }
+    } catch {}
+
     if (streamRef.current) {
       streamRef.current.getTracks().forEach(track => {
         track.stop();
@@ -61,6 +102,7 @@ export function CameraProvider({ children }: { children: React.ReactNode }) {
     }
 
     setStream(null);
+    setIsVideoReady(false);
     setStatus('disconnected');
   }, []);
 
@@ -75,9 +117,11 @@ export function CameraProvider({ children }: { children: React.ReactNode }) {
     // Stop existing stream first if active
     if (streamRef.current) {
       streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current = null;
     }
 
     setStatus('requesting');
+    setIsVideoReady(false);
     setErrorMessage(null);
 
     const constraints: MediaStreamConstraints = {
@@ -91,17 +135,26 @@ export function CameraProvider({ children }: { children: React.ReactNode }) {
       const mediaStream = await navigator.mediaDevices.getUserMedia(constraints);
       streamRef.current = mediaStream;
       setStream(mediaStream);
+      isUserDesiredRef.current = true;
+      try {
+        if (typeof window !== 'undefined') {
+          sessionStorage.setItem('hydrosmart_camera_desired', 'true');
+        }
+      } catch {}
 
       if (videoRef.current) {
-        videoRef.current.srcObject = mediaStream;
-        videoRef.current.play().catch(playErr => {
-          console.warn('[CameraProvider] Video autoplay warning:', playErr);
-        });
+        bindStreamToElement(videoRef.current, mediaStream);
       }
 
-      // Track active device ID
+      // Track active device ID and monitor track health
       const videoTrack = mediaStream.getVideoTracks()[0];
       if (videoTrack) {
+        videoTrack.onended = () => {
+          console.warn('[CameraProvider] Video track ended unexpectedly.');
+          setIsVideoReady(false);
+          setStatus('disconnected');
+        };
+
         const settings = videoTrack.getSettings();
         if (settings.deviceId) {
           setActiveDeviceId(settings.deviceId);
@@ -114,6 +167,7 @@ export function CameraProvider({ children }: { children: React.ReactNode }) {
     } catch (err: unknown) {
       const errObj = err as Error;
       setStatus('error');
+      setIsVideoReady(false);
       
       if (errObj.name === 'NotAllowedError' || errObj.name === 'PermissionDeniedError') {
         setErrorMessage('Camera permission was denied. Please grant webcam permission in your browser address bar.');
@@ -127,7 +181,61 @@ export function CameraProvider({ children }: { children: React.ReactNode }) {
       console.error('[CameraProvider] Start error:', err);
       return false;
     }
-  }, [enumerateDevices]);
+  }, [enumerateDevices, bindStreamToElement]);
+
+  // Ensure camera is active, recovering stream if stale or re-binding if mounted
+  const ensureCameraActive = useCallback(async (): Promise<boolean> => {
+    // If we have a healthy, live stream:
+    if (streamRef.current && isStreamLive(streamRef.current)) {
+      if (videoRef.current) {
+        bindStreamToElement(videoRef.current, streamRef.current);
+        if (videoRef.current.videoWidth > 0 && videoRef.current.videoHeight > 0) {
+          setIsVideoReady(true);
+        }
+      }
+      setStatus('connected');
+      return true;
+    }
+
+    // If stream is dead/null but camera was connected or desired:
+    const desired = isUserDesiredRef.current || (typeof window !== 'undefined' && sessionStorage.getItem('hydrosmart_camera_desired') === 'true');
+    if (status === 'connected' || desired) {
+      return await startCamera(activeDeviceId || undefined);
+    }
+
+    return false;
+  }, [status, activeDeviceId, startCamera, bindStreamToElement]);
+
+  // Callback ref for mounting video element to guarantee immediate attachment and event handling
+  const attachVideoElement = useCallback((element: HTMLVideoElement | null) => {
+    videoRef.current = element;
+
+    if (!element) {
+      setIsVideoReady(false);
+      return;
+    }
+
+    const checkReady = () => {
+      if (element.videoWidth > 0 && element.videoHeight > 0 && !element.paused) {
+        setIsVideoReady(true);
+      }
+    };
+
+    element.addEventListener('loadedmetadata', checkReady);
+    element.addEventListener('canplay', checkReady);
+    element.addEventListener('playing', checkReady);
+
+    // If stream is already live, immediately attach and play
+    if (streamRef.current && isStreamLive(streamRef.current)) {
+      bindStreamToElement(element, streamRef.current);
+      checkReady();
+    } else {
+      const desired = isUserDesiredRef.current || (typeof window !== 'undefined' && sessionStorage.getItem('hydrosmart_camera_desired') === 'true');
+      if (status === 'connected' || desired) {
+        ensureCameraActive();
+      }
+    }
+  }, [bindStreamToElement, ensureCameraActive, status]);
 
   // Switch camera device
   const switchDevice = useCallback(async (deviceId: string): Promise<boolean> => {
@@ -167,6 +275,7 @@ export function CameraProvider({ children }: { children: React.ReactNode }) {
     return () => {
       if (streamRef.current) {
         streamRef.current.getTracks().forEach(t => t.stop());
+        streamRef.current = null;
       }
     };
   }, []);
@@ -180,6 +289,9 @@ export function CameraProvider({ children }: { children: React.ReactNode }) {
         availableDevices,
         errorMessage,
         videoRef,
+        attachVideoElement,
+        ensureCameraActive,
+        isVideoReady,
         startCamera,
         stopCamera,
         captureFrame,

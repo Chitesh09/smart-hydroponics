@@ -26,7 +26,15 @@ const DEFAULT_READING = { ph: 6.0, tds: 1000, waterLevel: 85, distance: 23.5, ti
 export default function Dashboard() {
   const { currentUser, userProfile } = useAuth();
   const { mode, isStale, latestReading, history } = useESP32Serial();
-  const { status: cameraStatus, videoRef, startCamera } = useCamera();
+  const {
+    status: cameraStatus,
+    errorMessage: cameraErrorMessage,
+    videoRef,
+    attachVideoElement,
+    ensureCameraActive,
+    isVideoReady,
+    startCamera,
+  } = useCamera();
   const {
     cropIdentity,
     plantProfile,
@@ -184,13 +192,24 @@ export default function Dashboard() {
 
 
 
+  // Restore camera stream when mounting or navigating back to Dashboard
+  useEffect(() => {
+    const isDesired = cameraStatus === 'connected' || (typeof window !== 'undefined' && sessionStorage.getItem('hydrosmart_camera_desired') === 'true');
+    if (isDesired) {
+      ensureCameraActive();
+    }
+  }, [cameraStatus, ensureCameraActive]);
+
   // Optical detection progression label
   const opticalProgression = useMemo(() => {
+    if (cameraStatus === 'error') {
+      return isKn ? 'ಕ್ಯಾಮೆರಾ ಲಭ್ಯವಿಲ್ಲ' : (cameraErrorMessage || 'Camera unavailable');
+    }
     if (!isCameraActive) return isKn ? copy.ui.cameraOffline : 'Camera View Offline';
-    if (!latestDetection) return isKn ? copy.camera.SCAN_NOT_READY : 'Camera is starting...';
+    if (!isVideoReady || !latestDetection) return isKn ? copy.camera.SCAN_NOT_READY : 'Camera is starting...';
 
     if (latestDetection.state === 'SCAN_NOT_READY') {
-      return isKn ? copy.camera.SCAN_NOT_READY : latestDetection.userMessage;
+      return isKn ? copy.camera.SCAN_NOT_READY : (latestDetection.userMessage || 'Camera is starting...');
     }
 
     if (latestDetection.state === 'NO_PLANT_DETECTED' || !latestDetection.isPlantDetected) {
@@ -209,7 +228,7 @@ export default function Dashboard() {
     return isKn
       ? `ಗಿಡ ಪತ್ತೆಯಾಗಿದೆ · ಎಲೆಗಳ ವ್ಯಾಪ್ತಿ ${latestDetection.canopyCoveragePercent}%`
       : `Plant Detected · Canopy ${latestDetection.canopyCoveragePercent}%`;
-  }, [isCameraActive, latestDetection, isPlantIdentified, cropIdentity.commonName, cropIdentity.confidence, isKn, copy]);
+  }, [cameraStatus, cameraErrorMessage, isCameraActive, isVideoReady, latestDetection, isPlantIdentified, cropIdentity.commonName, cropIdentity.confidence, isKn, copy]);
 
   return (
     <div className={styles.container}>
@@ -243,7 +262,7 @@ export default function Dashboard() {
         {/* Left: Live Plant Camera Viewport (Single Primary Camera Interface) */}
         <div className={styles.opticalViewport}>
           <video
-            ref={videoRef}
+            ref={attachVideoElement}
             className={styles.opticalVideo}
             autoPlay
             playsInline
