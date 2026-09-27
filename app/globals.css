@@ -5,12 +5,16 @@
 
 
 :root {
+  /* HydroSmart Signature System (Phase 16 Refinement) */
+  --color-emerald-ink:   #064E3B; /* Primary Structural & Brand */
+  --color-champagne:     #F8E7C9; /* Primary Typographic Emphasis & Highlights */
+
   /* Surface & Canvas System (Deep Botanical Forest & Mineral Slate) */
-  --bg-base:             #051311; /* Obsidian Deep Forest */
-  --bg-canvas:           #071916; /* Botanical Canvas */
-  --bg-surface:          #0B221E; /* Primary Surface */
-  --bg-surface-subtle:   rgba(11, 34, 30, 0.65);
-  --bg-surface-elevated: #102E29; /* Elevated Instrument Surface */
+  --bg-base:             #041510; /* Obsidian Deep Forest */
+  --bg-canvas:           #051A14; /* Botanical Canvas */
+  --bg-surface:          #08241D; /* Derived from Emerald Ink (#064E3B but darker for panels) */
+  --bg-surface-subtle:   rgba(8, 36, 29, 0.65);
+  --bg-surface-elevated: #0B3026; /* Elevated Instrument Surface */
   --bg-tint-green:       rgba(46, 184, 114, 0.08);
   --bg-tint-teal:        rgba(28, 167, 160, 0.08);
   --bg-tint-amber:       rgba(229, 169, 60, 0.08);
@@ -18,9 +22,9 @@
 
   /* Editorial Borders & Dividers (Subtle, Restrained, Non-Glowing) */
   --border-hairline:     rgba(255, 255, 255, 0.05);
-  --border-default:      #193A33;
-  --border-subtle:       #122B26;
-  --border-strong:       #24534A;
+  --border-default:      #12362C; /* Derived from Emerald Ink */
+  --border-subtle:       #0A201A;
+  --border-strong:       #18483B;
   --border-accent-green: rgba(46, 184, 114, 0.35);
   --border-accent-teal:  rgba(28, 167, 160, 0.35);
 
@@ -61,6 +65,11 @@
   --font-sans: var(--font-ibm-sans), system-ui, -apple-system, sans-serif;
   --font-mono: var(--font-ibm-mono), ui-monospace, SFMono-Regular, monospace;
 
+  /* Tailwind CSS v4 Theme Overrides for Utility Classes */
+  --color-emerald-950: #021711;
+  --color-emerald-900: #064E3B; /* Tailwind Emerald-900 becomes Emerald Ink */
+  --color-amber-100: #F8E7C9;   /* Tailwind Amber-100 becomes Champagne */
+  
   /* Motion Timing */
   --ease-out-quad: cubic-bezier(0.25, 0.46, 0.45, 0.94);
   --ease-spring:   cubic-bezier(0.16, 1, 0.3, 1);

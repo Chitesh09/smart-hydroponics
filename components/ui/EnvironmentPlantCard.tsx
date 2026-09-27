@@ -19,7 +19,7 @@ import {
 } from '@/lib/intelligence/farmerSemanticLayer';
 
 interface EnvironmentPlantCardProps {
-  summary: CorrelationAnalysisSummary;
+  summary?: CorrelationAnalysisSummary | null;
   associations?: EnvironmentPlantAssociation[];
   language?: SupportedLanguageCode;
   userMode?: AssistantMode;
@@ -29,7 +29,7 @@ interface EnvironmentPlantCardProps {
 
 export function EnvironmentPlantCard({
   summary,
-  associations = summary.associations,
+  associations = summary?.associations || [],
   language = 'en',
   userMode = 'farmer',
   onUserModeChange,
@@ -38,8 +38,8 @@ export function EnvironmentPlantCard({
   const [isExpanded, setIsExpanded] = React.useState(false);
   const isKn = language === 'kn';
 
-  const localizedSummary = getLocalizedCorrelationSummary(summary, language);
-  const primaryAssoc = summary.primaryAssociation || (associations.length > 0 ? associations[0] : null);
+  const localizedSummary = summary ? getLocalizedCorrelationSummary(summary, language) : null;
+  const primaryAssoc = summary?.primaryAssociation || (associations.length > 0 ? associations[0] : null);
   const activeAssoc = primaryAssoc;
   const localizedAssoc = activeAssoc ? getLocalizedAssociation(activeAssoc, language) : null;
 
@@ -74,11 +74,11 @@ export function EnvironmentPlantCard({
   return (
     <div
       className={`rounded-md border bg-surface overflow-hidden transition-all duration-300 ${
-        summary.status === 'active_associations'
+        summary?.status === 'active_associations'
           ? 'border-cyan-700/50'
-          : summary.status === 'sensor_unavailable'
+          : summary?.status === 'sensor_unavailable'
           ? 'border-rose-700/50'
-          : summary.status === 'insufficient_history'
+          : summary?.status === 'insufficient_history'
           ? 'border-amber-700/50'
           : 'border-slate-800'
       } ${className}`}
@@ -95,49 +95,56 @@ export function EnvironmentPlantCard({
                 <h3 className="font-semibold text-slate-100 text-base sm:text-lg tracking-tight">
                   {isKn ? 'ಪರಿಸರ ↔ ಸಸ್ಯ ಪರಸ್ಪರ ಸಂಬಂಧ' : 'Environment ↔ Plant Correlation'}
                 </h3>
-                <span className="px-2 py-0.5 text-[10px] font-mono tracking-wider uppercase rounded-full bg-cyan-950/80 text-cyan-300 border border-cyan-800/60">
-                  Phase 9
-                </span>
               </div>
               <p className="text-xs text-slate-400 mt-0.5">
-                {isKn
+                {summary ? (isKn
                   ? 'ನೀರಿನ ಸಂವೇದಕಗಳು ಮತ್ತು ಎಲೆಗಳ ದೃಶ್ಯ ಬದಲಾವಣೆಗಳ ವೈಜ್ಞಾನಿಕ ಪರಸ್ಪರ ಸಂಬಂಧ'
-                  : 'Evidence-based associations between nutrient solution and visual foliage'}
+                  : 'Evidence-based associations between nutrient solution and visual foliage'
+                ) : (isKn ? 'ಸಾಕಷ್ಟು ಡೇಟಾ ಇಲ್ಲ' : 'Insufficient historical data')}
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2 self-end sm:self-center">
-            {/* Status Badge */}
-            <span
-              className={`px-2.5 py-1 text-xs font-medium rounded-full border flex items-center gap-1.5 ${
-                summary.status === 'active_associations'
-                  ? 'bg-cyan-500/10 text-cyan-400 border-cyan-500/30'
-                  : summary.status === 'insufficient_history'
-                  ? 'bg-amber-500/10 text-amber-400 border-amber-500/30'
-                  : summary.status === 'sensor_unavailable'
-                  ? 'bg-rose-500/10 text-rose-400 border-rose-500/30'
-                  : 'bg-slate-800 text-slate-400 border-slate-700'
-              }`}
-            >
+          {summary && (
+            <div className="flex items-center gap-2 self-end sm:self-center">
+              {/* Status Badge */}
               <span
-                className={`w-1.5 h-1.5 rounded-full ${
+                className={`px-2.5 py-1 text-xs font-medium rounded-full border flex items-center gap-1.5 ${
                   summary.status === 'active_associations'
-                    ? 'bg-cyan-400 animate-pulse'
+                    ? 'bg-cyan-500/10 text-cyan-400 border-cyan-500/30'
                     : summary.status === 'insufficient_history'
-                    ? 'bg-amber-400'
+                    ? 'bg-amber-500/10 text-amber-400 border-amber-500/30'
                     : summary.status === 'sensor_unavailable'
-                    ? 'bg-rose-400'
-                    : 'bg-slate-400'
+                    ? 'bg-rose-500/10 text-rose-400 border-rose-500/30'
+                    : 'bg-slate-800 text-slate-400 border-slate-700'
                 }`}
-              />
-              {localizedSummary.statusLabel}
-            </span>
-
-          </div>
+              >
+                <span
+                  className={`w-1.5 h-1.5 rounded-full ${
+                    summary.status === 'active_associations'
+                      ? 'bg-cyan-400 animate-pulse'
+                      : summary.status === 'insufficient_history'
+                      ? 'bg-amber-400'
+                      : summary.status === 'sensor_unavailable'
+                      ? 'bg-rose-400'
+                      : 'bg-slate-400'
+                  }`}
+                />
+                {localizedSummary?.statusLabel || summary.status.replace('_', ' ')}
+              </span>
+            </div>
+          )}
         </div>
       </div>
 
+      {!summary || !localizedSummary ? (
+        <div className="p-8 text-center flex flex-col items-center justify-center text-slate-400 bg-slate-950/20">
+          <span className="text-3xl mb-3 opacity-20">≡</span>
+          <p className="text-sm font-medium">{isKn ? 'ಪರಸ್ಪರ ಸಂಬಂಧವನ್ನು ನಿರ್ಧರಿಸಲು ಸಾಕಷ್ಟು ಡೇಟಾ ಇಲ್ಲ.' : 'Not enough historical data to determine a meaningful relationship.'}</p>
+          <p className="text-xs opacity-70 mt-1">{isKn ? 'ಹೆಚ್ಚಿನ ಡೇಟಾ ಲಭ್ಯವಾದಾಗ ಇದು ನವೀಕರಿಸಲ್ಪಡುತ್ತದೆ.' : 'This will populate as more environment and plant observations are gathered.'}</p>
+        </div>
+      ) : (
+        <>
       {/* CARD BODY */}
       <div className="p-4 sm:p-6 space-y-5">
         {/* CASE 1: SENSORS UNAVAILABLE */}
@@ -395,6 +402,8 @@ export function EnvironmentPlantCard({
           </div>
         )}
       </div>
+      </>
+      )}
     </div>
   );
 }

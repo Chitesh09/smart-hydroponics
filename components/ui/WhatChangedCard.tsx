@@ -8,7 +8,7 @@ import { SupportedLanguageCode, AssistantMode } from '@/lib/assistant/assistantC
 import { getLocalizedWhatChangedCopy, getLocalizedChangeEvent } from '@/lib/intelligence/farmerSemanticLayer';
 
 interface WhatChangedCardProps {
-  summary: WhatChangedSummary;
+  summary?: WhatChangedSummary | null;
   language?: SupportedLanguageCode;
   userMode?: AssistantMode;
   onUserModeChange?: (mode: AssistantMode) => void;
@@ -26,14 +26,14 @@ export function WhatChangedCard({
   const [activeTab, setActiveTab] = React.useState<'all' | 'sensor' | 'visual' | 'growth'>('all');
   const isKn = language === 'kn';
 
-  const localizedCopy = getLocalizedWhatChangedCopy(summary, language);
+  const localizedCopy = summary ? getLocalizedWhatChangedCopy(summary, language) : null;
 
-  const filteredEvents = summary.events.filter(e => {
+  const filteredEvents = summary?.events.filter(e => {
     if (activeTab === 'sensor') return e.category === 'sensor';
     if (activeTab === 'visual') return e.category === 'visual';
     if (activeTab === 'growth') return e.category === 'growth';
     return true;
-  });
+  }) || [];
 
   const getSignificanceColor = (sig: string) => {
     switch (sig) {
@@ -69,17 +69,16 @@ export function WhatChangedCard({
   return (
     <div
       className={`rounded-md border bg-surface overflow-hidden transition-all duration-300 ${
-        summary.reviewRequiredItems.length > 0
-          ? 'border-amber-700/50'
-          : summary.status === 'meaningful_changes' && summary.overallSignificance === 'CRITICAL'
+        summary?.reviewRequiredItems?.length ? 'border-amber-700/50'
+          : summary?.status === 'meaningful_changes' && summary?.overallSignificance === 'CRITICAL'
           ? 'border-rose-700/50'
-          : summary.hasMeaningfulChange
+          : summary?.hasMeaningfulChange
           ? 'border-emerald-700/50'
           : 'border-slate-800'
       } ${className}`}
     >
       {/* Top Banner / Review Alert */}
-      {summary.reviewRequiredItems.length > 0 && (
+      {summary?.reviewRequiredItems && summary.reviewRequiredItems.length > 0 && (
         <div className="bg-amber-950/80 border-b border-amber-600/50 px-4 py-2.5 flex items-center justify-between text-amber-200 text-xs">
           <div className="flex items-center gap-2">
             <span className="text-amber-400 font-bold shrink-0">⚠</span>
@@ -98,19 +97,19 @@ export function WhatChangedCard({
         <div className="flex items-center gap-3">
           <div
             className={`w-10 h-10 rounded-md flex items-center justify-center border ${
-              summary.status === 'stable_no_change'
-                ? 'bg-emerald-950/60 border-emerald-700/50 text-emerald-400'
-                : summary.status === 'insufficient_history'
+              !summary || summary.status === 'insufficient_history'
                 ? 'bg-slate-800/80 border-slate-700 text-slate-400'
+                : summary.status === 'stable_no_change'
+                ? 'bg-emerald-950/60 border-emerald-700/50 text-emerald-400'
                 : 'bg-emerald-950/80 border-emerald-600/60 text-emerald-400'
             }`}
           >
-            {summary.status === 'stable_no_change' ? (
-              <span className="text-emerald-400 font-bold">✓</span>
-            ) : summary.status === 'insufficient_history' ? (
-              <span className="text-slate-400 font-bold">⏱</span>
+            {!summary || summary.status === 'insufficient_history' ? (
+              <span className="text-slate-400 font-bold text-xl leading-none">⏱</span>
+            ) : summary.status === 'stable_no_change' ? (
+              <span className="text-emerald-400 font-bold text-xl leading-none">✓</span>
             ) : (
-              <span className="text-emerald-400 font-bold">★</span>
+              <span className="text-emerald-400 font-bold text-xl leading-none">∆</span>
             )}
           </div>
           <div>
@@ -118,36 +117,52 @@ export function WhatChangedCard({
               <h3 className="text-base sm:text-lg font-bold text-white tracking-tight">
                 {isKn ? 'ಏನು ಬದಲಾಗಿದೆ?' : 'What Changed?'}
               </h3>
-              <span
-                className={`text-[10px] font-mono uppercase px-2 py-0.5 rounded-full border ${
-                  summary.status === 'stable_no_change'
-                    ? 'bg-emerald-950/50 text-emerald-400 border-emerald-800/60'
+              {summary && (
+                <span
+                  className={`text-[10px] font-mono uppercase px-2 py-0.5 rounded-full border ${
+                    summary.status === 'stable_no_change'
+                      ? 'bg-emerald-950/50 text-emerald-400 border-emerald-800/60'
+                      : summary.status === 'insufficient_history'
+                      ? 'bg-slate-800 text-slate-400 border-slate-700'
+                      : getSignificanceColor(summary.overallSignificance)
+                  }`}
+                >
+                  {summary.status === 'stable_no_change'
+                    ? isKn ? 'ಸ್ಥಿರವಾಗಿದೆ' : 'Stable'
                     : summary.status === 'insufficient_history'
-                    ? 'bg-slate-800 text-slate-400 border-slate-700'
-                    : getSignificanceColor(summary.overallSignificance)
-                }`}
-              >
-                {summary.status === 'stable_no_change'
-                  ? isKn ? 'ಸ್ಥಿರವಾಗಿದೆ' : 'Stable'
-                  : summary.status === 'insufficient_history'
-                  ? isKn ? 'ಇತಿಹಾಸ ಬೇಕಿದೆ' : 'Pending History'
-                  : `${summary.overallSignificance} DELTA`}
-              </span>
+                    ? isKn ? 'ಇತಿಹಾಸ ಬೇಕಿದೆ' : 'Pending History'
+                    : `${summary.overallSignificance} DELTA`}
+                </span>
+              )}
             </div>
-            <p className="text-xs text-slate-400 flex items-center gap-1.5 mt-0.5">
-              <span className="text-slate-500 font-bold">⏱</span>
-              <span>
-                {isKn
-                  ? `ಅವಲೋಕನ: ${summary.timeframeDescription}`
-                  : `Comparison timeframe: ${summary.timeframeDescription}`}
-              </span>
-              <span className="text-slate-600">•</span>
-              <span>{summary.observationCount} {isKn ? 'ದಾಖಲೆಗಳು' : 'observations'}</span>
-            </p>
+            {summary ? (
+              <p className="text-xs text-slate-400 flex items-center gap-1.5 mt-0.5">
+                <span className="text-slate-500 font-bold">⏱</span>
+                <span>
+                  {isKn
+                    ? `ಅವಲೋಕನ: ${summary.timeframeDescription}`
+                    : `Comparison timeframe: ${summary.timeframeDescription}`}
+                </span>
+                <span className="text-slate-600">•</span>
+                <span>{summary.observationCount} {isKn ? 'ದಾಖಲೆಗಳು' : 'observations'}</span>
+              </p>
+            ) : (
+              <p className="text-xs text-slate-400 mt-0.5">
+                {isKn ? 'ಸಾಕಷ್ಟು ಡೇಟಾ ಇಲ್ಲ' : 'Insufficient historical data'}
+              </p>
+            )}
           </div>
         </div>
-
       </div>
+
+      {!summary || !localizedCopy ? (
+        <div className="p-8 text-center flex flex-col items-center justify-center text-slate-400 bg-slate-950/20">
+          <span className="text-3xl mb-3 opacity-20">∆</span>
+          <p className="text-sm font-medium">{isKn ? 'ಬದಲಾವಣೆಯನ್ನು ಗುರುತಿಸಲು ಸಾಕಷ್ಟು ಡೇಟಾ ಇಲ್ಲ.' : 'Not enough historical data to identify a meaningful change.'}</p>
+          <p className="text-xs opacity-70 mt-1">{isKn ? 'ಹೆಚ್ಚಿನ ಡೇಟಾ ಲಭ್ಯವಾದಾಗ ಇದು ನವೀಕರಿಸಲ್ಪಡುತ್ತದೆ.' : 'This will populate as more observation cycles are completed.'}</p>
+        </div>
+      ) : (
+        <>
 
       {/* Primary Intelligence Section */}
       <div className="p-4 sm:p-5 space-y-4">
@@ -398,6 +413,8 @@ export function WhatChangedCard({
           </Link>
         </div>
       </div>
+      </>
+      )}
     </div>
   );
 }

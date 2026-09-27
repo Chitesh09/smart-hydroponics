@@ -428,15 +428,13 @@ export default function AnalyticsPage() {
       {/* ============================================================ */}
       {/* 3C. ENVIRONMENT ↔ PLANT CORRELATION INTELLIGENCE (Phase 9)   */}
       {/* ============================================================ */}
-      {correlationSummary && (
-        <EnvironmentPlantCard
-          summary={correlationSummary}
-          associations={correlations}
-          language={language}
-          userMode={userMode}
-          onUserModeChange={setUserMode}
-        />
-      )}
+      <EnvironmentPlantCard
+        summary={correlationSummary}
+        associations={correlations}
+        language={language}
+        userMode={userMode}
+        onUserModeChange={setUserMode}
+      />
 
       {/* ============================================================ */}
       {/* 3D. CONFIDENCE-AWARE ALERTS & NOTIFICATIONS (Phase 10)       */}

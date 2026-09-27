@@ -16,7 +16,6 @@ import { FarmerActionCard } from '@/components/ui/FarmerActionCard';
 import { WhatChangedCard } from '@/components/ui/WhatChangedCard';
 import { EnvironmentPlantCard } from '@/components/ui/EnvironmentPlantCard';
 import { PlantAlertCard } from '@/components/ui/PlantAlertCard';
-import { WhatChanged, MetricDelta } from '@/components/ui/WhatChanged';
 import { getFarmerCopy, getLocalizedLifecycleState } from '@/lib/intelligence/farmerSemanticLayer';
 
 import styles from './page.module.css';
@@ -182,63 +181,7 @@ export default function Dashboard() {
     return () => clearTimeout(timer);
   }, [activeProfile.createdAt]);
 
-  // Real historical deltas calculation for "WHAT CHANGED TODAY"
-  const calculatedDeltas = useMemo((): MetricDelta[] => {
-    if (history.length < 5) return [];
 
-    const first = history[0];
-    const last = history[history.length - 1];
-
-    const phDelta = last.ph - first.ph;
-    const tdsDelta = last.tds - first.tds;
-    const waterDelta = last.waterLevel - first.waterLevel;
-
-    const deltas: MetricDelta[] = [
-      {
-        parameter: 'pH Level',
-        unit: 'pH',
-        delta: phDelta,
-        direction: Math.abs(phDelta) < 0.05 ? 'stable' : phDelta > 0 ? 'rising' : 'falling',
-        isBeneficial: Math.abs(phDelta) < 0.2,
-      },
-      {
-        parameter: 'Nutrient TDS',
-        unit: 'PPM',
-        delta: tdsDelta,
-        direction: Math.abs(tdsDelta) < 10 ? 'stable' : tdsDelta > 0 ? 'rising' : 'falling',
-        isBeneficial: tdsDelta >= -50 && tdsDelta <= 50,
-      },
-      {
-        parameter: 'Reservoir',
-        unit: '%',
-        delta: waterDelta,
-        direction: Math.abs(waterDelta) < 1 ? 'stable' : waterDelta > 0 ? 'rising' : 'falling',
-        isBeneficial: waterDelta > -15,
-      },
-    ];
-
-    if (latestVisualHealth?.baselineDeltas) {
-      const bDeltas = latestVisualHealth.baselineDeltas;
-      deltas.unshift({
-        parameter: isKn ? 'ಎಲೆಗಳ ಹರಡುವಿಕೆ' : 'Canopy Area',
-        unit: '%',
-        delta: bDeltas.canopyDeltaPercent,
-        direction: Math.abs(bDeltas.canopyDeltaPercent) < 1.0 ? 'stable' : bDeltas.canopyDeltaPercent > 0 ? 'rising' : 'falling',
-        isBeneficial: bDeltas.canopyDeltaPercent >= -5.0,
-      });
-      if (Math.abs(bDeltas.chlorosisDeltaPercent) > 2.0) {
-        deltas.push({
-          parameter: isKn ? 'ಎಲೆಗಳ ಹಳದಿ ಬಣ್ಣ' : 'Leaf Yellowing',
-          unit: '%',
-          delta: bDeltas.chlorosisDeltaPercent,
-          direction: bDeltas.chlorosisDeltaPercent > 0 ? 'rising' : 'falling',
-          isBeneficial: bDeltas.chlorosisDeltaPercent <= 0,
-        });
-      }
-    }
-
-    return deltas;
-  }, [history, latestVisualHealth, isKn]);
 
   // Optical detection progression label
   const opticalProgression = useMemo(() => {
@@ -634,27 +577,23 @@ export default function Dashboard() {
       {/* ============================================================ */}
       {/* 3B. LONGITUDINAL "WHAT CHANGED?" INTELLIGENCE                */}
       {/* ============================================================ */}
-      {whatChangedSummary && (
-        <WhatChangedCard
-          summary={whatChangedSummary}
-          language={language}
-          userMode={userMode}
-          onUserModeChange={setUserMode}
-        />
-      )}
+      <WhatChangedCard
+        summary={whatChangedSummary}
+        language={language}
+        userMode={userMode}
+        onUserModeChange={setUserMode}
+      />
 
       {/* ============================================================ */}
       {/* 3C. ENVIRONMENT ↔ PLANT CORRELATION INTELLIGENCE (Phase 9)   */}
       {/* ============================================================ */}
-      {correlationSummary && (
-        <EnvironmentPlantCard
-          summary={correlationSummary}
-          associations={correlations}
-          language={language}
-          userMode={userMode}
-          onUserModeChange={setUserMode}
-        />
-      )}
+      <EnvironmentPlantCard
+        summary={correlationSummary}
+        associations={correlations}
+        language={language}
+        userMode={userMode}
+        onUserModeChange={setUserMode}
+      />
 
       {/* ============================================================ */}
       {/* 4. CONFIDENCE-AWARE PLANT ALERTS & NOTIFICATIONS (Phase 10)  */}
@@ -734,109 +673,7 @@ export default function Dashboard() {
       </div>
 
       {/* ============================================================ */}
-      {/* 5. SUPPORTING: PLANT ENVIRONMENT OVERVIEW                    */}
-      {/* ============================================================ */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <span className="section-label">
-            {isKn ? copy.ui.plantEnvironmentSummary : 'Plant Environment Summary'}
-          </span>
-          {userMode === 'farmer' && (isStale || (latestReading?.quality && Object.values(latestReading.quality).some(q => q === 'INVALID' || q === 'OUT_OF_RANGE' || q === 'NOISY'))) && (
-            <span style={{ fontSize: '11.5px', color: '#F2B84B', display: 'flex', alignItems: 'center', gap: '4px' }}>
-              <span className="font-bold">⚠</span>
-              {copy.devices.farmerCheckNotice}
-            </span>
-          )}
-        </div>
-        
-        <div className={styles.environmentalStrip}>
-          
-          {/* Water Node */}
-          <div className={styles.envNode}>
-            <div className={styles.envNodeHeader}>
-              <span className="section-label" style={{ fontSize: '9.5px' }}>
-                {isKn ? copy.ui.waterLevelLabel : 'Water Level'}
-              </span>
-              <span className="text-teal-400 font-bold">≈</span>
-            </div>
-            <div className={styles.envValueRow}>
-              <span className={styles.envValue}>
-                {userMode === 'technical' ? (isTelemetryAvailable ? `${Math.round(reading.waterLevel)}%` : '--') : farmerSemanticState.waterStatus}
-              </span>
-            </div>
-            <div className={styles.envFooter}>
-              <span>{farmerSemanticState.waterMessage}</span>
-              <StatusBadge status={isTelemetryAvailable ? farmerSemanticState.waterStatus.toLowerCase() : 'unavailable'} size="sm" />
-            </div>
-          </div>
-
-          {/* Nutrient Node */}
-          <div className={styles.envNode}>
-            <div className={styles.envNodeHeader}>
-              <span className="section-label" style={{ fontSize: '9.5px' }}>
-                {isKn ? copy.ui.nutrientLevelLabel : 'Nutrient Balance'}
-              </span>
-              <span className="text-emerald-400 font-bold">★</span>
-            </div>
-            <div className={styles.envValueRow}>
-              <span className={styles.envValue}>
-                {userMode === 'technical' ? (isTelemetryAvailable ? `${Math.round(reading.tds)} PPM` : '--') : farmerSemanticState.nutrientStatus}
-              </span>
-            </div>
-            <div className={styles.envFooter}>
-              <span>{farmerSemanticState.nutrientMessage}</span>
-              <StatusBadge status={isTelemetryAvailable ? farmerSemanticState.nutrientStatus.toLowerCase() : 'unavailable'} size="sm" />
-            </div>
-          </div>
-
-          {/* Acidity / pH Node */}
-          <div className={styles.envNode}>
-            <div className={styles.envNodeHeader}>
-              <span className="section-label" style={{ fontSize: '9.5px' }}>
-                {isKn ? copy.ui.solutionAcidityLabel : 'Solution Acidity'}
-              </span>
-              <span className="text-teal-400 font-bold">∆</span>
-            </div>
-            <div className={styles.envValueRow}>
-              <span className={styles.envValue}>
-                {userMode === 'technical' ? (isTelemetryAvailable ? `${reading.ph.toFixed(2)} pH` : '--') : farmerSemanticState.nutrientStatus}
-              </span>
-            </div>
-            <div className={styles.envFooter}>
-              <span>{userMode === 'technical' ? (isKn ? 'ಗುರಿ: 5.5 - 6.5 pH' : 'Target: 5.5 - 6.5 pH') : farmerSemanticState.nutrientMessage}</span>
-              <StatusBadge status={isTelemetryAvailable ? farmerSemanticState.nutrientStatus.toLowerCase() : 'unavailable'} size="sm" />
-            </div>
-          </div>
-
-          {/* Environment Status Node */}
-          <div className={styles.envNode}>
-            <div className={styles.envNodeHeader}>
-              <span className="section-label" style={{ fontSize: '9.5px' }}>
-                {isKn ? copy.ui.growingConditionsLabel : 'Growing Conditions'}
-              </span>
-              <span className="text-amber-400 font-bold">↕</span>
-            </div>
-            <div className={styles.envValueRow}>
-              <span className={styles.envValue}>
-                {farmerSemanticState.environmentStatus}
-              </span>
-            </div>
-            <div className={styles.envFooter}>
-              <span>{farmerSemanticState.environmentMessage}</span>
-              <StatusBadge status={farmerSemanticState.environmentStatus.toLowerCase()} size="sm" />
-            </div>
-          </div>
-
-        </div>
-      </div>
-
-      {/* ============================================================ */}
-      {/* 6. SUPPORTING: WHAT CHANGED TODAY? (Historical Deltas)        */}
-      {/* ============================================================ */}
-      <WhatChanged deltas={calculatedDeltas} hasHistory={history.length >= 5} language={language} />
-
-      {/* ============================================================ */}
-      {/* 7. ADVANCED: TECHNICAL MODE TELEMETRY & SERIAL (Conditional) */}
+      {/* 6. ADVANCED: TECHNICAL MODE TELEMETRY & SERIAL (Conditional) */}
       {/* ============================================================ */}
       {userMode === 'technical' && (
         <div className={styles.instrumentationSection}>
