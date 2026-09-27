@@ -7,8 +7,6 @@ import { useAuth } from '@/lib/auth/AuthContext';
 import { usePlantIntelligence } from '@/lib/intelligence/PlantIntelligenceContext';
 import { getFarmerCopy } from '@/lib/intelligence/farmerSemanticLayer';
 import { BrandLogo } from '@/components/ui/BrandLogo';
-import { ModeToggle } from '@/components/ui/ModeToggle';
-import { LanguageToggle } from '@/components/ui/LanguageToggle';
 import {
   LayoutDashboard,
   BarChart3,
@@ -92,12 +90,6 @@ export function Sidebar({
       {/* Brand Header with Official Logo */}
       <div className={styles.brand}>
         <BrandLogo size={32} showText subtitle={copy.nav.livingIntelligence} priority />
-      </div>
-
-      {/* Mode & Language Controls */}
-      <div style={{ padding: '0 4px', marginBottom: '8px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-        <ModeToggle mode={userMode} onModeChange={setUserMode} language={language} size="sm" />
-        <LanguageToggle language={language} onLanguageChange={setLanguage} size="sm" showIcon />
       </div>
 
       {/* Hardware Node Status */}
