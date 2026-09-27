@@ -1,24 +1,11 @@
 'use client';
 
-import React, { useState } from 'react';
-import {
-  Sprout,
-  Sparkles,
-  CheckCircle2,
-  AlertTriangle,
-  TrendingUp,
-  Droplets,
-  FlaskConical,
-  ShieldCheck,
-} from 'lucide-react';
+import React from 'react';
 import { PlantProfile } from '@/lib/intelligence/types';
 import { SupportedLanguageCode, AssistantMode } from '@/lib/assistant/assistantConfig';
 import {
   getLocalizedLifecycleState,
-  getLocalizedMonitoringStatus,
   getLocalizedIdentificationStatus,
-  getLocalizedCompletenessStatus,
-  getLocalizedDigitalProfileSummary,
 } from '@/lib/intelligence/farmerSemanticLayer';
 
 interface PlantProfileCardProps {
@@ -36,14 +23,7 @@ export function PlantProfileCard({
   userMode = 'farmer',
   compact = false,
 }: PlantProfileCardProps) {
-  const [internalMode, setInternalMode] = useState<AssistantMode>(userMode);
-
-  React.useEffect(() => {
-    setInternalMode(userMode);
-  }, [userMode]);
-
   const isKn = language === 'kn';
-  const effectiveMode = internalMode;
 
   const isIdentified = Boolean(
     profile.species &&
@@ -53,13 +33,13 @@ export function PlantProfileCard({
 
   const plantName = isIdentified
     ? (profile.commonName || profile.species)
-    : (isKn ? 'ಗಿಡ' : 'Plant');
+    : (isKn ? 'ಪರಿಶೀಲಿಸುತ್ತಿರುವ ಗಿಡ' : 'Monitored Specimen');
 
   const speciesSubtitle = isIdentified
-    ? (profile.scientificName || (isKn ? 'ವರ್ಗೀಕರಿಸಿದ ಪ್ರಭೇದ' : 'Botanical Specimen'))
-    : (isKn ? 'ಗಿಡದ ಪ್ರಕಾರ ಇನ್ನೂ ಗುರುತಿಸಲಾಗಿಲ್ಲ' : 'Plant type not identified yet');
+    ? (profile.scientificName || (isKn ? 'ವರ್ಗೀಕರಿಸಿದ ಸಸ್ಯ' : 'Botanical Specimen'))
+    : (isKn ? 'ಸಸ್ಯ ಪ್ರಭೇದ ಇನ್ನೂ ವರ್ಗೀಕರಿಸಲಾಗಿಲ್ಲ' : 'Botanical classification pending identification');
 
-  const [now, setNow] = useState<number | null>(null);
+  const [now, setNow] = React.useState<number | null>(null);
 
   React.useEffect(() => {
     setNow(Date.now());
@@ -68,295 +48,488 @@ export function PlantProfileCard({
   const ageDays = (now && profile.createdAt)
     ? Math.max(1, Math.round((now - profile.createdAt) / 86400000) + 1)
     : 1;
+
   const totalObs = observationsCount !== undefined ? observationsCount : profile.observationCount;
 
-  // Format relative last observed string
-  const lastObservedStr = React.useMemo(() => {
-    if (!profile.lastObservedAt || !now) {
-      return isKn ? 'ದಾಖಲೆಯಿಲ್ಲ' : 'No records yet';
-    }
-    const diffMs = now - profile.lastObservedAt;
-    const diffMin = Math.floor(diffMs / 60000);
-    const diffHours = Math.floor(diffMin / 60);
-
-    if (diffMin < 2) return isKn ? 'ಈಗಷ್ಟೇ' : 'Just now';
-    if (diffMin < 60) return isKn ? `${diffMin} ನಿಮಿಷದ ಹಿಂದೆ` : `${diffMin}m ago`;
-    if (diffHours < 24) return isKn ? `${diffHours} ಗಂಟೆಯ ಹಿಂದೆ` : `${diffHours}h ago`;
-    return new Date(profile.lastObservedAt).toLocaleDateString(isKn ? 'kn-IN' : 'en-US', {
-      month: 'short',
-      day: 'numeric',
-    });
-  }, [profile.lastObservedAt, now, isKn]);
-
-  // Derived Digital Profile Summary
-  const profileSummary = getLocalizedDigitalProfileSummary(profile, language);
-  const completeness = profile.completeness;
-  const lifecycleState = profile.lifecycle?.lifecycleState || 'STABLE';
-  const monitoringStatus = profile.lifecycle?.monitoringStatus || 'ACTIVE';
+  const lifecycleState = profile.lifecycle?.lifecycleState || 'MONITORING';
   const identificationStatus = profile.identity?.identificationStatus || (isIdentified ? 'IDENTIFIED' : 'UNKNOWN');
 
+  // Genuinely available ML confidence only
+  const hasGenuinelyAvailableConfidence = Boolean(
+    isIdentified && profile.speciesConfidence && profile.speciesConfidence > 0
+  );
+
+  // Evidence Items definition
+  const evidenceItems = [
+    {
+      id: 'species',
+      label: isKn ? 'ಸಸ್ಯ ಪ್ರಭೇದ ಗುರುತಿಸುವಿಕೆ' : 'Species Identity',
+      state: isIdentified ? (isKn ? 'ದೃಢೀಕರಿಸಲಾಗಿದೆ' : 'Identified') : (isKn ? 'ಬಾಕಿ ಇದೆ' : 'Pending'),
+      status: isIdentified ? 'optimal' : 'neutral',
+      supportingValue: isIdentified ? (profile.commonName || profile.species) : (isKn ? 'ವರ್ಗೀಕರಿಸದ' : 'Unclassified'),
+      explanation: isIdentified
+        ? (profile.scientificName ? `Taxonomic rank: ${profile.scientificName}` : 'Optical foliage matching completed.')
+        : 'Awaiting camera capture or manual assignment.',
+    },
+    {
+      id: 'baseline',
+      label: isKn ? 'ಮೂಲ ಮಾಪನಾಂಕ ನಿರ್ಣಯ' : 'Baseline Calibration',
+      state: profile.baseline ? (isKn ? 'ಸ್ಥಾಪಿಸಲಾಗಿದೆ' : 'Established') : (isKn ? 'ಪ್ರಕ್ರಿಯೆಯಲ್ಲಿದೆ' : 'Calibrating'),
+      status: profile.baseline ? 'optimal' : 'neutral',
+      supportingValue: profile.baseline ? `${totalObs} checkpoints` : 'Initial cycle',
+      explanation: profile.baseline
+        ? 'Reference parameters for pH, TDS, and water consumption active.'
+        : 'Accumulating initial observation data.',
+    },
+    {
+      id: 'health',
+      label: isKn ? 'ಆರೋಗ್ಯ ಪಥ' : 'Health Trajectory',
+      state: profile.currentHealthStatus ? String(profile.currentHealthStatus) : (isKn ? 'ಸ್ಥಿರ' : 'Stable'),
+      status: profile.currentHealthStatus === 'HEALTHY' || !profile.currentHealthStatus ? 'optimal' : 'warning',
+      supportingValue: profile.healthConfidence ? `${profile.healthConfidence} confidence` : 'Normal range',
+      explanation: 'Evaluated across multi-sensor readings and optical foliar checks.',
+    },
+    {
+      id: 'growth',
+      label: isKn ? 'ಬೆಳವಣಿಗೆ ವಿಶ್ಲೇಷಣೆ' : 'Growth Analytics',
+      state: profile.growth?.latestCanopyCoverage !== undefined ? (isKn ? 'ಸಕ್ರಿಯ' : 'Active') : (isKn ? 'ಮಾಹಿತಿ ಇಲ್ಲ' : 'Awaiting data'),
+      status: profile.growth?.latestCanopyCoverage !== undefined ? 'optimal' : 'neutral',
+      supportingValue: profile.growth?.latestCanopyCoverage !== undefined ? `${profile.growth.latestCanopyCoverage}% canopy` : '--',
+      explanation: '2D optical foliage canopy coverage estimated from camera frame.',
+    },
+    {
+      id: 'telemetry',
+      label: isKn ? 'ಪರಿಸರ ಟೆಲಿಮೆಟ್ರಿ' : 'Environmental Telemetry',
+      state: profile.environment ? (isKn ? 'ಸಕ್ರಿಯ' : 'Streaming') : (isKn ? 'ಸ್ಟ್ಯಾಂಡ್‌ಬೈ' : 'Standby'),
+      status: profile.environment ? 'optimal' : 'neutral',
+      supportingValue: profile.environment?.latestPH ? `pH ${profile.environment.latestPH.toFixed(1)} · ${Math.round(profile.environment.latestTDS || 0)} PPM` : 'Sensor ready',
+      explanation: 'Continuous closed-loop solution chemistry and reservoir metrics.',
+    },
+  ];
+
   return (
-    <div
-      className={`rounded-2xl border transition-all duration-300 overflow-hidden ${
-        lifecycleState === 'ATTENTION'
-          ? 'bg-slate-900/90 border-amber-600/40 shadow-xl shadow-amber-950/20'
-          : lifecycleState === 'RECOVERING'
-          ? 'bg-slate-900/90 border-emerald-500/40 shadow-xl shadow-emerald-950/15'
-          : 'bg-slate-900/90 border-slate-800 shadow-xl shadow-slate-950/30'
-      }`}
+    <article
+      aria-label={isKn ? 'ಸಸ್ಯ ಡಿಜಿಟಲ್ ಪ್ರೊಫೈಲ್' : 'Plant Digital Profile'}
+      style={{
+        background: 'var(--bg-surface)',
+        border: '1px solid var(--border-default)',
+        borderRadius: 'var(--radius-sm, 4px)',
+        overflow: 'hidden',
+        width: '100%',
+        marginBottom: '1.25rem',
+      }}
     >
-      {/* Top Header Bar */}
-      <div className="p-4 sm:p-5 border-b border-slate-800/80 flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-emerald-950/60 border border-emerald-700/50 flex items-center justify-center text-emerald-400">
-            <Sprout className="w-5 h-5" />
+      {/* ── 1. Proper Profile Header ── */}
+      <div
+        style={{
+          padding: '1.25rem 1.5rem',
+          borderBottom: '1px solid var(--border-default)',
+          background: 'var(--bg-canvas)',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '0.75rem',
+        }}
+      >
+        {/* Top Eyebrow Row */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <span
+              style={{
+                fontSize: '0.625rem',
+                fontFamily: 'var(--font-mono, monospace)',
+                fontWeight: 800,
+                letterSpacing: '0.08em',
+                textTransform: 'uppercase',
+                padding: '0.2rem 0.5rem',
+                borderRadius: '2px',
+                background: 'var(--color-emerald-ink)',
+                color: 'var(--color-champagne)',
+              }}
+            >
+              DIGITAL SPECIMEN
+            </span>
+            <span
+              style={{
+                fontSize: '0.6875rem',
+                fontFamily: 'var(--font-mono, monospace)',
+                color: 'var(--text-muted)',
+              }}
+            >
+              ID: {profile.plantId || 'HS-01'}
+            </span>
           </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h3 className="text-base sm:text-lg font-bold text-white tracking-tight">
-                {isKn ? 'ಸಸ್ಯ ಡಿಜಿಟಲ್ ಪ್ರೊಫೈಲ್' : 'Plant Digital Profile'}
-              </h3>
-              <span className="text-[10px] font-mono px-2 py-0.5 rounded-full border bg-slate-800 text-slate-300 border-slate-700">
-                {profile.plantId}
-              </span>
-            </div>
-            <p className="text-xs text-slate-400 flex items-center gap-1.5 mt-0.5">
-              <span>{isKn ? `ದಿನ ${ageDays}` : `Day ${ageDays}`}</span>
-              <span className="text-slate-600">•</span>
-              <span>{totalObs} {isKn ? 'ತಪಾಸಣೆಗಳು' : 'observations'}</span>
-              <span className="text-slate-600">•</span>
-              <span className="text-emerald-400 font-medium">
-                {getLocalizedLifecycleState(lifecycleState, language)}
-              </span>
-              <span className="text-slate-600">•</span>
-              <span className="text-slate-400">{lastObservedStr}</span>
-            </p>
-          </div>
+
+          {/* Growth Stage badge */}
+          <span
+            style={{
+              fontSize: '0.6875rem',
+              fontWeight: 700,
+              fontFamily: 'var(--font-mono, monospace)',
+              textTransform: 'uppercase',
+              letterSpacing: '0.04em',
+              padding: '0.2rem 0.6rem',
+              borderRadius: '2px',
+              border: '1px solid var(--border-default)',
+              background: 'var(--bg-surface)',
+              color: 'var(--color-green)',
+            }}
+          >
+            {getLocalizedLifecycleState(lifecycleState, language)}
+          </span>
         </div>
 
-        {/* Right Badges & Mode Toggle */}
-        <div className="flex items-center gap-2">
-          <span
-            className={`text-xs font-mono uppercase px-2.5 py-1 rounded-lg border font-semibold ${
-              monitoringStatus === 'ACTIVE'
-                ? 'bg-emerald-950/70 text-emerald-300 border-emerald-700/60'
-                : monitoringStatus === 'PAUSED'
-                ? 'bg-amber-950/70 text-amber-300 border-amber-700/60'
-                : 'bg-slate-800 text-slate-400 border-slate-700'
-            }`}
-          >
-            {getLocalizedMonitoringStatus(monitoringStatus, language)}
-          </span>
+        {/* Primary Specimen Identity Row */}
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'flex-start',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: '1rem',
+          }}
+        >
+          <div>
+            <h1
+              style={{
+                fontSize: '1.5rem',
+                fontWeight: 800,
+                letterSpacing: '-0.02em',
+                lineHeight: 1.15,
+                color: 'var(--text-primary)',
+                margin: 0,
+              }}
+            >
+              {plantName}
+            </h1>
+            <p
+              style={{
+                fontSize: '0.8125rem',
+                fontStyle: isIdentified ? 'italic' : 'normal',
+                color: 'var(--text-secondary)',
+                margin: '0.25rem 0 0',
+              }}
+            >
+              {speciesSubtitle}
+            </p>
+          </div>
 
-          {!compact && (
-            <div className="bg-slate-800/90 rounded-lg p-0.5 border border-slate-700/60 flex text-xs">
-              <button
-                onClick={() => setInternalMode('farmer')}
-                className={`px-2 py-0.5 rounded-md font-medium transition-all ${
-                  effectiveMode === 'farmer'
-                    ? 'bg-emerald-600 text-white shadow-sm'
-                    : 'text-slate-400 hover:text-slate-200'
-                }`}
+          {/* ML Identification Status & Confidence (only when genuinely available) */}
+          {hasGenuinelyAvailableConfidence && (
+            <div
+              style={{
+                background: 'var(--bg-surface)',
+                border: '1px solid var(--border-default)',
+                borderRadius: 'var(--radius-xs, 2px)',
+                padding: '0.4rem 0.75rem',
+                textAlign: 'right',
+              }}
+            >
+              <span
+                style={{
+                  fontSize: '0.625rem',
+                  fontFamily: 'var(--font-mono, monospace)',
+                  textTransform: 'uppercase',
+                  color: 'var(--text-muted)',
+                  display: 'block',
+                }}
               >
-                {isKn ? 'ರೈತ' : 'Farmer'}
-              </button>
-              <button
-                onClick={() => setInternalMode('technical')}
-                className={`px-2 py-0.5 rounded-md font-medium transition-all ${
-                  effectiveMode === 'technical'
-                    ? 'bg-emerald-600 text-white shadow-sm'
-                    : 'text-slate-400 hover:text-slate-200'
-                }`}
+                {isKn ? 'ವರ್ಗೀಕರಣ ವಿಶ್ವಾಸಾರ್ಹತೆ' : 'ML Identification'}
+              </span>
+              <span
+                style={{
+                  fontSize: '0.875rem',
+                  fontWeight: 800,
+                  fontFamily: 'var(--font-mono, monospace)',
+                  color: 'var(--color-green)',
+                }}
               >
-                {isKn ? 'ತಾಂತ್ರಿಕ' : 'Technical'}
-              </button>
+                {profile.speciesConfidence}%
+              </span>
             </div>
           )}
         </div>
+
+        {/* Structured Metadata Row */}
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            flexWrap: 'wrap',
+            gap: '1rem',
+            paddingTop: '0.5rem',
+            borderTop: '1px solid var(--border-subtle)',
+            fontSize: '0.75rem',
+          }}
+        >
+          <div style={{ display: 'flex', gap: '0.35rem' }}>
+            <span style={{ color: 'var(--text-muted)' }}>{isKn ? 'ವಯಸ್ಸು:' : 'Cultivation Age:'}</span>
+            <strong style={{ color: 'var(--text-primary)' }}>{isKn ? `ದಿನ ${ageDays}` : `Day ${ageDays}`}</strong>
+          </div>
+          <span style={{ color: 'var(--border-subtle)' }}>|</span>
+          <div style={{ display: 'flex', gap: '0.35rem' }}>
+            <span style={{ color: 'var(--text-muted)' }}>{isKn ? 'ಒಟ್ಟು ಪರಿಶೀಲನೆಗಳು:' : 'Checkpoints:'}</span>
+            <strong style={{ color: 'var(--text-primary)' }}>{totalObs}</strong>
+          </div>
+          <span style={{ color: 'var(--border-subtle)' }}>|</span>
+          <div style={{ display: 'flex', gap: '0.35rem' }}>
+            <span style={{ color: 'var(--text-muted)' }}>{isKn ? 'ಸ್ಥಿತಿ:' : 'Identity Status:'}</span>
+            <strong style={{ color: 'var(--text-primary)' }}>
+              {getLocalizedIdentificationStatus(identificationStatus, language)}
+            </strong>
+          </div>
+        </div>
       </div>
 
-      {/* Main Specimen Details */}
-      <div className="p-4 sm:p-5 space-y-4">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="text-xl sm:text-2xl font-extrabold text-white tracking-tight">
-                {plantName}
+      {/* ── 2. Clean 2-Column Profile Attributes Grid ── */}
+      <div
+        style={{
+          padding: '1.25rem 1.5rem',
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+          gap: '1.25rem',
+          borderBottom: '1px solid var(--border-default)',
+        }}
+      >
+        {/* Column 1: Botanical & Lifecycle Parameters */}
+        <div
+          style={{
+            background: 'var(--bg-canvas)',
+            border: '1px solid var(--border-subtle)',
+            borderRadius: 'var(--radius-xs, 2px)',
+            padding: '1rem 1.125rem',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '0.75rem',
+          }}
+        >
+          <span
+            style={{
+              fontSize: '0.6875rem',
+              fontWeight: 800,
+              fontFamily: 'var(--font-mono, monospace)',
+              letterSpacing: '0.06em',
+              textTransform: 'uppercase',
+              color: 'var(--text-muted)',
+              borderBottom: '1px solid var(--border-subtle)',
+              paddingBottom: '0.4rem',
+            }}
+          >
+            {isKn ? 'ಜೈವಿಕ ಮತ್ತು ಬೆಳವಣಿಗೆ ವಿವರ' : 'CROP & LIFECYCLE ATTRIBUTES'}
+          </span>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+            <div>
+              <span style={{ fontSize: '0.625rem', color: 'var(--text-muted)', display: 'block' }}>
+                {isKn ? 'ಸಾಮಾನ್ಯ ಹೆಸರು' : 'Common Name'}
               </span>
+              <span style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+                {profile.commonName || 'Unspecified'}
+              </span>
+            </div>
+            <div>
+              <span style={{ fontSize: '0.625rem', color: 'var(--text-muted)', display: 'block' }}>
+                {isKn ? 'ವೈಜ್ಞಾನಿಕ ಹೆಸರು' : 'Botanical Scientific'}
+              </span>
+              <span style={{ fontSize: '0.8125rem', fontStyle: 'italic', color: 'var(--text-primary)' }}>
+                {profile.scientificName || 'Unclassified'}
+              </span>
+            </div>
+            <div>
+              <span style={{ fontSize: '0.625rem', color: 'var(--text-muted)', display: 'block' }}>
+                {isKn ? 'ಬೆಳವಣಿಗೆಯ ಹಂತ' : 'Lifecycle Phase'}
+              </span>
+              <span style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--color-green)' }}>
+                {getLocalizedLifecycleState(lifecycleState, language)}
+              </span>
+            </div>
+            <div>
+              <span style={{ fontSize: '0.625rem', color: 'var(--text-muted)', display: 'block' }}>
+                {isKn ? 'ಆರೋಗ್ಯ ಸ್ಥಿತಿ' : 'Health Evaluation'}
+              </span>
+              <span style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+                {profile.currentHealthStatus || 'STABLE'}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Column 2: Environmental Baseline & Telemetry Attributes */}
+        <div
+          style={{
+            background: 'var(--bg-canvas)',
+            border: '1px solid var(--border-subtle)',
+            borderRadius: 'var(--radius-xs, 2px)',
+            padding: '1rem 1.125rem',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '0.75rem',
+          }}
+        >
+          <span
+            style={{
+              fontSize: '0.6875rem',
+              fontWeight: 800,
+              fontFamily: 'var(--font-mono, monospace)',
+              letterSpacing: '0.06em',
+              textTransform: 'uppercase',
+              color: 'var(--text-muted)',
+              borderBottom: '1px solid var(--border-subtle)',
+              paddingBottom: '0.4rem',
+            }}
+          >
+            {isKn ? 'ದ್ರಾವಣ ಮತ್ತು ಪರಿಸರ ವಿವರ' : 'CULTIVATION TELEMETRY TARGETS'}
+          </span>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+            <div>
+              <span style={{ fontSize: '0.625rem', color: 'var(--text-muted)', display: 'block' }}>
+                {isKn ? 'ದ್ರಾವಣ pH ವ್ಯಾಪ್ತಿ' : 'Target Solution pH'}
+              </span>
+              <span style={{ fontSize: '0.8125rem', fontWeight: 600, fontFamily: 'var(--font-mono, monospace)', color: 'var(--text-primary)' }}>
+                5.5 – 6.5 pH
+              </span>
+            </div>
+            <div>
+              <span style={{ fontSize: '0.625rem', color: 'var(--text-muted)', display: 'block' }}>
+                {isKn ? 'ಪೋಷಕಾಂಶ ಗುರಿ' : 'Target Nutrients'}
+              </span>
+              <span style={{ fontSize: '0.8125rem', fontWeight: 600, fontFamily: 'var(--font-mono, monospace)', color: 'var(--text-primary)' }}>
+                800 – 1200 PPM
+              </span>
+            </div>
+            <div>
+              <span style={{ fontSize: '0.625rem', color: 'var(--text-muted)', display: 'block' }}>
+                {isKn ? 'ಇತ್ತೀಚಿನ pH' : 'Latest Measured pH'}
+              </span>
+              <span style={{ fontSize: '0.8125rem', fontWeight: 600, fontFamily: 'var(--font-mono, monospace)', color: 'var(--text-primary)' }}>
+                {profile.environment?.latestPH ? profile.environment.latestPH.toFixed(2) : '--'}
+              </span>
+            </div>
+            <div>
+              <span style={{ fontSize: '0.625rem', color: 'var(--text-muted)', display: 'block' }}>
+                {isKn ? 'ಇತ್ತೀಚಿನ TDS' : 'Latest Measured TDS'}
+              </span>
+              <span style={{ fontSize: '0.8125rem', fontWeight: 600, fontFamily: 'var(--font-mono, monospace)', color: 'var(--text-primary)' }}>
+                {profile.environment?.latestTDS ? `${Math.round(profile.environment.latestTDS)} PPM` : '--'}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ── 3. Profile Evidence & Completeness Section ── */}
+      {!compact && (
+        <div style={{ padding: '1.25rem 1.5rem', display: 'flex', flexDirection: 'column', gap: '0.875rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem' }}>
+            <span
+              style={{
+                fontSize: '0.6875rem',
+                fontWeight: 800,
+                fontFamily: 'var(--font-mono, monospace)',
+                letterSpacing: '0.06em',
+                textTransform: 'uppercase',
+                color: 'var(--text-muted)',
+              }}
+            >
+              {isKn ? 'ಪ್ರೊಫೈಲ್ ಸಾಕ್ಷ್ಯ ಮತ್ತು ಡೇಟಾ ಸಂಪೂರ್ಣತೆ' : 'PROFILE EVIDENCE & VERIFICATION STATUS'}
+            </span>
+
+            {profile.completeness && (
               <span
-                className={`text-[10px] font-mono px-2 py-0.5 rounded-full border uppercase ${
-                  identificationStatus === 'IDENTIFIED'
-                    ? 'bg-emerald-950/50 text-emerald-400 border-emerald-800/60'
-                    : identificationStatus === 'REVIEW_REQUIRED'
-                    ? 'bg-amber-950/70 text-amber-300 border-amber-600/70'
-                    : 'bg-slate-800 text-slate-400 border-slate-700'
-                }`}
+                style={{
+                  fontSize: '0.6875rem',
+                  fontFamily: 'var(--font-mono, monospace)',
+                  fontWeight: 700,
+                  color: 'var(--color-teal)',
+                }}
               >
-                {getLocalizedIdentificationStatus(identificationStatus, language)}
+                Completeness: {profile.completeness.score}%
               </span>
-            </div>
-            <div className="text-xs text-slate-400 italic mt-0.5">
-              {speciesSubtitle}
-            </div>
-          </div>
-
-          {/* Identification Confidence */}
-          <div className="bg-slate-800/60 border border-slate-700/60 rounded-xl px-3.5 py-2 text-right">
-            <span className="text-[10px] uppercase font-mono tracking-wider text-slate-400 block">
-              {isKn ? 'ವಿಶ್ವಾಸಾರ್ಹತೆ' : 'ML CONFIDENCE'}
-            </span>
-            <span className="text-sm font-bold font-mono text-emerald-400">
-              {profile.speciesConfidence ? `${profile.speciesConfidence}%` : (isIdentified ? '90%' : '--')}
-            </span>
-          </div>
-        </div>
-
-        {/* Farmer Mode Narrative Story */}
-        {effectiveMode === 'farmer' ? (
-          <div className="p-3.5 rounded-xl bg-slate-800/40 border border-slate-700/50 space-y-2">
-            <div className="flex items-center justify-between text-xs">
-              <span className="font-semibold text-emerald-400">
-                {profileSummary.stateLabel}
-              </span>
-              <span className="text-slate-400">
-                {profileSummary.growthLabel}
-              </span>
-            </div>
-            <p className="text-sm text-slate-200 leading-relaxed font-medium">
-              {profileSummary.story}
-            </p>
-            <div className="pt-2 border-t border-slate-700/40 text-xs text-amber-300/90 flex items-center gap-1.5">
-              <span className="font-semibold">{isKn ? 'ಕ್ರಮ:' : 'Action:'}</span>
-              <span>{profileSummary.action}</span>
-            </div>
-          </div>
-        ) : (
-          /* Technical Mode Matrix */
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 font-mono text-xs">
-            <div className="p-2.5 rounded-xl bg-slate-800/40 border border-slate-700/50">
-              <span className="text-[10px] text-slate-400 uppercase block">Lifecycle State</span>
-              <span className="font-bold text-slate-100">{lifecycleState}</span>
-            </div>
-            <div className="p-2.5 rounded-xl bg-slate-800/40 border border-slate-700/50">
-              <span className="text-[10px] text-slate-400 uppercase block">Monitoring</span>
-              <span className="font-bold text-slate-100">{monitoringStatus}</span>
-            </div>
-            <div className="p-2.5 rounded-xl bg-slate-800/40 border border-slate-700/50">
-              <span className="text-[10px] text-slate-400 uppercase block">Health State</span>
-              <span className="font-bold text-slate-100">{String(profile.currentHealthStatus)}</span>
-            </div>
-            <div className="p-2.5 rounded-xl bg-slate-800/40 border border-slate-700/50">
-              <span className="text-[10px] text-slate-400 uppercase block">Confidence</span>
-              <span className="font-bold text-slate-100">{profile.healthConfidence || 'moderate'}</span>
-            </div>
-          </div>
-        )}
-
-        {/* Growth & Environmental Preview Strip */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-1">
-          <div className="flex items-center gap-2.5 p-2 rounded-lg bg-slate-800/30 border border-slate-800">
-            <TrendingUp className="w-4 h-4 text-emerald-400 shrink-0" />
-            <div>
-              <span className="text-[10px] text-slate-400 block">{isKn ? 'ಎಲೆಗಳ ವ್ಯಾಪ್ತಿ' : 'Canopy Area'}</span>
-              <span className="text-xs font-bold font-mono text-white">
-                {profile.growth?.latestCanopyCoverage !== undefined ? `${profile.growth.latestCanopyCoverage}%` : '--'}
-              </span>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2.5 p-2 rounded-lg bg-slate-800/30 border border-slate-800">
-            <FlaskConical className="w-4 h-4 text-teal-400 shrink-0" />
-            <div>
-              <span className="text-[10px] text-slate-400 block">{isKn ? 'ದ್ರಾವಣ pH' : 'Solution pH'}</span>
-              <span className="text-xs font-bold font-mono text-white">
-                {profile.environment?.latestPH !== undefined ? profile.environment.latestPH.toFixed(2) : '--'}
-              </span>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2.5 p-2 rounded-lg bg-slate-800/30 border border-slate-800">
-            <Sparkles className="w-4 h-4 text-green-400 shrink-0" />
-            <div>
-              <span className="text-[10px] text-slate-400 block">{isKn ? 'ಪೋಷಕಾಂಶಗಳು' : 'Nutrients TDS'}</span>
-              <span className="text-xs font-bold font-mono text-white">
-                {profile.environment?.latestTDS !== undefined ? `${Math.round(profile.environment.latestTDS)} PPM` : '--'}
-              </span>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2.5 p-2 rounded-lg bg-slate-800/30 border border-slate-800">
-            <Droplets className="w-4 h-4 text-cyan-400 shrink-0" />
-            <div>
-              <span className="text-[10px] text-slate-400 block">{isKn ? 'ನೀರಿನ ಮಟ್ಟ' : 'Water Level'}</span>
-              <span className="text-xs font-bold font-mono text-white">
-                {profile.environment?.latestWaterLevel !== undefined ? `${Math.round(profile.environment.latestWaterLevel)}%` : '--'}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {/* Profile Completeness Audit (Section 19) */}
-        {completeness && (
-          <div className="p-3.5 rounded-xl bg-slate-800/40 border border-slate-700/50 space-y-2.5">
-            <div className="flex items-center justify-between text-xs">
-              <div className="flex items-center gap-2">
-                <ShieldCheck className="w-4 h-4 text-teal-400" />
-                <span className="font-semibold text-white">
-                  {isKn ? 'ಪ್ರೊಫೈಲ್ ಪೂರ್ಣತೆಯ ಪರಿಶೀಲನೆ' : 'Profile Evidence Completeness'}
-                </span>
-              </div>
-              <span className="font-mono text-xs font-bold text-teal-300">
-                {completeness.score}% ({getLocalizedCompletenessStatus(completeness.status, language)})
-              </span>
-            </div>
-
-            {/* Progress bar */}
-            <div className="w-full h-1.5 rounded-full bg-slate-700 overflow-hidden">
-              <div
-                className={`h-full transition-all duration-500 rounded-full ${
-                  completeness.score >= 90
-                    ? 'bg-emerald-500'
-                    : completeness.score >= 60
-                    ? 'bg-teal-500'
-                    : 'bg-amber-500'
-                }`}
-                style={{ width: `${completeness.score}%` }}
-              />
-            </div>
-
-            {/* Checklist of 5 categories */}
-            <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 pt-1 text-[11px]">
-              {Object.entries(completeness.categories).map(([key, cat]) => (
-                <div key={key} className="flex items-center gap-1.5">
-                  {cat.available ? (
-                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                  ) : (
-                    <AlertTriangle className="w-3.5 h-3.5 text-slate-500 shrink-0" />
-                  )}
-                  <span className={cat.available ? 'text-slate-200' : 'text-slate-500'}>
-                    {cat.label}
-                  </span>
-                </div>
-              ))}
-            </div>
-
-            {completeness.missingItems.length > 0 && (
-              <p className="text-[11px] text-slate-400 border-t border-slate-700/40 pt-2 mt-1">
-                <span className="text-amber-400/90 font-medium">
-                  {isKn ? 'ಬಾಕಿ ಇರುವ ಮಾಹಿತಿ: ' : 'Pending evidence: '}
-                </span>
-                {completeness.missingItems.join(' • ')}
-              </p>
             )}
           </div>
-        )}
 
-        {/* Non-biomass Growth Disclaimer */}
-        <div className="text-[10px] text-slate-500 font-mono leading-relaxed pt-1">
-          {profile.growth?.disclaimer ||
-            'IMAGE-DERIVED GROWTH ESTIMATES: Values represent 2D optical canopy surface area changes detected by the camera and do not claim physical biomass measurement.'}
+          {/* Structured Evidence Rows */}
+          <div
+            style={{
+              border: '1px solid var(--border-default)',
+              borderRadius: 'var(--radius-xs, 2px)',
+              overflow: 'hidden',
+            }}
+          >
+            {/* Table Header */}
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: '1.4fr 1fr 1.2fr 2fr',
+                padding: '0.5rem 0.875rem',
+                background: 'var(--bg-canvas)',
+                borderBottom: '1px solid var(--border-default)',
+                fontSize: '0.625rem',
+                fontFamily: 'var(--font-mono, monospace)',
+                fontWeight: 700,
+                textTransform: 'uppercase',
+                letterSpacing: '0.04em',
+                color: 'var(--text-muted)',
+              }}
+            >
+              <div>{isKn ? 'ಸಾಕ್ಷ್ಯ ವರ್ಗ' : 'Evidence Domain'}</div>
+              <div>{isKn ? 'ಸ್ಥಿತಿ' : 'Current State'}</div>
+              <div>{isKn ? 'ಮಾಪನ / ವಿವರ' : 'Supporting Value'}</div>
+              <div>{isKn ? 'ಟಿಪ್ಪಣಿ' : 'Scientific Explanation'}</div>
+            </div>
+
+            {/* Evidence Rows */}
+            {evidenceItems.map((item, idx) => (
+              <div
+                key={item.id}
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: '1.4fr 1fr 1.2fr 2fr',
+                  padding: '0.625rem 0.875rem',
+                  background: idx % 2 === 0 ? 'var(--bg-surface)' : 'var(--bg-canvas)',
+                  borderBottom: idx < evidenceItems.length - 1 ? '1px solid var(--border-subtle)' : 'none',
+                  fontSize: '0.75rem',
+                  alignItems: 'center',
+                }}
+              >
+                <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{item.label}</div>
+                <div>
+                  <span
+                    style={{
+                      fontSize: '0.6875rem',
+                      fontFamily: 'var(--font-mono, monospace)',
+                      fontWeight: 700,
+                      color: item.status === 'optimal' ? 'var(--color-green)' : 'var(--text-muted)',
+                    }}
+                  >
+                    {item.state}
+                  </span>
+                </div>
+                <div style={{ fontFamily: 'var(--font-mono, monospace)', color: 'var(--text-secondary)' }}>
+                  {item.supportingValue}
+                </div>
+                <div style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', lineHeight: 1.4 }}>
+                  {item.explanation}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Growth Methodology Disclaimer */}
+          <p
+            style={{
+              fontSize: '0.625rem',
+              fontFamily: 'var(--font-mono, monospace)',
+              color: 'var(--text-dim)',
+              margin: '0.25rem 0 0',
+              lineHeight: 1.4,
+            }}
+          >
+            {profile.growth?.disclaimer ||
+              'METHODOLOGICAL NOTE: Foliage growth values represent 2D optical canopy surface area computed from camera vision frames. Values provide relative longitudinal tracking and do not claim physical wet/dry biomass weight.'}
+          </p>
         </div>
-      </div>
-    </div>
+      )}
+    </article>
   );
 }

@@ -19,16 +19,15 @@ export function WhatChangedCard({
   summary,
   language = 'en',
   userMode = 'farmer',
-  onUserModeChange,
   className = '',
 }: WhatChangedCardProps) {
-  const [isExpanded, setIsExpanded] = React.useState(false);
-  const [activeTab, setActiveTab] = React.useState<'all' | 'sensor' | 'visual' | 'growth'>('all');
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [activeTab, setActiveTab] = useState<'all' | 'sensor' | 'visual' | 'growth'>('all');
   const isKn = language === 'kn';
 
   const localizedCopy = summary ? getLocalizedWhatChangedCopy(summary, language) : null;
 
-  const filteredEvents = summary?.events.filter(e => {
+  const filteredEvents = summary?.events.filter((e) => {
     if (activeTab === 'sensor') return e.category === 'sensor';
     if (activeTab === 'visual') return e.category === 'visual';
     if (activeTab === 'growth') return e.category === 'growth';
@@ -38,383 +37,589 @@ export function WhatChangedCard({
   const getSignificanceColor = (sig: string) => {
     switch (sig) {
       case 'CRITICAL':
-        return 'text-[var(--color-red)] bg-[var(--bg-tint-red)] border-[var(--color-red)]/30';
+        return {
+          color: 'var(--color-red)',
+          bg: 'var(--bg-canvas)',
+          border: 'var(--color-red)',
+        };
       case 'SIGNIFICANT':
-        return 'text-[var(--color-amber)] bg-[var(--bg-tint-amber)] border-[var(--color-amber)]/30';
       case 'MODERATE':
-        return 'text-[var(--color-teal)] bg-[var(--bg-tint-teal)] border-[var(--color-teal)]/30';
+        return {
+          color: 'var(--color-amber)',
+          bg: 'var(--bg-canvas)',
+          border: 'var(--color-amber)',
+        };
       case 'MINOR':
-        return 'text-[var(--color-green)] bg-[var(--bg-tint-green)] border-[var(--color-green)]/30';
+        return {
+          color: 'var(--color-green)',
+          bg: 'var(--bg-canvas)',
+          border: 'var(--color-green)',
+        };
       default:
-        return 'text-[var(--text-muted)] bg-[var(--bg-canvas)] border-[var(--border-default)]';
+        return {
+          color: 'var(--text-muted)',
+          bg: 'var(--bg-canvas)',
+          border: 'var(--border-default)',
+        };
     }
   };
 
-  const getDirectionIcon = (dir: string) => {
+  const getDirectionMark = (dir: string) => {
     switch (dir) {
       case 'improved':
       case 'recovered':
-        return <span className="text-[var(--color-green)] font-bold">↗</span>;
+        return '▲';
       case 'declined':
-        return <span className="text-[var(--color-red)] font-bold">↘</span>;
+        return '▼';
       case 'changed':
-        return <span className="text-[var(--color-amber)] font-bold">≈</span>;
-      case 'unavailable':
-        return <span className="text-[var(--text-muted)] font-bold">?</span>;
+        return '≈';
       default:
-        return <span className="text-[var(--text-muted)] font-bold">−</span>;
+        return '—';
     }
   };
 
+  // Find primary event for the primary change block
+  const primaryEvent = summary?.events && summary.events.length > 0 ? summary.events[0] : null;
+  const primaryEventCopy = primaryEvent ? getLocalizedChangeEvent(primaryEvent, language) : null;
+
   return (
-    <div
-      className={`rounded-md border bg-[var(--bg-surface)] overflow-hidden transition-all duration-300 ${
-        summary?.reviewRequiredItems?.length ? 'border-[var(--color-amber)]/50'
-          : summary?.status === 'meaningful_changes' && summary?.overallSignificance === 'CRITICAL'
-          ? 'border-[var(--color-red)]/50'
-          : summary?.hasMeaningfulChange
-          ? 'border-[var(--color-green)]/50'
-          : 'border-[var(--border-default)]'
-      } ${className}`}
+    <section
+      aria-label={isKn ? 'ಏನು ಬದಲಾಗಿದೆ?' : 'What Changed Analysis'}
+      className={className}
+      style={{
+        background: 'var(--bg-surface)',
+        border: '1px solid var(--border-default)',
+        borderRadius: 'var(--radius-sm, 4px)',
+        overflow: 'hidden',
+        width: '100%',
+        marginTop: '1.25rem',
+        marginBottom: '1.25rem',
+      }}
     >
-      {/* Top Banner / Review Alert */}
+      {/* ── 1. Top Review Banner (if identity shift or review required) ── */}
       {summary?.reviewRequiredItems && summary.reviewRequiredItems.length > 0 && (
-        <div className="bg-[var(--bg-tint-amber)] border-b border-[var(--color-amber)]/50 px-4 py-2.5 flex items-center justify-between text-[var(--color-amber)] text-xs">
-          <div className="flex items-center gap-2">
-            <span className="text-[var(--color-amber)] font-bold shrink-0">⚠</span>
-            <span className="font-semibold text-[var(--text-primary)]">
-              {isKn ? 'ಪರಿಶೀಲನೆ ಅಗತ್ಯವಿದೆ:' : 'Review Required:'} {summary.reviewRequiredItems[0].summary}
+        <div
+          style={{
+            background: 'var(--bg-canvas)',
+            borderBottom: '1px solid var(--color-amber)',
+            padding: '0.625rem 1.25rem',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '0.75rem',
+            fontSize: '0.75rem',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <span style={{ color: 'var(--color-amber)', fontWeight: 800 }}>!</span>
+            <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
+              {isKn ? 'ಪರಿಶೀಲನೆ ಅಗತ್ಯವಿದೆ: ' : 'Review Required: '}
+              {summary.reviewRequiredItems[0].summary}
             </span>
           </div>
-          <span className="bg-[var(--bg-canvas)] text-[var(--color-amber)] px-2 py-0.5 rounded text-[11px] font-mono border border-[var(--color-amber)]/50">
-            {isKn ? 'ಸಸ್ಯದ ತಳಿ ಬದಲಾಗಿದೆ' : 'Identity Shift'}
+          <span
+            style={{
+              fontSize: '0.625rem',
+              fontFamily: 'var(--font-mono, monospace)',
+              padding: '0.15rem 0.5rem',
+              borderRadius: '2px',
+              border: '1px solid var(--border-default)',
+              color: 'var(--text-muted)',
+            }}
+          >
+            {isKn ? 'ಸಸ್ಯದ ತಳಿ ಪರಿಶೀಲನೆ' : 'Specimen Identity Shift'}
           </span>
         </div>
       )}
 
-      {/* Main Header */}
-      <div className="p-4 sm:p-5 border-b border-[var(--border-default)] flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <div
-            className={`w-10 h-10 rounded-md flex items-center justify-center border ${
-              !summary || summary.status === 'insufficient_history'
-                ? 'bg-[var(--bg-canvas)] border-[var(--border-default)] text-[var(--text-muted)]'
-                : summary.status === 'stable_no_change'
-                ? 'bg-[var(--bg-tint-green)] border-[var(--color-green)]/30 text-[var(--color-green)]'
-                : 'bg-[var(--bg-tint-amber)] border-[var(--color-amber)]/30 text-[var(--color-amber)]'
-            }`}
-          >
-            {!summary || summary.status === 'insufficient_history' ? (
-              <span className="text-[var(--text-muted)] font-bold text-xl leading-none">⏱</span>
-            ) : summary.status === 'stable_no_change' ? (
-              <span className="text-[var(--color-green)] font-bold text-xl leading-none">✓</span>
-            ) : (
-              <span className="text-[var(--color-amber)] font-bold text-xl leading-none">∆</span>
-            )}
-          </div>
+      {/* ── 2. Header Bar ── */}
+      <div
+        style={{
+          padding: '1.125rem 1.25rem',
+          borderBottom: '1px solid var(--border-subtle)',
+          display: 'flex',
+          flexWrap: 'wrap',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: '0.75rem',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
           <div>
-            <div className="flex items-center gap-2">
-              <h3 className="text-base sm:text-lg font-bold text-[var(--text-primary)] tracking-tight">
-                {isKn ? 'ಏನು ಬದಲಾಗಿದೆ?' : 'What Changed?'}
-              </h3>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', flexWrap: 'wrap' }}>
+              <h2
+                style={{
+                  fontSize: '1rem',
+                  fontWeight: 800,
+                  letterSpacing: '-0.01em',
+                  color: 'var(--text-primary)',
+                  margin: 0,
+                  textTransform: 'uppercase',
+                }}
+              >
+                {isKn ? 'ಏನು ಬದಲಾಗಿದೆ?' : 'WHAT CHANGED?'}
+              </h2>
+
               {summary && (
                 <span
-                  className={`text-[10px] font-mono uppercase px-2 py-0.5 rounded-full border ${
-                    summary.status === 'stable_no_change'
-                      ? 'bg-[var(--bg-tint-green)] text-[var(--color-green)] border-[var(--color-green)]/30'
-                      : summary.status === 'insufficient_history'
-                      ? 'bg-[var(--bg-canvas)] text-[var(--text-muted)] border-[var(--border-default)]'
-                      : getSignificanceColor(summary.overallSignificance)
-                  }`}
+                  style={{
+                    fontSize: '0.6875rem',
+                    fontFamily: 'var(--font-mono, monospace)',
+                    fontWeight: 700,
+                    textTransform: 'uppercase',
+                    padding: '0.2rem 0.6rem',
+                    borderRadius: '2px',
+                    border: `1px solid ${
+                      summary.status === 'stable_no_change'
+                        ? 'var(--color-green)'
+                        : getSignificanceColor(summary.overallSignificance).border
+                    }`,
+                    color:
+                      summary.status === 'stable_no_change'
+                        ? 'var(--color-green)'
+                        : getSignificanceColor(summary.overallSignificance).color,
+                    background: 'var(--bg-canvas)',
+                  }}
                 >
                   {summary.status === 'stable_no_change'
-                    ? isKn ? 'ಸ್ಥಿರವಾಗಿದೆ' : 'Stable'
+                    ? isKn
+                      ? 'ಸ್ಥಿರವಾಗಿದೆ'
+                      : 'STABLE EQUILIBRIUM'
                     : summary.status === 'insufficient_history'
-                    ? isKn ? 'ಇತಿಹಾಸ ಬೇಕಿದೆ' : 'Pending History'
-                    : `${summary.overallSignificance} DELTA`}
+                    ? isKn
+                      ? 'ಇತಿಹಾಸ ಬೇಕಿದೆ'
+                      : 'PENDING HISTORY'
+                    : `[${summary.overallSignificance} DELTA]`}
                 </span>
               )}
             </div>
+
             {summary ? (
-              <p className="text-xs text-[var(--text-muted)] flex items-center gap-1.5 mt-0.5">
-                <span className="text-[var(--text-secondary)] font-bold">⏱</span>
+              <p
+                style={{
+                  fontSize: '0.75rem',
+                  color: 'var(--text-muted)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.4rem',
+                  margin: '0.25rem 0 0',
+                }}
+              >
                 <span>
                   {isKn
-                    ? `ಅವಲೋಕನ: ${summary.timeframeDescription}`
-                    : `Comparison timeframe: ${summary.timeframeDescription}`}
+                    ? `ಕಳೆದ ${summary.timeframeDescription} ದಿನಗಳಿಗೆ ಹೋಲಿಸಿದಾಗ`
+                    : `Compared with last ${summary.timeframeDescription}`}
                 </span>
-                <span className="text-[var(--text-dim)]">•</span>
-                <span>{summary.observationCount} {isKn ? 'ದಾಖಲೆಗಳು' : 'observations'}</span>
+                <span>·</span>
+                <span>
+                  {summary.observationCount} {isKn ? 'ತಪಾಸಣೆಗಳು' : 'observations'}
+                </span>
               </p>
             ) : (
-              <p className="text-xs text-[var(--text-muted)] mt-0.5">
-                {isKn ? 'ಸಾಕಷ್ಟು ಡೇಟಾ ಇಲ್ಲ' : 'Insufficient historical data'}
+              <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', margin: '0.25rem 0 0' }}>
+                {isKn ? 'ಸಾಕಷ್ಟು ಡೇಟಾ ಇಲ್ಲ' : 'Insufficient historical observation checkpoints.'}
               </p>
             )}
           </div>
         </div>
       </div>
 
-      {!summary || !localizedCopy ? (
-        <div className="p-8 text-center flex flex-col items-center justify-center text-[var(--text-muted)] bg-[var(--bg-canvas)]">
-          <span className="text-3xl mb-3 opacity-20">∆</span>
-          <p className="text-sm font-medium">{isKn ? 'ಬದಲಾವಣೆಯನ್ನು ಗುರುತಿಸಲು ಸಾಕಷ್ಟು ಡೇಟಾ ಇಲ್ಲ.' : 'Not enough historical data to identify a meaningful change.'}</p>
-          <p className="text-xs opacity-70 mt-1">{isKn ? 'ಹೆಚ್ಚಿನ ಡೇಟಾ ಲಭ್ಯವಾದಾಗ ಇದು ನವೀಕರಿಸಲ್ಪಡುತ್ತದೆ.' : 'This will populate as more observation cycles are completed.'}</p>
+      {/* ── 3. Content Body ── */}
+      {!summary || summary.status === 'insufficient_history' ? (
+        <div
+          style={{
+            padding: '2.5rem 1.5rem',
+            textAlign: 'center',
+            background: 'var(--bg-canvas)',
+            color: 'var(--text-muted)',
+          }}
+        >
+          <div
+            style={{
+              fontSize: '1.25rem',
+              fontWeight: 800,
+              color: 'var(--text-dim)',
+              marginBottom: '0.5rem',
+            }}
+          >
+            —
+          </div>
+          <p style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-primary)', margin: 0 }}>
+            {isKn
+              ? 'ಬದಲಾವಣೆಯನ್ನು ಗುರುತಿಸಲು ಸಾಕಷ್ಟು ಇತಿಹಾಸವಿಲ್ಲ.'
+              : 'Not enough historical data to compute longitudinal parameter drift.'}
+          </p>
+          <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>
+            {isKn
+              ? 'ಕಾಲಕ್ರಮೇಣ ಸಂವೇದಕ ಹಾಗೂ ಕ್ಯಾಮೆರಾ ದಾಖಲೆಗಳು ಸಂಗ್ರಹವಾದಂತೆ ಇದು ನವೀಕರಿಸಲ್ಪಡುತ್ತದೆ.'
+              : 'Trajectories will populate automatically as observations accumulate across checkpoints.'}
+          </p>
         </div>
       ) : (
-        <>
-
-      {/* Primary Intelligence Section */}
-      <div className="p-4 sm:p-5 space-y-4">
-        {/* Core Narrative / Status Block */}
-        <div
-          className={`p-4 rounded-xl border transition-all ${
-            summary.status === 'stable_no_change'
-              ? 'bg-emerald-950/20 border-emerald-800/40 text-emerald-200'
-              : summary.status === 'insufficient_history'
-              ? 'bg-slate-800/40 border-slate-700/50 text-slate-300'
-              : 'bg-slate-800/50 border-slate-700/60 text-slate-200'
-          }`}
-        >
-          {userMode === 'farmer' ? (
-            <div className="space-y-3">
-              <div>
-                <span className="text-[11px] uppercase tracking-wider font-semibold text-emerald-400 block mb-0.5">
-                  {isKn ? 'ಏನು ಗಮನಿಸಲಾಗಿದೆ' : "What's happening"}
+        <div style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+          {/* Structured Primary Change Block: LEFT / CENTER / RIGHT */}
+          <div
+            style={{
+              background: 'var(--bg-canvas)',
+              border: '1px solid var(--border-default)',
+              borderRadius: 'var(--radius-sm, 4px)',
+              padding: '1.125rem 1.25rem',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '1rem',
+            }}
+          >
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                gap: '1rem',
+                borderBottom: '1px solid var(--border-subtle)',
+                paddingBottom: '1rem',
+              }}
+            >
+              {/* LEFT: Category & Status */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                <span
+                  style={{
+                    fontSize: '0.625rem',
+                    fontFamily: 'var(--font-mono, monospace)',
+                    fontWeight: 700,
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.05em',
+                    color: 'var(--text-muted)',
+                  }}
+                >
+                  {isKn ? 'ವರ್ಗ / ಸ್ಥಿತಿ' : 'CHANGE CATEGORY'}
                 </span>
-                <p className="text-base font-semibold text-white leading-snug">
-                  {localizedCopy.headline}
+                <span style={{ fontSize: '0.875rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+                  {primaryEvent?.label || (summary.status === 'stable_no_change' ? 'Equilibrium' : 'Biological State')}
+                </span>
+                <span
+                  style={{
+                    fontSize: '0.6875rem',
+                    color: 'var(--text-secondary)',
+                    textTransform: 'uppercase',
+                    fontFamily: 'var(--font-mono, monospace)',
+                  }}
+                >
+                  {summary.status.replace(/_/g, ' ')}
+                </span>
+              </div>
+
+              {/* CENTER: What Happened */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                <span
+                  style={{
+                    fontSize: '0.625rem',
+                    fontFamily: 'var(--font-mono, monospace)',
+                    fontWeight: 700,
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.05em',
+                    color: 'var(--text-muted)',
+                  }}
+                >
+                  {isKn ? 'ಏನು ಗಮನಿಸಲಾಗಿದೆ' : 'WHAT HAPPENED'}
+                </span>
+                <p style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-primary)', margin: 0, lineHeight: 1.4 }}>
+                  {primaryEventCopy?.headline || localizedCopy?.headline || summary.summaryHeadline}
                 </p>
               </div>
 
-              <div>
-                <span className="text-[11px] uppercase tracking-wider font-semibold text-slate-400 block mb-0.5">
-                  {isKn ? 'ಕಾರಣ / ಹಿನ್ನೆಲೆ' : 'Why this matters'}
+              {/* RIGHT: Magnitude / Value */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                <span
+                  style={{
+                    fontSize: '0.625rem',
+                    fontFamily: 'var(--font-mono, monospace)',
+                    fontWeight: 700,
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.05em',
+                    color: 'var(--text-muted)',
+                  }}
+                >
+                  {isKn ? 'ಪ್ರಮಾಣ / ಬದಲಾವಣೆ' : 'MEASURED DELTA'}
                 </span>
-                <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
-                  {localizedCopy.why}
+                <span
+                  style={{
+                    fontSize: '1rem',
+                    fontWeight: 800,
+                    fontFamily: 'var(--font-mono, monospace)',
+                    color: primaryEvent?.delta && primaryEvent.delta < 0 ? 'var(--color-amber)' : 'var(--color-green)',
+                  }}
+                >
+                  {primaryEvent?.delta !== undefined
+                    ? `${primaryEvent.delta > 0 ? '+' : ''}${primaryEvent.delta} ${primaryEvent.unit || ''}`
+                    : 'Nominal Range'}
+                </span>
+                <span style={{ fontSize: '0.6875rem', color: 'var(--text-muted)' }}>
+                  {primaryEvent?.direction ? `${primaryEvent.direction.toUpperCase()}` : 'STABLE'}
+                </span>
+              </div>
+            </div>
+
+            {/* Below: Why this matters & Suggested check */}
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+                gap: '1rem',
+              }}
+            >
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                <span
+                  style={{
+                    fontSize: '0.625rem',
+                    fontFamily: 'var(--font-mono, monospace)',
+                    fontWeight: 700,
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.04em',
+                    color: 'var(--text-muted)',
+                  }}
+                >
+                  {isKn ? 'ಏಕೆ ಮುಖ್ಯ' : 'WHY THIS MATTERS'}
+                </span>
+                <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', margin: 0, lineHeight: 1.5 }}>
+                  {primaryEventCopy?.why || localizedCopy?.why || summary.summaryExplanation}
                 </p>
               </div>
 
-              <div className="pt-2 border-t border-slate-700/40 flex items-start gap-2">
-                <span className="text-[11px] uppercase tracking-wider font-semibold text-amber-400 shrink-0 mt-0.5">
-                  {isKn ? 'ಶಿಫಾರಸು ಮಾಡಿದ ಕ್ರಮ:' : 'Suggested Check:'}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                <span
+                  style={{
+                    fontSize: '0.625rem',
+                    fontFamily: 'var(--font-mono, monospace)',
+                    fontWeight: 700,
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.04em',
+                    color: 'var(--color-emerald-ink)',
+                  }}
+                >
+                  {isKn ? 'ಶಿಫಾರಸು ಮಾಡಿದ ಪರಿಶೀಲನೆ' : 'SUGGESTED CHECK'}
                 </span>
-                <p className="text-xs sm:text-sm text-amber-200 font-medium leading-relaxed">
-                  {localizedCopy.action}
+                <p style={{ fontSize: '0.75rem', color: 'var(--text-primary)', fontWeight: 600, margin: 0, lineHeight: 1.5 }}>
+                  {primaryEventCopy?.action || localizedCopy?.action || 'Continue standard cultivation routine.'}
                 </p>
               </div>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-[11px] uppercase tracking-wider font-mono text-cyan-400">
-                  Longitudinal Telemetry Synthesis
-                </span>
-                <span className="text-[10px] font-mono text-slate-400">
-                  Status: {summary.status.toUpperCase()}
-                </span>
-              </div>
-              <p className="text-sm font-mono text-slate-100 font-medium">
-                {summary.summaryHeadline}
-              </p>
-              <p className="text-xs font-mono text-slate-300 leading-relaxed">
-                {summary.summaryExplanation}
-              </p>
-              {summary.limitations.length > 0 && (
-                <div className="pt-2 border-t border-slate-700/50 text-[11px] font-mono text-amber-400/90 space-y-0.5">
-                  {summary.limitations.map((lim, idx) => (
-                    <div key={idx} className="flex items-center gap-1.5">
-                      <span className="text-amber-500">•</span>
-                      <span>{lim}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-
-        {/* Change Breakdown Pills / Events Section */}
-        {summary.events.length > 0 && (
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-1 overflow-x-auto pb-2 pt-1 px-1">
-                <button
-                  onClick={() => setActiveTab('all')}
-                  className={`px-3 py-1.5 rounded-sm font-medium transition-colors border ${
-                    activeTab === 'all'
-                      ? 'bg-slate-800 border-slate-600 text-champagne'
-                      : 'bg-transparent border-transparent text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
-                  }`}
-                >
-                  {isKn ? 'ಎಲ್ಲಾ ಬದಲಾವಣೆಗಳು' : 'All Events'} {summary.events.length}
-                </button>
-                <button
-                  onClick={() => setActiveTab('sensor')}
-                  className={`px-3 py-1.5 rounded-sm font-medium transition-colors border ${
-                    activeTab === 'sensor'
-                      ? 'bg-slate-800 border-slate-600 text-champagne'
-                      : 'bg-transparent border-transparent text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
-                  }`}
-                >
-                  {isKn ? 'ಸಂವೇದಕಗಳು' : 'Sensors'} {summary.sensorChanges.length}
-                </button>
-                <button
-                  onClick={() => setActiveTab('visual')}
-                  className={`px-3 py-1.5 rounded-sm font-medium transition-colors border ${
-                    activeTab === 'visual'
-                      ? 'bg-slate-800 border-slate-600 text-champagne'
-                      : 'bg-transparent border-transparent text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
-                  }`}
-                >
-                  {isKn ? 'ದೃಶ್ಯ' : 'Visual'} {summary.visualChanges.length}
-                </button>
-                <button
-                  onClick={() => setActiveTab('growth')}
-                  className={`px-3 py-1.5 rounded-sm font-medium transition-colors border ${
-                    activeTab === 'growth'
-                      ? 'bg-slate-800 border-slate-600 text-champagne'
-                      : 'bg-transparent border-transparent text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
-                  }`}
-                >
-                  {isKn ? 'ಬೆಳವಣಿಗೆ' : 'Growth'} {summary.growthChanges.length}
-                </button>
-              </div>
-
-              <button
-                onClick={() => setIsExpanded(!isExpanded)}
-                className="text-xs text-emerald-400 hover:text-emerald-300 flex items-center gap-1 font-medium ml-2 shrink-0"
-              >
-                <span>{isExpanded ? (isKn ? 'ಕಡಿಮೆ ತೋರಿಸಿ' : 'Show less') : (isKn ? 'ವಿವರಗಳು' : 'Details')}</span>
-                <span className="font-bold text-[10px]">{isExpanded ? '↑' : '↓'}</span>
-              </button>
-            </div>
-
-            {/* Event List */}
-            <div className="space-y-2">
-              {(isExpanded ? filteredEvents : filteredEvents.slice(0, 3)).map((event: PlantChangeEvent) => {
-                const eventCopy = getLocalizedChangeEvent(event, language);
-                return (
-                  <div
-                    key={event.id}
-                    className={`p-4 rounded-md border transition-all ${
-                      event.requiresReview
-                        ? 'bg-amber-950/20 border-amber-800/40'
-                        : event.isMeaningful
-                        ? 'bg-slate-800/30 border-slate-700/50'
-                        : 'bg-slate-900/30 border-slate-800/40'
-                    }`}
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex items-start gap-2.5">
-                        <div className="mt-0.5 p-1 rounded-lg bg-slate-800 border border-slate-700">
-                          {getDirectionIcon(event.direction)}
-                        </div>
-                        <div>
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span className="text-sm font-semibold text-white">
-                              {userMode === 'farmer' ? eventCopy.headline : event.label}
-                            </span>
-                            <span
-                              className={`text-[9px] font-mono px-1.5 py-0.5 rounded border uppercase ${getSignificanceColor(
-                                event.significance
-                              )}`}
-                            >
-                              {event.significance}
-                            </span>
-                            {event.requiresReview && (
-                              <span className="text-[9px] font-semibold text-amber-300 bg-amber-950/80 border border-amber-600/60 px-1.5 py-0.5 rounded">
-                                {isKn ? 'ಪರಿಶೀಲಿಸಿ' : 'Verify'}
-                              </span>
-                            )}
-                          </div>
-
-                          <p className="text-xs text-slate-300 mt-1 leading-relaxed">
-                            {userMode === 'farmer' ? eventCopy.why : event.summary}
-                          </p>
-
-                          {isExpanded && (
-                            <div className="mt-3 pt-3 border-t border-slate-800/80 text-[12px] text-slate-400 space-y-2">
-                              <div className="flex flex-col gap-1">
-                                <span className="font-semibold text-[10px] uppercase tracking-wider text-slate-500">{isKn ? 'ಏಕೆ ಮುಖ್ಯ' : 'Why it matters'}</span>
-                                <span className="text-slate-300 leading-relaxed">{userMode === 'farmer' ? eventCopy.why : event.summary}</span>
-                              </div>
-                              <div className="flex flex-col gap-1 mt-2">
-                                <span className="font-semibold text-[10px] uppercase tracking-wider text-amber-500/80">{isKn ? 'ಕ್ರಮ:' : 'Related Action'}</span>
-                                <span className="text-amber-200/90 font-medium">
-                                  {userMode === 'farmer' ? eventCopy.action : event.farmerAction}
-                                </span>
-                              </div>
-                              {userMode === 'technical' && (
-                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1 font-mono text-[10px] text-slate-400">
-                                  <div>
-                                    <span className="text-slate-500">Prev: </span>
-                                    {String(event.previousValue ?? 'N/A')}
-                                  </div>
-                                  <div>
-                                    <span className="text-slate-500">Current: </span>
-                                    {String(event.currentValue ?? 'N/A')}
-                                  </div>
-                                  <div>
-                                    <span className="text-slate-500">Delta: </span>
-                                    {event.delta !== undefined ? `${event.delta > 0 ? '+' : ''}${event.delta} ${event.unit || ''}` : 'N/A'}
-                                  </div>
-                                  <div>
-                                    <span className="text-slate-500">Confidence: </span>
-                                    {event.confidence}
-                                  </div>
-                                </div>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-
-                      {event.delta !== undefined && (
-                        <div className="text-right shrink-0">
-                          <span
-                            className={`text-xs font-mono font-bold ${
-                              event.direction === 'improved' || event.direction === 'recovered'
-                                ? 'text-emerald-400'
-                                : event.direction === 'declined'
-                                ? 'text-rose-400'
-                                : 'text-slate-300'
-                            }`}
-                          >
-                            {event.delta > 0 ? `+${event.delta}` : event.delta} {event.unit || ''}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
             </div>
           </div>
-        )}
 
-        {/* Footer Navigation Links */}
-        <div className="pt-3 border-t border-slate-800/80 flex items-center justify-between text-xs">
-          <Link
-            href="/dashboard/intelligence"
-            className="text-emerald-400 hover:text-emerald-300 flex items-center gap-1 font-medium transition-colors"
-          >
-            <span>{isKn ? 'ತಾರ್ಕಿಕ ಪ್ರಯೋಗಾಲಯಕ್ಕೆ ಹೋಗಿ' : 'Open Reasoning Lab'}</span>
-            <span className="font-bold text-[14px] leading-none">→</span>
-          </Link>
+          {/* ── 4. Horizontal Event Filters & Multi-Row Events ── */}
+          {summary.events.length > 0 && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+              {/* Event Filter Row: Real horizontal bar with clear dividers */}
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  flexWrap: 'wrap',
+                  gap: '0.75rem',
+                  borderBottom: '1px solid var(--border-subtle)',
+                  paddingBottom: '0.625rem',
+                }}
+              >
+                <div
+                  role="tablist"
+                  aria-label="Event category filters"
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    background: 'var(--bg-canvas)',
+                    border: '1px solid var(--border-default)',
+                    borderRadius: 'var(--radius-xs, 2px)',
+                    padding: '2px',
+                    gap: '2px',
+                  }}
+                >
+                  {[
+                    { id: 'all', label: isKn ? 'ಎಲ್ಲಾ ಬದಲಾವಣೆಗಳು' : 'All Events', count: summary.events.length },
+                    { id: 'sensor', label: isKn ? 'ಸಂವೇದಕಗಳು' : 'Sensors', count: summary.sensorChanges.length },
+                    { id: 'visual', label: isKn ? 'ದೃಶ್ಯ' : 'Visual', count: summary.visualChanges.length },
+                    { id: 'growth', label: isKn ? 'ಬೆಳವಣಿಗೆ' : 'Growth', count: summary.growthChanges.length },
+                  ].map((tab, idx, arr) => {
+                    const isActive = activeTab === tab.id;
+                    return (
+                      <React.Fragment key={tab.id}>
+                        <button
+                          type="button"
+                          role="tab"
+                          aria-selected={isActive}
+                          onClick={() => setActiveTab(tab.id as typeof activeTab)}
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '0.35rem',
+                            padding: '0.3rem 0.65rem',
+                            borderRadius: '2px',
+                            border: 'none',
+                            fontSize: '0.6875rem',
+                            fontWeight: isActive ? 700 : 500,
+                            fontFamily: 'var(--font-mono, monospace)',
+                            cursor: 'pointer',
+                            background: isActive ? 'var(--color-emerald-ink)' : 'transparent',
+                            color: isActive ? 'var(--color-champagne)' : 'var(--text-secondary)',
+                            transition: 'all 0.15s',
+                          }}
+                        >
+                          <span>{tab.label}</span>
+                          <span
+                            style={{
+                              fontSize: '0.625rem',
+                              opacity: isActive ? 1 : 0.7,
+                            }}
+                          >
+                            ({tab.count})
+                          </span>
+                        </button>
+                        {idx < arr.length - 1 && (
+                          <span style={{ color: 'var(--border-subtle)', userSelect: 'none' }}>|</span>
+                        )}
+                      </React.Fragment>
+                    );
+                  })}
+                </div>
 
-          <Link
-            href="/dashboard/analytics"
-            className="text-slate-400 hover:text-slate-200 flex items-center gap-1 transition-colors"
+                <button
+                  type="button"
+                  onClick={() => setIsExpanded(!isExpanded)}
+                  style={{
+                    fontSize: '0.6875rem',
+                    color: 'var(--text-muted)',
+                    background: 'transparent',
+                    border: 'none',
+                    cursor: 'pointer',
+                    textDecoration: 'underline',
+                  }}
+                >
+                  {isExpanded
+                    ? (isKn ? 'ಕಡಿಮೆ ತೋರಿಸಿ ↑' : 'Collapse event archive ↑')
+                    : (isKn ? `ಎಲ್ಲಾ ${filteredEvents.length} ದಾಖಲೆಗಳನ್ನು ವೀಕ್ಷಿಸಿ ↓` : `View all ${filteredEvents.length} events ↓`)}
+                </button>
+              </div>
+
+              {/* Individual Event Rows */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                {(isExpanded ? filteredEvents : filteredEvents.slice(0, 3)).map((event: PlantChangeEvent) => {
+                  const eventCopy = getLocalizedChangeEvent(event, language);
+                  const sigStyle = getSignificanceColor(event.significance);
+                  const dirMark = getDirectionMark(event.direction);
+
+                  return (
+                    <div
+                      key={event.id}
+                      style={{
+                        background: 'var(--bg-canvas)',
+                        border: '1px solid var(--border-subtle)',
+                        borderRadius: 'var(--radius-xs, 2px)',
+                        padding: '0.75rem 1rem',
+                        display: 'grid',
+                        gridTemplateColumns: 'auto 1fr auto',
+                        alignItems: 'center',
+                        gap: '0.875rem',
+                      }}
+                    >
+                      {/* Direction mark */}
+                      <span
+                        style={{
+                          fontSize: '0.75rem',
+                          fontFamily: 'var(--font-mono, monospace)',
+                          fontWeight: 900,
+                          color: sigStyle.color,
+                          width: '1.25rem',
+                          textAlign: 'center',
+                        }}
+                      >
+                        {dirMark}
+                      </span>
+
+                      {/* Main text & metadata */}
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                          <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+                            {userMode === 'farmer' ? eventCopy.headline : event.label}
+                          </span>
+                          <span
+                            style={{
+                              fontSize: '0.5625rem',
+                              fontFamily: 'var(--font-mono, monospace)',
+                              textTransform: 'uppercase',
+                              padding: '1px 5px',
+                              borderRadius: '2px',
+                              border: `1px solid ${sigStyle.border}`,
+                              color: sigStyle.color,
+                            }}
+                          >
+                            {event.significance}
+                          </span>
+                        </div>
+                        <p style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', margin: 0, lineHeight: 1.4 }}>
+                          {userMode === 'farmer' ? eventCopy.why : event.summary}
+                        </p>
+                      </div>
+
+                      {/* Delta magnitude */}
+                      <div style={{ textAlign: 'right' }}>
+                        <span
+                          style={{
+                            fontSize: '0.75rem',
+                            fontFamily: 'var(--font-mono, monospace)',
+                            fontWeight: 700,
+                            color: 'var(--text-primary)',
+                          }}
+                        >
+                          {event.delta !== undefined ? `${event.delta > 0 ? '+' : ''}${event.delta} ${event.unit || ''}` : 'Recorded'}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* ── 5. Footer Links ── */}
+          <div
+            style={{
+              paddingTop: '0.625rem',
+              borderTop: '1px solid var(--border-subtle)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              fontSize: '0.75rem',
+            }}
           >
-            <span className="font-bold text-[14px] text-slate-400">~</span>
-            <span>{isKn ? 'ಸಸ್ಯ ಪ್ರವಾಸ' : 'Plant Journey'}</span>
-          </Link>
+            <Link
+              href="/dashboard/intelligence"
+              style={{
+                color: 'var(--color-teal)',
+                textDecoration: 'none',
+                fontWeight: 600,
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.3rem',
+              }}
+            >
+              <span>{isKn ? 'ತಾರ್ಕಿಕ ಪ್ರಯೋಗಾಲಯಕ್ಕೆ ಹೋಗಿ' : 'Open Plant Reasoning Lab'}</span>
+              <span>→</span>
+            </Link>
+
+            <Link
+              href="/dashboard/analytics"
+              style={{
+                color: 'var(--text-muted)',
+                textDecoration: 'none',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.3rem',
+              }}
+            >
+              <span>{isKn ? 'ಸಸ್ಯ ಪ್ರವಾಸ' : 'Plant Journey & Analytics'}</span>
+              <span>→</span>
+            </Link>
+          </div>
         </div>
-      </div>
-      </>
       )}
-    </div>
+    </section>
   );
 }

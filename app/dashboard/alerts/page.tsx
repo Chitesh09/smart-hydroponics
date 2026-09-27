@@ -2,17 +2,8 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import {
-  Bell,
-  AlertOctagon,
-  AlertTriangle,
-  Info,
-  CheckCircle2,
-  ArrowLeft,
-} from 'lucide-react';
 import { usePlantIntelligence } from '@/lib/intelligence/PlantIntelligenceContext';
 import { PlantAlertCard } from '@/components/ui/PlantAlertCard';
-
 
 export default function AlertsPage() {
   const {
@@ -24,163 +15,416 @@ export default function AlertsPage() {
     plantProfile,
   } = usePlantIntelligence();
 
-  const [activeTab, setActiveTab] = useState<'ACTIVE' | 'DISMISSED' | 'RESOLVED'>('ACTIVE');
+  const [activeTab, setActiveTab] = useState<'ACTIVE' | 'RESOLVED' | 'DISMISSED'>('ACTIVE');
 
-  const { activeAlerts, dismissedAlerts, resolvedAlerts, urgentCount, attentionCount, infoCount } = alertSummary;
+  const {
+    activeAlerts,
+    dismissedAlerts,
+    resolvedAlerts,
+    urgentCount,
+    attentionCount,
+    infoCount,
+  } = alertSummary;
 
-  const currentList = activeTab === 'ACTIVE'
-    ? activeAlerts
-    : activeTab === 'DISMISSED'
-    ? dismissedAlerts
-    : resolvedAlerts;
+  const currentList =
+    activeTab === 'ACTIVE'
+      ? activeAlerts
+      : activeTab === 'RESOLVED'
+      ? resolvedAlerts
+      : dismissedAlerts;
 
   const isKn = language === 'kn';
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 p-4 sm:p-6 lg:p-8 space-y-6">
-      {/* Top Navigation & Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-white/10">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2">
+    <div
+      style={{
+        minHeight: '100vh',
+        backgroundColor: 'var(--bg-canvas)',
+        color: 'var(--text-primary)',
+        padding: '1.5rem',
+        width: '100%',
+        boxSizing: 'border-box',
+      }}
+    >
+      <div
+        style={{
+          width: '100%',
+          maxWidth: '1200px',
+          margin: '0 auto',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '1.5rem',
+        }}
+      >
+        {/* ── 1. Page Header ── */}
+        <div
+          style={{
+            paddingBottom: '1.25rem',
+            borderBottom: '1px solid var(--border-default)',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '0.5rem',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
             <Link
               href="/dashboard"
-              className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-white/70 hover:text-white transition-colors"
-              title={isKn ? 'ಡ್ಯಾಶ್‌ಬೋರ್ಡ್‌ಗೆ ಹಿಂತಿರುಗಿ' : 'Back to Dashboard'}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.35rem',
+                padding: '0.25rem 0.65rem',
+                borderRadius: 'var(--radius-xs, 2px)',
+                fontSize: '0.75rem',
+                fontWeight: 600,
+                color: 'var(--text-secondary)',
+                backgroundColor: 'var(--bg-surface)',
+                border: '1px solid var(--border-default)',
+                textDecoration: 'none',
+              }}
             >
-              <ArrowLeft className="w-4 h-4" />
+              ← {isKn ? 'ಡ್ಯಾಶ್‌ಬೋರ್ಡ್' : 'Dashboard'}
             </Link>
-            <div className="flex items-center gap-2 text-xs font-semibold text-emerald-400 uppercase tracking-wider">
-              <Bell className="w-3.5 h-3.5" />
-              <span>{isKn ? 'ಹೈಡ್ರೋಸ್ಮಾರ್ಟ್ ಎಚ್ಚರಿಕೆ ವ್ಯವಸ್ಥೆ' : 'HydroSmart Intelligence'}</span>
+            <span
+              style={{
+                fontSize: '0.6875rem',
+                fontWeight: 800,
+                fontFamily: 'var(--font-mono, monospace)',
+                letterSpacing: '0.08em',
+                textTransform: 'uppercase',
+                color: 'var(--color-emerald-ink)',
+              }}
+            >
+              HYDROSMART ALERT ENGINE
+            </span>
+          </div>
+
+          <div>
+            <h1
+              style={{
+                fontSize: '1.625rem',
+                fontWeight: 800,
+                letterSpacing: '-0.02em',
+                color: 'var(--text-primary)',
+                margin: 0,
+              }}
+            >
+              {isKn ? 'ಗಿಡದ ಎಚ್ಚರಿಕೆಗಳು ಮತ್ತು ಅಧಿಸೂಚನೆಗಳು' : 'Plant Alerts & Notifications'}
+            </h1>
+            <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', margin: '0.25rem 0 0' }}>
+              {isKn
+                ? `${plantProfile?.commonName || 'ಗಿಡ'}ಕ್ಕಾಗಿ ಸಾಕ್ಷ್ಯಾಧಾರಿತ ಎಚ್ಚರಿಕೆಗಳು ಮತ್ತು ಪರಿಹಾರ ಕ್ರಮಗಳು.`
+                : `Confidence-aware, evidence-based alerts and actionable notifications for ${plantProfile?.commonName || 'your plant'}.`}
+            </p>
+          </div>
+        </div>
+
+        {/* ── 2. Proper Horizontal Summary Section ── */}
+        <div
+          style={{
+            backgroundColor: 'var(--bg-surface)',
+            border: '1px solid var(--border-default)',
+            borderRadius: 'var(--radius-sm, 4px)',
+            overflow: 'hidden',
+            width: '100%',
+          }}
+        >
+          {/* Row 1 — Severity Levels: URGENT | ATTENTION | INFO */}
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(3, 1fr)',
+              borderBottom: '1px solid var(--border-default)',
+            }}
+          >
+            {/* Urgent */}
+            <div
+              style={{
+                padding: '1.25rem 1rem',
+                textAlign: 'center',
+                borderRight: '1px solid var(--border-default)',
+                background: 'var(--bg-surface)',
+              }}
+            >
+              <div
+                style={{
+                  fontSize: '0.6875rem',
+                  fontWeight: 800,
+                  fontFamily: 'var(--font-mono, monospace)',
+                  letterSpacing: '0.08em',
+                  textTransform: 'uppercase',
+                  color: 'var(--color-red)',
+                  marginBottom: '0.35rem',
+                }}
+              >
+                {isKn ? 'ತುರ್ತು' : 'URGENT'}
+              </div>
+              <div
+                style={{
+                  fontSize: '2rem',
+                  fontWeight: 800,
+                  fontFamily: 'var(--font-mono, monospace)',
+                  lineHeight: 1,
+                  color: 'var(--color-red)',
+                }}
+              >
+                {urgentCount}
+              </div>
+            </div>
+
+            {/* Attention */}
+            <div
+              style={{
+                padding: '1.25rem 1rem',
+                textAlign: 'center',
+                borderRight: '1px solid var(--border-default)',
+                background: 'var(--bg-surface)',
+              }}
+            >
+              <div
+                style={{
+                  fontSize: '0.6875rem',
+                  fontWeight: 800,
+                  fontFamily: 'var(--font-mono, monospace)',
+                  letterSpacing: '0.08em',
+                  textTransform: 'uppercase',
+                  color: 'var(--color-amber)',
+                  marginBottom: '0.35rem',
+                }}
+              >
+                {isKn ? 'ಗಮನಿಸಿ' : 'ATTENTION'}
+              </div>
+              <div
+                style={{
+                  fontSize: '2rem',
+                  fontWeight: 800,
+                  fontFamily: 'var(--font-mono, monospace)',
+                  lineHeight: 1,
+                  color: 'var(--color-amber)',
+                }}
+              >
+                {attentionCount}
+              </div>
+            </div>
+
+            {/* Info */}
+            <div
+              style={{
+                padding: '1.25rem 1rem',
+                textAlign: 'center',
+                background: 'var(--bg-surface)',
+              }}
+            >
+              <div
+                style={{
+                  fontSize: '0.6875rem',
+                  fontWeight: 800,
+                  fontFamily: 'var(--font-mono, monospace)',
+                  letterSpacing: '0.08em',
+                  textTransform: 'uppercase',
+                  color: 'var(--color-teal)',
+                  marginBottom: '0.35rem',
+                }}
+              >
+                {isKn ? 'ಮಾಹಿತಿ' : 'INFO'}
+              </div>
+              <div
+                style={{
+                  fontSize: '2rem',
+                  fontWeight: 800,
+                  fontFamily: 'var(--font-mono, monospace)',
+                  lineHeight: 1,
+                  color: 'var(--color-teal)',
+                }}
+              >
+                {infoCount}
+              </div>
             </div>
           </div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight flex items-center gap-3">
-            <span>{isKn ? 'ಗಿಡದ ಎಚ್ಚರಿಕೆಗಳು ಮತ್ತು ಅಧಿಸೂಚನೆಗಳು' : 'Plant Alerts & Notifications'}</span>
-          </h1>
-          <p className="text-sm text-white/60">
-            {isKn
-              ? `${plantProfile?.commonName || 'ಗಿಡ'}ಕ್ಕಾಗಿ ಸಾಕ್ಷ್ಯಾಧಾರಿತ ಎಚ್ಚರಿಕೆಗಳು ಮತ್ತು ಶಿಫಾರಸುಗಳು.`
-              : `Confidence-aware, evidence-based alerts and actionable notifications for ${plantProfile?.commonName || 'your plant'}.`}
-          </p>
-        </div>
 
-        {/* Severity Summary Counter Pills */}
-        <div className="flex items-center gap-2 flex-wrap">
-          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-red-500/10 border border-red-500/30 text-red-300 text-xs font-bold">
-            <AlertOctagon className="w-3.5 h-3.5 text-red-400" />
-            <span>{urgentCount} {isKn ? 'ತುರ್ತು' : 'Urgent'}</span>
-          </div>
-          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs font-bold">
-            <AlertTriangle className="w-3.5 h-3.5 text-amber-400" />
-            <span>{attentionCount} {isKn ? 'ಗಮನಿಸಿ' : 'Attention'}</span>
-          </div>
-          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-500/10 border border-blue-500/30 text-blue-300 text-xs font-bold">
-            <Info className="w-3.5 h-3.5 text-blue-400" />
-            <span>{infoCount} {isKn ? 'ಮಾಹಿತಿ' : 'Info'}</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Filter Tabs */}
-      <div className="flex items-center justify-between gap-4 border-b border-white/5 pb-3">
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setActiveTab('ACTIVE')}
-            className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 ${
-              activeTab === 'ACTIVE'
-                ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 shadow-sm'
-                : 'text-white/60 hover:text-white hover:bg-white/5'
-            }`}
+          {/* Row 2 — Status Lifecycle: ACTIVE | RESOLVED | DISMISSED */}
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(3, 1fr)',
+              background: 'var(--bg-canvas)',
+            }}
           >
-            <span>{isKn ? 'ಸಕ್ರಿಯ ಎಚ್ಚರಿಕೆಗಳು' : 'Active Alerts'}</span>
-            <span className="px-1.5 py-0.2 rounded-full bg-white/10 text-[10px]">
-              {activeAlerts.length}
-            </span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab('RESOLVED')}
-            className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 ${
-              activeTab === 'RESOLVED'
-                ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 shadow-sm'
-                : 'text-white/60 hover:text-white hover:bg-white/5'
-            }`}
-          >
-            <span>{isKn ? 'ಪರಿಹರಿಸಲಾಗಿದೆ' : 'Resolved'}</span>
-            <span className="px-1.5 py-0.2 rounded-full bg-white/10 text-[10px]">
-              {resolvedAlerts.length}
-            </span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab('DISMISSED')}
-            className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 ${
-              activeTab === 'DISMISSED'
-                ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 shadow-sm'
-                : 'text-white/60 hover:text-white hover:bg-white/5'
-            }`}
-          >
-            <span>{isKn ? 'ವಜಾಗೊಳಿಸಲಾಗಿದೆ' : 'Dismissed'}</span>
-            <span className="px-1.5 py-0.2 rounded-full bg-white/10 text-[10px]">
-              {dismissedAlerts.length}
-            </span>
-          </button>
-        </div>
-      </div>
-
-      {/* Alert Cards Container */}
-      <div className="space-y-4">
-        {currentList.length === 0 ? (
-          <div className="p-12 text-center rounded-2xl border border-white/10 bg-slate-900/40 backdrop-blur-sm space-y-3">
-            <CheckCircle2 className="w-12 h-12 text-emerald-400 mx-auto" />
-            <h3 className="text-lg font-bold text-white">
-              {activeTab === 'ACTIVE'
-                ? isKn
-                  ? 'ಯಾವುದೇ ಸಕ್ರಿಯ ಎಚ್ಚರಿಕೆಗಳಿಲ್ಲ'
-                  : 'All Systems Stable — No Active Alerts'
-                : activeTab === 'DISMISSED'
-                ? isKn
-                  ? 'ಯಾವುದೇ ವಜಾಗೊಳಿಸಿದ ಎಚ್ಚರಿಕೆಗಳಿಲ್ಲ'
-                  : 'No Dismissed Alerts'
-                : isKn
-                ? 'ಯಾವುದೇ ಪರಿಹರಿಸಿದ ಎಚ್ಚರಿಕೆಗಳಿಲ್ಲ'
-                : 'No Resolved Alerts Yet'}
-            </h3>
-            <p className="text-sm text-white/50 max-w-md mx-auto">
-              {activeTab === 'ACTIVE'
-                ? isKn
-                  ? 'ಗಿಡದ ಪರಿಸರ ಮತ್ತು ಎಲೆಗಳ ಆರೋಗ್ಯ ಸಹಜ ಸ್ಥಿತಿಯಲ್ಲಿದೆ. ನಿಯಮಿತ ನಿಗಾ ಮುಂದುವರಿಸಿ.'
-                  : 'Environmental parameters and foliar metrics are within expected ranges. Continue routine monitoring.'
-                : isKn
-                ? 'ಇತಿಹಾಸದಲ್ಲಿ ಯಾವುದೇ ನಮೂದುಗಳಿಲ್ಲ.'
-                : 'No records in this archive.'}
-            </p>
-            {activeTab === 'ACTIVE' && (
-              <div className="pt-2">
-                <Link
-                  href="/dashboard"
-                  className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white/10 hover:bg-white/15 text-white text-xs font-semibold transition-colors"
+            {[
+              { label: isKn ? 'ಸಕ್ರಿಯ' : 'ACTIVE', count: activeAlerts.length, tabKey: 'ACTIVE' as const },
+              { label: isKn ? 'ಪರಿಹರಿಸಲಾಗಿದೆ' : 'RESOLVED', count: resolvedAlerts.length, tabKey: 'RESOLVED' as const },
+              { label: isKn ? 'ವಜಾಗೊಳಿಸಲಾಗಿದೆ' : 'DISMISSED', count: dismissedAlerts.length, tabKey: 'DISMISSED' as const },
+            ].map((item, idx) => (
+              <button
+                key={item.tabKey}
+                type="button"
+                onClick={() => setActiveTab(item.tabKey)}
+                style={{
+                  padding: '0.75rem 1rem',
+                  textAlign: 'center',
+                  borderRight: idx < 2 ? '1px solid var(--border-default)' : 'none',
+                  borderTop: 'none',
+                  borderBottom: 'none',
+                  borderLeft: 'none',
+                  background: activeTab === item.tabKey ? 'var(--bg-surface)' : 'transparent',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '0.5rem',
+                  cursor: 'pointer',
+                  fontFamily: 'inherit',
+                }}
+              >
+                <span
+                  style={{
+                    fontSize: '0.6875rem',
+                    fontWeight: 700,
+                    fontFamily: 'var(--font-mono, monospace)',
+                    letterSpacing: '0.06em',
+                    color: activeTab === item.tabKey ? 'var(--color-emerald-ink)' : 'var(--text-muted)',
+                  }}
                 >
-                  <ArrowLeft className="w-3.5 h-3.5" />
-                  <span>{isKn ? 'ಡ್ಯಾಶ್‌ಬೋರ್ಡ್‌ಗೆ ಹಿಂತಿರುಗಿ' : 'Return to Dashboard'}</span>
-                </Link>
-              </div>
-            )}
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 gap-4">
-            {currentList.map(alert => (
-              <PlantAlertCard
-                key={alert.id}
-                alert={alert}
-                mode={userMode}
-                language={language}
-                onDismiss={activeTab === 'ACTIVE' ? dismissAlert : undefined}
-                onAcknowledge={activeTab === 'ACTIVE' ? acknowledgeAlert : undefined}
-              />
+                  {item.label}
+                </span>
+                <span
+                  style={{
+                    fontSize: '0.75rem',
+                    fontWeight: 800,
+                    fontFamily: 'var(--font-mono, monospace)',
+                    color: activeTab === item.tabKey ? 'var(--text-primary)' : 'var(--text-muted)',
+                    backgroundColor: activeTab === item.tabKey ? 'var(--bg-canvas)' : 'var(--bg-surface)',
+                    border: '1px solid var(--border-default)',
+                    borderRadius: '2px',
+                    padding: '1px 6px',
+                  }}
+                >
+                  {item.count}
+                </span>
+              </button>
             ))}
           </div>
-        )}
+        </div>
+
+        {/* ── 3. Alert Cards or Centered Contained Empty State ── */}
+        <div style={{ width: '100%' }}>
+          {currentList.length === 0 ? (
+            /* Deliberate Centered/Contained Empty State */
+            <div
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                textAlign: 'center',
+                padding: '3.5rem 2rem',
+                borderRadius: 'var(--radius-sm, 4px)',
+                border: '1px solid var(--border-default)',
+                backgroundColor: 'var(--bg-surface)',
+                width: '100%',
+                boxSizing: 'border-box',
+              }}
+            >
+              {/* Typographic status mark */}
+              <div
+                style={{
+                  width: '2.5rem',
+                  height: '2.5rem',
+                  borderRadius: '2px',
+                  backgroundColor: 'var(--bg-canvas)',
+                  border: '1px solid var(--color-green)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '1.25rem',
+                  color: 'var(--color-green)',
+                  marginBottom: '1rem',
+                  fontWeight: 900,
+                }}
+              >
+                ✓
+              </div>
+
+              <h2
+                style={{
+                  fontSize: '1.125rem',
+                  fontWeight: 800,
+                  color: 'var(--text-primary)',
+                  margin: '0 0 0.35rem',
+                  letterSpacing: '-0.01em',
+                }}
+              >
+                {activeTab === 'ACTIVE'
+                  ? (isKn ? 'ಎಲ್ಲ ವ್ಯವಸ್ಥೆಗಳು ಸ್ಥಿರವಾಗಿವೆ' : 'All Systems Stable')
+                  : activeTab === 'RESOLVED'
+                  ? (isKn ? 'ಯಾವುದೇ ಪರಿಹರಿಸಿದ ಎಚ್ಚರಿಕೆಗಳಿಲ್ಲ' : 'No Resolved Alerts')
+                  : (isKn ? 'ಯಾವುದೇ ವಜಾಗೊಳಿಸಿದ ಎಚ್ಚರಿಕೆಗಳಿಲ್ಲ' : 'No Dismissed Alerts')}
+              </h2>
+
+              <p
+                style={{
+                  fontSize: '0.8125rem',
+                  fontWeight: 600,
+                  color: 'var(--color-green)',
+                  margin: '0 0 0.5rem',
+                }}
+              >
+                {activeTab === 'ACTIVE'
+                  ? (isKn ? 'ಯಾವುದೇ ಸಕ್ರಿಯ ಎಚ್ಚರಿಕೆಗಳಿಲ್ಲ' : 'No active alerts')
+                  : (isKn ? 'ದಾಖಲೆಗಳು ಖಾಲಿಯಾಗಿವೆ' : 'No records in this archive')}
+              </p>
+
+              <p
+                style={{
+                  fontSize: '0.75rem',
+                  color: 'var(--text-secondary)',
+                  maxWidth: '460px',
+                  margin: '0 0 1.5rem',
+                  lineHeight: 1.5,
+                }}
+              >
+                {activeTab === 'ACTIVE'
+                  ? (isKn
+                    ? 'ಪರಿಸರ ಸಂವೇದಕಗಳು ಮತ್ತು ಸಸ್ಯದ ಅವಲೋಕನಗಳಿಗೆ ಪ್ರಸ್ತುತ ಯಾವುದೇ ಎಚ್ಚರಿಕೆಯ ಕ್ರಮದ ಅಗತ್ಯವಿಲ್ಲ.'
+                    : 'Environmental and plant observations currently require no alert action.')
+                  : (isKn
+                    ? 'ಹಿಂದಿನ ತಪಾಸಣೆಗಳಲ್ಲಿ ಯಾವುದೇ ಸಂಬಂಧಿತ ಅಧಿಸೂಚನೆಗಳನ್ನು ಸಂಗ್ರಹಿಸಲಾಗಿಲ್ಲ.'
+                    : 'Archive will reflect historical alerts as notifications are processed.')}
+              </p>
+
+              <Link
+                href="/dashboard"
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.4rem',
+                  padding: '0.5rem 1.125rem',
+                  borderRadius: 'var(--radius-xs, 2px)',
+                  fontSize: '0.8125rem',
+                  fontWeight: 600,
+                  color: 'var(--color-champagne)',
+                  backgroundColor: 'var(--color-emerald-ink)',
+                  border: 'none',
+                  textDecoration: 'none',
+                }}
+              >
+                ← {isKn ? 'ಡ್ಯಾಶ್‌ಬೋರ್ಡ್‌ಗೆ ಹಿಂತಿರುಗಿ' : 'Return to Dashboard'}
+              </Link>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+              {currentList.map((alert) => (
+                <PlantAlertCard
+                  key={alert.id}
+                  alert={alert}
+                  mode={userMode}
+                  language={language}
+                  onDismiss={activeTab === 'ACTIVE' ? dismissAlert : undefined}
+                  onAcknowledge={activeTab === 'ACTIVE' ? acknowledgeAlert : undefined}
+                />
+              ))}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

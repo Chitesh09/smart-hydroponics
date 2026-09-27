@@ -1,26 +1,6 @@
 'use client';
 
 import React from 'react';
-import {
-  Eye,
-  Thermometer,
-  TrendingUp,
-  Brain,
-  CheckCircle,
-  ArrowDown,
-  AlertCircle
-} from 'lucide-react';
-
-export type EvidenceStage =
-  | 'CAMERA OBSERVATION'
-  | 'SENSOR OBSERVATION'
-  | 'HISTORICAL CHANGE'
-  | 'INTERPRETATION'
-  | 'RECOMMENDATION'
-  | 'OBSERVATION'
-  | 'ENVIRONMENT'
-  | 'HISTORICAL TREND'
-  | 'ACTION';
 
 export interface EvidenceStep {
   stage: string;
@@ -37,134 +17,175 @@ interface EvidenceChainProps {
   confidenceLabel?: string;
 }
 
-export function EvidenceChain({ steps, confidenceScore, confidenceText, confidenceLabel = 'Confidence' }: EvidenceChainProps) {
-  const getIconForStage = (stage: string) => {
-    switch (stage) {
-      case 'OBSERVATIONS':
-      case 'CAMERA OBSERVATION':
-        return Eye;
-      case 'ENVIRONMENT':
-      case 'SENSOR OBSERVATION':
-        return Thermometer;
-      case 'HISTORICAL CONTEXT':
-      case 'HISTORICAL TREND':
-      case 'HISTORICAL CHANGE':
-        return TrendingUp;
-      case 'ASSOCIATIONS':
-        return Brain;
-      case 'REASONING':
-      case 'INTERPRETATION':
-        return Brain;
-      case 'RECOMMENDATION':
-      case 'ACTION':
-        return CheckCircle;
-      case 'LIMITATIONS':
-        return AlertCircle;
-      default:
-        return AlertCircle;
-    }
-  };
-
-  const getStageColor = (stage: string, status?: EvidenceStep['status']) => {
-    if (status === 'critical') return 'var(--color-red)';
-    if (status === 'warning') return 'var(--color-amber)';
-    if (status === 'optimal') return 'var(--color-green)';
-    if (stage === 'RECOMMENDATION' || stage === 'ACTION') return 'var(--color-green)';
-    if (stage === 'INTERPRETATION') return 'var(--color-teal)';
-    return 'var(--text-secondary)';
-  };
-
+export function EvidenceChain({
+  steps,
+  confidenceScore,
+  confidenceText,
+  confidenceLabel = 'Confidence',
+}: EvidenceChainProps) {
   if (!steps || steps.length === 0) {
     return null;
   }
 
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '0px' }}>
-      {steps.map((step, idx) => {
-        const Icon = getIconForStage(step.stage);
-        const stageColor = getStageColor(step.stage, step.status);
-        const isLast = idx === steps.length - 1;
+  const getStageBadge = (stage: string) => {
+    switch (stage) {
+      case 'OBSERVATIONS':
+      case 'CAMERA OBSERVATION':
+        return 'OPTICAL';
+      case 'ENVIRONMENT':
+      case 'SENSOR OBSERVATION':
+        return 'SENSORS';
+      case 'HISTORICAL CONTEXT':
+      case 'HISTORICAL TREND':
+      case 'HISTORICAL CHANGE':
+        return 'HISTORY';
+      case 'ASSOCIATIONS':
+        return 'CORRELATION';
+      case 'REASONING':
+      case 'INTERPRETATION':
+        return 'INFERENCE';
+      case 'RECOMMENDATION':
+      case 'ACTION':
+        return 'ACTION';
+      case 'LIMITATIONS':
+        return 'BOUNDS';
+      default:
+        return 'EVIDENCE';
+    }
+  };
 
-        return (
-          <div key={idx} style={{ display: 'flex', flexDirection: 'column' }}>
-            {/* Step Node */}
+  const getStatusColor = (status?: EvidenceStep['status']) => {
+    if (status === 'critical') return 'var(--color-red)';
+    if (status === 'warning') return 'var(--color-amber)';
+    if (status === 'optimal') return 'var(--color-green)';
+    return 'var(--text-muted)';
+  };
+
+  return (
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '0.625rem',
+        width: '100%',
+      }}
+    >
+      {/* Evidence Chain Header */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          paddingBottom: '0.5rem',
+          borderBottom: '1px solid var(--border-subtle)',
+        }}
+      >
+        <span
+          style={{
+            fontSize: '0.6875rem',
+            fontFamily: 'var(--font-mono, monospace)',
+            fontWeight: 800,
+            letterSpacing: '0.06em',
+            textTransform: 'uppercase',
+            color: 'var(--text-muted)',
+          }}
+        >
+          EVIDENCE CHAIN & REASONING TRACE
+        </span>
+
+        {(confidenceScore !== undefined || confidenceText) && (
+          <span
+            style={{
+              fontSize: '0.6875rem',
+              fontFamily: 'var(--font-mono, monospace)',
+              fontWeight: 700,
+              color: 'var(--color-teal)',
+            }}
+          >
+            {confidenceLabel}: {confidenceScore !== undefined ? `${confidenceScore}%` : confidenceText}
+          </span>
+        )}
+      </div>
+
+      {/* Step Nodes */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+        {steps.map((step, idx) => {
+          const statusColor = getStatusColor(step.status);
+          const stageBadge = getStageBadge(step.stage);
+
+          return (
             <div
+              key={idx}
               style={{
-                display: 'flex',
-                alignItems: 'flex-start',
-                gap: '14px',
-                padding: '12px 16px',
                 background: 'var(--bg-canvas)',
-                border: '1px solid var(--border-default)',
-                borderRadius: 'var(--radius-sm)',
-                position: 'relative',
+                border: '1px solid var(--border-subtle)',
+                borderRadius: 'var(--radius-xs, 2px)',
+                padding: '0.875rem 1rem',
+                display: 'grid',
+                gridTemplateColumns: '80px 1fr',
+                gap: '1rem',
+                alignItems: 'flex-start',
               }}
             >
-              <div
-                style={{
-                  width: '32px',
-                  height: '32px',
-                  borderRadius: 'var(--radius-xs)',
-                  background: 'var(--bg-surface)',
-                  border: `1px solid ${stageColor}`,
-                  color: stageColor,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  flexShrink: 0,
-                  marginTop: '2px',
-                }}
-              >
-                <Icon size={16} />
+              {/* Left Column: Stage Badge */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                <span
+                  style={{
+                    fontSize: '0.5625rem',
+                    fontFamily: 'var(--font-mono, monospace)',
+                    fontWeight: 800,
+                    letterSpacing: '0.06em',
+                    textTransform: 'uppercase',
+                    padding: '0.15rem 0.4rem',
+                    borderRadius: '2px',
+                    border: '1px solid var(--border-default)',
+                    background: 'var(--bg-surface)',
+                    color: statusColor,
+                    textAlign: 'center',
+                  }}
+                >
+                  {stageBadge}
+                </span>
+                <span
+                  style={{
+                    fontSize: '0.5625rem',
+                    fontFamily: 'var(--font-mono, monospace)',
+                    color: 'var(--text-dim)',
+                    textAlign: 'center',
+                  }}
+                >
+                  STEP 0{idx + 1}
+                </span>
               </div>
 
-              <div style={{ flex: 1 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2px' }}>
+              {/* Right Column: Finding Headline & Detail */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                   <span
                     style={{
-                      fontSize: '10px',
-                      fontWeight: 800,
-                      letterSpacing: '0.12em',
-                      color: stageColor,
-                      textTransform: 'uppercase',
+                      fontSize: '0.8125rem',
+                      fontWeight: 700,
+                      color: 'var(--text-primary)',
+                      lineHeight: 1.3,
                     }}
                   >
-                    {step.stageLabel || step.stage}
+                    {step.stageLabel || step.stage}: {step.headline}
                   </span>
-                  {idx === 0 && (confidenceText || confidenceScore !== undefined) && (
-                    <span className="scientific-meta" style={{ fontSize: '10px', color: 'var(--text-muted)' }}>
-                      {confidenceLabel}: {confidenceText || `${confidenceScore}%`}
-                    </span>
-                  )}
                 </div>
-
-                <div style={{ fontSize: '13.5px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '2px' }}>
-                  {step.headline}
-                </div>
-
-                <div style={{ fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.4 }}>
+                <div
+                  style={{
+                    fontSize: '0.75rem',
+                    color: 'var(--text-secondary)',
+                    lineHeight: 1.5,
+                  }}
+                >
                   {step.detail}
                 </div>
               </div>
             </div>
-
-            {/* Connecting Arrow */}
-            {!isLast && (
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  padding: '4px 0',
-                  color: 'var(--text-dim)',
-                }}
-              >
-                <ArrowDown size={14} />
-              </div>
-            )}
-          </div>
-        );
-      })}
+          );
+        })}
+      </div>
     </div>
   );
 }

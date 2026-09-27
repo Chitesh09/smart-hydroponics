@@ -1,20 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import {
-  AlertTriangle,
-  AlertOctagon,
-  Info,
-  X,
-  ChevronDown,
-  ChevronUp,
-  Clock,
-  ShieldCheck,
-  Check,
-} from 'lucide-react';
-import {
-  PlantAlert,
-} from '@/lib/intelligence/types';
+import { PlantAlert } from '@/lib/intelligence/types';
 import { SupportedLanguageCode, AssistantMode } from '@/lib/assistant/assistantConfig';
 import {
   getLocalizedAlert,
@@ -50,63 +37,79 @@ export const PlantAlertCard: React.FC<PlantAlertCardProps> = ({
   const isUrgent = alert.severity === 'URGENT';
   const isAttention = alert.severity === 'ATTENTION';
 
-  // Severity styling
-  const containerClasses = isUrgent
-    ? 'border-red-500/40 bg-red-950/20 text-red-100'
+  const severityColor = isUrgent
+    ? 'var(--color-red)'
     : isAttention
-    ? 'border-amber-500/40 bg-amber-950/20 text-amber-100'
-    : 'border-blue-500/30 bg-blue-950/20 text-blue-100';
-
-  const badgeClasses = isUrgent
-    ? 'bg-red-500/20 text-red-300 border-red-500/40'
-    : isAttention
-    ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
-    : 'bg-blue-500/20 text-blue-300 border-blue-500/40';
-
-  const iconColor = isUrgent
-    ? 'text-red-400'
-    : isAttention
-    ? 'text-amber-400'
-    : 'text-blue-400';
-
-  const renderIcon = () => {
-    if (isUrgent) return <AlertOctagon className={`w-5 h-5 ${iconColor} shrink-0`} />;
-    if (isAttention) return <AlertTriangle className={`w-5 h-5 ${iconColor} shrink-0`} />;
-    return <Info className={`w-5 h-5 ${iconColor} shrink-0`} />;
-  };
+    ? 'var(--color-amber)'
+    : 'var(--color-teal)';
 
   const formattedTime = new Date(alert.lastDetectedAt).toLocaleTimeString([], {
     hour: '2-digit',
     minute: '2-digit',
   });
 
-  // Compact Farmer View (e.g. for dashboard summary banner)
+  // Compact View
   if (compact) {
     return (
-      <div className={`p-3.5 rounded-xl border flex items-start justify-between gap-3 shadow-sm ${containerClasses}`}>
-        <div className="flex items-start gap-2.5 min-w-0">
-          {renderIcon()}
-          <div className="min-w-0">
-            <div className="flex items-center gap-2 flex-wrap mb-1">
-              <span className={`text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full border ${badgeClasses}`}>
-                {severityLabel}
-              </span>
-              <span className="text-xs text-white/50">{categoryLabel}</span>
-              <span className="text-xs text-white/40 flex items-center gap-1">
-                <Clock className="w-3 h-3 inline" /> {formattedTime}
-              </span>
-            </div>
-            <h4 className="text-sm font-semibold text-white truncate">{loc.title}</h4>
-            <p className="text-xs text-white/80 line-clamp-2 mt-0.5">{loc.farmerMessage}</p>
+      <div
+        style={{
+          padding: '0.875rem 1rem',
+          borderRadius: 'var(--radius-xs, 2px)',
+          border: `1px solid ${severityColor}`,
+          background: 'var(--bg-surface)',
+          display: 'flex',
+          alignItems: 'flex-start',
+          justifyContent: 'space-between',
+          gap: '0.75rem',
+          width: '100%',
+        }}
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+            <span
+              style={{
+                fontSize: '0.625rem',
+                fontFamily: 'var(--font-mono, monospace)',
+                fontWeight: 800,
+                textTransform: 'uppercase',
+                padding: '0.1rem 0.4rem',
+                borderRadius: '2px',
+                border: `1px solid ${severityColor}`,
+                color: severityColor,
+                background: 'var(--bg-canvas)',
+              }}
+            >
+              {severityLabel}
+            </span>
+            <span style={{ fontSize: '0.6875rem', color: 'var(--text-muted)' }}>{categoryLabel}</span>
+            <span style={{ fontSize: '0.6875rem', fontFamily: 'var(--font-mono, monospace)', color: 'var(--text-dim)' }}>
+              {formattedTime}
+            </span>
           </div>
+          <h4 style={{ fontSize: '0.875rem', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>
+            {loc.title}
+          </h4>
+          <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', margin: 0, lineHeight: 1.4 }}>
+            {loc.farmerMessage}
+          </p>
         </div>
+
         {onDismiss && (
           <button
+            type="button"
             onClick={() => onDismiss(alert.id)}
-            className="p-1 rounded-lg hover:bg-white/10 text-white/50 hover:text-white transition-colors shrink-0"
+            style={{
+              background: 'transparent',
+              border: 'none',
+              color: 'var(--text-muted)',
+              cursor: 'pointer',
+              fontSize: '0.875rem',
+              fontWeight: 800,
+              padding: '0.2rem 0.4rem',
+            }}
             title={language === 'kn' ? 'ವಜಾಗೊಳಿಸಿ' : 'Dismiss'}
           >
-            <X className="w-4 h-4" />
+            ×
           </button>
         )}
       </div>
@@ -114,156 +117,280 @@ export const PlantAlertCard: React.FC<PlantAlertCardProps> = ({
   }
 
   return (
-    <div className={`rounded-2xl border p-5 shadow-lg backdrop-blur-sm transition-all duration-200 ${containerClasses}`}>
+    <div
+      style={{
+        borderRadius: 'var(--radius-sm, 4px)',
+        border: `1px solid ${severityColor}`,
+        background: 'var(--bg-surface)',
+        padding: '1.25rem',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '0.875rem',
+        width: '100%',
+        boxSizing: 'border-box',
+      }}
+    >
       {/* Header Bar */}
-      <div className="flex items-start justify-between gap-4 mb-3">
-        <div className="flex items-center gap-2.5 flex-wrap">
-          {renderIcon()}
-          <span className={`text-xs uppercase font-extrabold tracking-wider px-2.5 py-0.5 rounded-full border ${badgeClasses}`}>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'flex-start',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: '0.75rem',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+          <span
+            style={{
+              fontSize: '0.625rem',
+              fontFamily: 'var(--font-mono, monospace)',
+              fontWeight: 800,
+              textTransform: 'uppercase',
+              letterSpacing: '0.06em',
+              padding: '0.2rem 0.5rem',
+              borderRadius: '2px',
+              border: `1px solid ${severityColor}`,
+              color: severityColor,
+              background: 'var(--bg-canvas)',
+            }}
+          >
             {severityLabel}
           </span>
-          <span className="text-xs font-medium px-2 py-0.5 rounded-md bg-white/5 border border-white/10 text-white/70">
+          <span
+            style={{
+              fontSize: '0.6875rem',
+              fontWeight: 600,
+              padding: '0.15rem 0.4rem',
+              borderRadius: '2px',
+              border: '1px solid var(--border-default)',
+              background: 'var(--bg-canvas)',
+              color: 'var(--text-secondary)',
+            }}
+          >
             {categoryLabel}
           </span>
           {alert.occurrenceCount > 1 && (
-            <span className="text-xs px-2 py-0.5 rounded-md bg-white/5 text-white/50 border border-white/5">
-              {language === 'kn' ? `${alert.occurrenceCount} ಬಾರಿ ಪತ್ತೆಯಾಗಿದೆ` : `${alert.occurrenceCount}x detected`}
+            <span
+              style={{
+                fontSize: '0.6875rem',
+                fontFamily: 'var(--font-mono, monospace)',
+                color: 'var(--text-muted)',
+              }}
+            >
+              {language === 'kn' ? `${alert.occurrenceCount} ಬಾರಿ ಪತ್ತೆ` : `${alert.occurrenceCount}x detected`}
             </span>
           )}
-          <span className="text-xs text-white/40 flex items-center gap-1">
-            <Clock className="w-3 h-3 inline" /> {formattedTime}
+          <span style={{ fontSize: '0.6875rem', fontFamily: 'var(--font-mono, monospace)', color: 'var(--text-dim)' }}>
+            {formattedTime}
           </span>
         </div>
 
-        <div className="flex items-center gap-1.5 shrink-0">
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           {onAcknowledge && alert.status === 'ACTIVE' && (
             <button
+              type="button"
               onClick={() => onAcknowledge(alert.id)}
-              className="text-xs px-2.5 py-1 rounded-lg bg-white/10 hover:bg-white/15 text-white/80 transition-colors flex items-center gap-1"
-              title={language === 'kn' ? 'ಪರಿಶೀಲಿಸಲಾಗಿದೆ ಎಂದು ಗುರುತಿಸಿ' : 'Acknowledge'}
+              style={{
+                fontSize: '0.6875rem',
+                fontWeight: 700,
+                fontFamily: 'var(--font-mono, monospace)',
+                padding: '0.25rem 0.65rem',
+                borderRadius: '2px',
+                border: '1px solid var(--border-default)',
+                background: 'var(--bg-canvas)',
+                color: 'var(--text-primary)',
+                cursor: 'pointer',
+              }}
             >
-              <Check className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">{language === 'kn' ? 'ಪರಿಶೀಲಿಸಲಾಗಿದೆ' : 'Ack'}</span>
+              {language === 'kn' ? 'ಪರಿಶೀಲಿಸಲಾಗಿದೆ' : 'Acknowledge'}
             </button>
           )}
           {onDismiss && alert.status !== 'DISMISSED' && (
             <button
+              type="button"
               onClick={() => onDismiss(alert.id)}
-              className="p-1.5 rounded-lg hover:bg-white/10 text-white/50 hover:text-white transition-colors"
-              title={language === 'kn' ? 'ವಜಾಗೊಳಿಸಿ' : 'Dismiss Alert'}
+              style={{
+                fontSize: '0.875rem',
+                fontWeight: 800,
+                color: 'var(--text-muted)',
+                background: 'transparent',
+                border: 'none',
+                cursor: 'pointer',
+                padding: '0.2rem 0.4rem',
+              }}
+              title={language === 'kn' ? 'ವಜಾಗೊಳಿಸಿ' : 'Dismiss'}
             >
-              <X className="w-4 h-4" />
+              ×
             </button>
           )}
         </div>
       </div>
 
       {/* Main Title */}
-      <h3 className="text-base font-bold text-white mb-2 tracking-tight">
+      <h3
+        style={{
+          fontSize: '1rem',
+          fontWeight: 800,
+          color: 'var(--text-primary)',
+          margin: 0,
+          letterSpacing: '-0.01em',
+        }}
+      >
         {loc.title}
       </h3>
 
-      {/* Farmer Presentation: What, Why, What to do */}
-      <div className="space-y-3 bg-black/25 rounded-xl p-4 border border-white/5">
-        <div>
-          <span className="text-[10px] uppercase font-bold tracking-wider text-emerald-400 block mb-0.5">
-            {language === 'kn' ? 'ಏನು ಸಂಭವಿಸಿದೆ?' : 'What Is Happening'}
+      {/* Structured Farmer Presentation: What, Why, Action */}
+      <div
+        style={{
+          background: 'var(--bg-canvas)',
+          border: '1px solid var(--border-subtle)',
+          borderRadius: 'var(--radius-xs, 2px)',
+          padding: '1rem',
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+          gap: '0.875rem',
+        }}
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+          <span
+            style={{
+              fontSize: '0.625rem',
+              fontFamily: 'var(--font-mono, monospace)',
+              fontWeight: 800,
+              textTransform: 'uppercase',
+              color: 'var(--text-muted)',
+            }}
+          >
+            {language === 'kn' ? 'ಏನು ಸಂಭವಿಸಿದೆ?' : 'WHAT IS HAPPENING'}
           </span>
-          <p className="text-sm text-white/90 leading-relaxed">{loc.farmerMessage}</p>
-        </div>
-
-        <div>
-          <span className="text-[10px] uppercase font-bold tracking-wider text-amber-400 block mb-0.5">
-            {language === 'kn' ? 'ಏಕೆ ಹೀಗಾಗಿದೆ?' : 'Why Am I Seeing This'}
-          </span>
-          <p className="text-sm text-white/80 leading-relaxed">{loc.farmerWhy}</p>
-        </div>
-
-        <div>
-          <span className="text-[10px] uppercase font-bold tracking-wider text-cyan-400 block mb-0.5">
-            {language === 'kn' ? 'ಮುಂದಿನ ಕ್ರಮ' : 'Recommended Action'}
-          </span>
-          <p className="text-sm font-medium text-cyan-200 leading-relaxed flex items-start gap-1.5">
-            <span className="inline-block mt-1 w-1.5 h-1.5 rounded-full bg-cyan-400 shrink-0" />
-            <span>{loc.farmerAction}</span>
+          <p style={{ fontSize: '0.75rem', color: 'var(--text-primary)', margin: 0, lineHeight: 1.45 }}>
+            {loc.farmerMessage}
           </p>
         </div>
 
-        {loc.limitation && (
-          <div className="pt-2 border-t border-white/5 text-[11px] text-white/50 italic flex items-center gap-1.5">
-            <ShieldCheck className="w-3.5 h-3.5 shrink-0 text-white/40" />
-            <span>{loc.limitation}</span>
-          </div>
-        )}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+          <span
+            style={{
+              fontSize: '0.625rem',
+              fontFamily: 'var(--font-mono, monospace)',
+              fontWeight: 800,
+              textTransform: 'uppercase',
+              color: 'var(--color-amber)',
+            }}
+          >
+            {language === 'kn' ? 'ಏಕೆ ಹೀಗಾಗಿದೆ?' : 'WHY AM I SEEING THIS'}
+          </span>
+          <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', margin: 0, lineHeight: 1.45 }}>
+            {loc.farmerWhy}
+          </p>
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+          <span
+            style={{
+              fontSize: '0.625rem',
+              fontFamily: 'var(--font-mono, monospace)',
+              fontWeight: 800,
+              textTransform: 'uppercase',
+              color: 'var(--color-emerald-ink)',
+            }}
+          >
+            {language === 'kn' ? 'ಮುಂದಿನ ಕ್ರಮ' : 'RECOMMENDED ACTION'}
+          </span>
+          <p style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-primary)', margin: 0, lineHeight: 1.45 }}>
+            {loc.farmerAction}
+          </p>
+        </div>
       </div>
 
-      {/* Technical Mode Toggle & Details */}
+      {loc.limitation && (
+        <div style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>
+          Note: {loc.limitation}
+        </div>
+      )}
+
+      {/* Technical Mode Toggle & Diagnostic Panel */}
       {(mode === 'technical' || showTechnicalDetails) && (
-        <div className="mt-4 pt-3 border-t border-white/10 space-y-3">
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
-            <div className="bg-black/30 p-2.5 rounded-lg border border-white/5">
-              <span className="text-white/40 block text-[10px] uppercase font-bold">{language === 'kn' ? 'ನಿಯತಾಂಕ' : 'Metric'}</span>
-              <span className="font-mono font-medium text-white">{alert.metric || 'general'}</span>
+        <div
+          style={{
+            borderTop: '1px solid var(--border-subtle)',
+            paddingTop: '0.75rem',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '0.625rem',
+          }}
+        >
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
+              gap: '0.5rem',
+              fontSize: '0.6875rem',
+              fontFamily: 'var(--font-mono, monospace)',
+            }}
+          >
+            <div style={{ background: 'var(--bg-canvas)', padding: '0.5rem', border: '1px solid var(--border-default)', borderRadius: '2px' }}>
+              <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.5625rem' }}>METRIC</span>
+              <span style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{alert.metric || 'general'}</span>
             </div>
-            <div className="bg-black/30 p-2.5 rounded-lg border border-white/5">
-              <span className="text-white/40 block text-[10px] uppercase font-bold">{language === 'kn' ? 'ಪ್ರಸ್ತುತ ಮೌಲ್ಯ' : 'Current Value'}</span>
-              <span className="font-mono font-medium text-emerald-300">{alert.currentValue ?? '--'}</span>
+            <div style={{ background: 'var(--bg-canvas)', padding: '0.5rem', border: '1px solid var(--border-default)', borderRadius: '2px' }}>
+              <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.5625rem' }}>MEASURED</span>
+              <span style={{ fontWeight: 700, color: 'var(--color-green)' }}>{alert.currentValue ?? '--'}</span>
             </div>
-            <div className="bg-black/30 p-2.5 rounded-lg border border-white/5">
-              <span className="text-white/40 block text-[10px] uppercase font-bold">{language === 'kn' ? 'ಮೂಲ ಮೌಲ್ಯ' : 'Baseline'}</span>
-              <span className="font-mono font-medium text-white/70">{alert.baselineValue ?? '--'}</span>
+            <div style={{ background: 'var(--bg-canvas)', padding: '0.5rem', border: '1px solid var(--border-default)', borderRadius: '2px' }}>
+              <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.5625rem' }}>BASELINE</span>
+              <span style={{ fontWeight: 700, color: 'var(--text-secondary)' }}>{alert.baselineValue ?? '--'}</span>
             </div>
-            <div className="bg-black/30 p-2.5 rounded-lg border border-white/5">
-              <span className="text-white/40 block text-[10px] uppercase font-bold">{language === 'kn' ? 'ಮಿತಿ' : 'Threshold'}</span>
-              <span className="font-mono font-medium text-amber-300">{alert.threshold ?? '--'}</span>
+            <div style={{ background: 'var(--bg-canvas)', padding: '0.5rem', border: '1px solid var(--border-default)', borderRadius: '2px' }}>
+              <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.5625rem' }}>THRESHOLD</span>
+              <span style={{ fontWeight: 700, color: 'var(--color-amber)' }}>{alert.threshold ?? '--'}</span>
             </div>
           </div>
 
-          <div className="bg-black/40 p-3 rounded-lg border border-white/5 text-xs space-y-1.5 font-mono text-white/70">
-            <div className="flex items-center justify-between text-[11px]">
-              <span className="text-white/40">TRIGGER TYPE:</span>
-              <span className="text-white">{alert.triggerType}</span>
+          <div
+            style={{
+              background: 'var(--bg-canvas)',
+              padding: '0.625rem 0.75rem',
+              borderRadius: '2px',
+              border: '1px solid var(--border-subtle)',
+              fontSize: '0.6875rem',
+              fontFamily: 'var(--font-mono, monospace)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '0.35rem',
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span style={{ color: 'var(--text-muted)' }}>TRIGGER: {alert.triggerType}</span>
+              <span style={{ color: 'var(--color-teal)', fontWeight: 700 }}>CONFIDENCE: {alert.confidence}</span>
             </div>
-            <div className="flex items-center justify-between text-[11px]">
-              <span className="text-white/40">CONFIDENCE:</span>
-              <span className={`font-bold ${alert.confidence === 'HIGH' ? 'text-emerald-400' : alert.confidence === 'MODERATE' ? 'text-amber-400' : 'text-blue-400'}`}>
-                {alert.confidence}
-              </span>
-            </div>
-            <div className="text-[11px] text-white/60">
-              <span className="text-white/40 block mb-0.5">CONFIDENCE REASON:</span>
-              <span>{alert.confidenceReason}</span>
-            </div>
-            <div className="text-[11px] text-white/60 pt-1 border-t border-white/5">
-              <span className="text-white/40 block mb-0.5">TECHNICAL LOG:</span>
-              <span>{alert.technicalMessage}</span>
-            </div>
-            <div className="flex items-center justify-between text-[10px] text-white/40 pt-1 border-t border-white/5">
-              <span>ALERT ID: {alert.id}</span>
-              <span>STATUS: {statusLabel}</span>
+            <div style={{ color: 'var(--text-secondary)' }}>
+              LOG: {alert.technicalMessage}
             </div>
           </div>
         </div>
       )}
 
-      {/* Mode toggle button if in Farmer mode */}
+      {/* Technical Diagnostics Toggle (for farmer mode) */}
       {mode === 'farmer' && (
-        <div className="mt-3 flex justify-end">
+        <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
           <button
+            type="button"
             onClick={() => setShowTechnicalDetails(!showTechnicalDetails)}
-            className="text-[11px] text-white/40 hover:text-white/80 transition-colors flex items-center gap-1"
+            style={{
+              fontSize: '0.6875rem',
+              fontFamily: 'var(--font-mono, monospace)',
+              color: 'var(--text-muted)',
+              background: 'transparent',
+              border: 'none',
+              cursor: 'pointer',
+              textDecoration: 'underline',
+            }}
           >
-            {showTechnicalDetails ? (
-              <>
-                <span>{language === 'kn' ? 'ವಿವರಗಳನ್ನು ಮರೆಮಾಡಿ' : 'Hide diagnostics'}</span>
-                <ChevronUp className="w-3.5 h-3.5" />
-              </>
-            ) : (
-              <>
-                <span>{language === 'kn' ? 'ತಾಂತ್ರಿಕ ವಿವರಗಳು' : 'Diagnostic details'}</span>
-                <ChevronDown className="w-3.5 h-3.5" />
-              </>
-            )}
+            {showTechnicalDetails
+              ? (language === 'kn' ? 'ತಾಂತ್ರಿಕ ವಿವರಗಳನ್ನು ಮರೆಮಾಡಿ ↑' : 'Hide technical diagnostics ↑')
+              : (language === 'kn' ? 'ತಾಂತ್ರಿಕ ವಿವರಗಳು ↓' : 'Diagnostic telemetry details ↓')}
           </button>
         </div>
       )}

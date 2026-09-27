@@ -400,7 +400,7 @@ export default function Dashboard() {
                 style={{ fontSize: '11.5px', padding: '6px 14px', marginTop: '4px' }}
                 onClick={() => startCamera()}
               >
-                <span className="font-bold">[ + ]</span>
+                <span className="font-bold">+</span>
                 <span>{isKn ? copy.ui.startLiveCamera : 'Start Live Plant Camera'}</span>
               </button>
             </div>
@@ -451,7 +451,7 @@ export default function Dashboard() {
                     className="btn btn-secondary"
                     style={{ fontSize: '10.5px', padding: '4px 10px' }}
                   >
-                    <span className="font-bold">[ + ]</span>
+                    <span className="font-bold">+</span>
                     <span>{isKn ? 'ಕ್ಯಾಮೆರಾ ಮೂಲಕ ಗುರುತಿಸಿ' : 'Identify via Camera'}</span>
                   </button>
                   <Link
@@ -473,16 +473,16 @@ export default function Dashboard() {
                   fontWeight: 600,
                   padding: '2px 8px',
                   borderRadius: 'var(--radius-xs)',
-                  background: 'rgba(28, 167, 160, 0.12)',
-                  color: 'var(--color-teal)',
-                  border: '1px solid rgba(28, 167, 160, 0.25)',
+                  background: 'var(--bg-canvas)',
+                  color: 'var(--color-green)',
+                  border: '1px solid var(--border-default)',
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: '4px',
                 }}
                 title={getLocalizedLifecycleState(activeProfile.lifecycleState || 'MONITORING', language)}
               >
-                <span>🌱</span>
+                <span style={{ fontSize: '9px', fontWeight: 800 }}>◆</span>
                 <span>{getLocalizedLifecycleState(activeProfile.lifecycleState || 'MONITORING', language)}</span>
               </span>
               {activeProfile.completeness && (
@@ -508,7 +508,7 @@ export default function Dashboard() {
 
             {userMode === 'technical' && (
               <div style={{ fontSize: '10.5px', fontFamily: 'var(--font-mono)', color: 'var(--text-muted)', marginTop: '4px' }}>
-                plantId: <span style={{ color: 'var(--color-teal)' }}>{activeProfile.plantId}</span>
+                Specimen ID: <span style={{ color: 'var(--color-teal)' }}>{activeProfile.plantId === 'plant_primary' ? 'HS-01' : activeProfile.plantId}</span>
               </div>
             )}
           </div>

@@ -249,13 +249,13 @@ export default function AnalyticsPage() {
           </div>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <span className="font-bold text-slate-500">[Date]</span>
+            <span style={{ fontSize: '10px', fontFamily: 'var(--font-mono, monospace)', fontWeight: 800, color: 'var(--color-emerald-ink)', background: 'var(--color-champagne)', padding: '2px 6px', borderRadius: '2px' }}>CHECKPOINTS</span>
             <span className="scientific-meta">{observations.length} {copy.analytics.checkpointsCount}</span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <span className="font-bold text-slate-500">[Log]</span>
+            <span style={{ fontSize: '10px', fontFamily: 'var(--font-mono, monospace)', fontWeight: 800, color: 'var(--color-emerald-ink)', background: 'var(--color-champagne)', padding: '2px 6px', borderRadius: '2px' }}>TELEMETRY</span>
             <span className="scientific-meta">{history.length} {copy.analytics.dataIntervalsCount}</span>
           </div>
         </div>
@@ -486,7 +486,7 @@ export default function AnalyticsPage() {
       >
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span className="font-bold text-slate-500">[Date]</span>
+            <span style={{ fontSize: '10px', fontFamily: 'var(--font-mono, monospace)', fontWeight: 800, color: 'var(--color-emerald-ink)', background: 'var(--color-champagne)', padding: '2px 6px', borderRadius: '2px' }}>TIMELINE</span>
             <span className="section-label">{copy.analytics.milestonesTitle}</span>
           </div>
           <span className="scientific-meta">{copy.analytics.milestonesSubtitle}</span>

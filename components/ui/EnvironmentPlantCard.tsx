@@ -1,16 +1,11 @@
 'use client';
 
 import React, { useState } from 'react';
-
-
 import {
   CorrelationAnalysisSummary,
   EnvironmentPlantAssociation,
-  AssociationStrength,
-  AssociationConfidenceLevel,
 } from '@/lib/intelligence/types';
 import { SupportedLanguageCode, AssistantMode } from '@/lib/assistant/assistantConfig';
-
 import {
   getLocalizedCorrelationSummary,
   getLocalizedAssociation,
@@ -27,15 +22,45 @@ interface EnvironmentPlantCardProps {
   className?: string;
 }
 
+function formatHumanLabel(raw: string, isKn: boolean): string {
+  if (!raw) return isKn ? 'ಲಭ್ಯವಿಲ್ಲ' : 'Unspecified Metric';
+  const lower = raw.toLowerCase().replace(/[_\-\s]/g, '');
+
+  if (lower.includes('tds') || lower.includes('nutrient')) {
+    return isKn ? 'ಪೋಷಕಾಂಶಗಳ ಸಾಂದ್ರತೆ (TDS)' : 'Total Dissolved Solids (TDS)';
+  }
+  if (lower.includes('water') || lower.includes('reservoir')) {
+    return isKn ? 'ತೊಟ್ಟಿಯ ನೀರಿನ ಮಟ್ಟ' : 'Reservoir Water Level';
+  }
+  if (lower.includes('ph') || lower.includes('acidity')) {
+    return isKn ? 'ದ್ರಾವಣದ ಆಮ್ಲೀಯತೆ (pH)' : 'Solution Acidity (pH)';
+  }
+  if (lower.includes('visual') || lower.includes('health') || lower.includes('foliage')) {
+    return isKn ? 'ಎಲೆಗಳ ದೃಶ್ಯ ಆರೋಗ್ಯ' : 'Visual Foliage Health';
+  }
+  if (lower.includes('canopy') || lower.includes('area') || lower.includes('coverage')) {
+    return isKn ? 'ಎಲೆಗಳ ವ್ಯಾಪ್ತಿ ಪ್ರದೇಶ' : 'Canopy Coverage Area';
+  }
+  if (lower.includes('chlorosis') || lower.includes('yellow')) {
+    return isKn ? 'ಎಲೆಗಳ ಹಳದಿ ಬಣ್ಣ (ಕ್ಲೋರೋಸಿಸ್)' : 'Foliar Chlorosis Ratio';
+  }
+
+  // Fallback: title-case human string, stripping camelCase
+  return raw
+    .replace(/([A-Z])/g, ' $1')
+    .replace(/[_\-]+/g, ' ')
+    .trim()
+    .replace(/^./, (str) => str.toUpperCase());
+}
+
 export function EnvironmentPlantCard({
   summary,
   associations = summary?.associations || [],
   language = 'en',
   userMode = 'farmer',
-  onUserModeChange,
   className = '',
 }: EnvironmentPlantCardProps) {
-  const [isExpanded, setIsExpanded] = React.useState(false);
+  const [isLimitationsOpen, setIsLimitationsOpen] = useState(false);
   const isKn = language === 'kn';
 
   const localizedSummary = summary ? getLocalizedCorrelationSummary(summary, language) : null;
@@ -43,367 +68,537 @@ export function EnvironmentPlantCard({
   const activeAssoc = primaryAssoc;
   const localizedAssoc = activeAssoc ? getLocalizedAssociation(activeAssoc, language) : null;
 
-  const getStrengthBadgeClass = (strength: AssociationStrength) => {
-    switch (strength) {
-      case 'strong':
-        return 'bg-[var(--bg-tint-green)] text-[var(--color-green)] border-[var(--color-green)]/30';
-      case 'moderate':
-        return 'bg-[var(--bg-tint-teal)] text-[var(--color-teal)] border-[var(--color-teal)]/30';
-      case 'weak':
-        return 'bg-[var(--bg-tint-amber)] text-[var(--color-amber)] border-[var(--color-amber)]/30';
-      case 'none':
-      default:
-        return 'bg-[var(--bg-canvas)] text-[var(--text-muted)] border-[var(--border-default)]';
-    }
-  };
-
-  const getConfidenceBadgeClass = (conf: AssociationConfidenceLevel) => {
-    switch (conf) {
-      case 'HIGH':
-        return 'bg-[var(--bg-tint-green)] text-[var(--color-green)] border-[var(--color-green)]/30';
-      case 'MODERATE':
-        return 'bg-[var(--bg-tint-teal)] text-[var(--color-teal)] border-[var(--color-teal)]/30';
-      case 'LOW':
-        return 'bg-[var(--bg-tint-amber)] text-[var(--color-amber)] border-[var(--color-amber)]/30';
-      case 'INSUFFICIENT':
-      default:
-        return 'bg-[var(--bg-canvas)] text-[var(--text-muted)] border-[var(--border-default)]';
-    }
-  };
+  // Human-readable labels
+  const envMetricName = activeAssoc ? formatHumanLabel(activeAssoc.environmentMetric || activeAssoc.environmentLabel, isKn) : (isKn ? 'ಪರಿಸರ ಅಳತೆ' : 'Nutrient & Water Chemistry');
+  const plantMetricName = activeAssoc ? formatHumanLabel(activeAssoc.plantMetric || activeAssoc.plantLabel, isKn) : (isKn ? 'ಸಸ್ಯದ ಆರೋಗ್ಯ' : 'Visual Foliage Condition');
 
   return (
-    <div
-      className={`rounded-md border bg-[var(--bg-surface)] overflow-hidden transition-all duration-300 ${
-        summary?.status === 'active_associations'
-          ? 'border-[var(--color-teal)]/50'
-          : summary?.status === 'sensor_unavailable'
-          ? 'border-[var(--color-red)]/50'
-          : summary?.status === 'insufficient_history'
-          ? 'border-[var(--color-amber)]/50'
-          : 'border-[var(--border-default)]'
-      } ${className}`}
+    <section
+      aria-label={isKn ? 'ಪರಿಸರ ↔ ಸಸ್ಯ ಪರಸ್ಪರ ಸಂಬಂಧ' : 'Environment to Plant Correlation'}
+      className={className}
+      style={{
+        background: 'var(--bg-surface)',
+        border: '1px solid var(--border-default)',
+        borderRadius: 'var(--radius-sm, 4px)',
+        overflow: 'hidden',
+        width: '100%',
+        marginTop: '1.25rem',
+        marginBottom: '1.25rem',
+      }}
     >
-      {/* CARD HEADER */}
-      <div className="p-4 sm:p-5 border-b border-[var(--border-default)]">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-sm bg-[var(--bg-canvas)] border border-[var(--border-default)] text-[var(--text-muted)]">
-              <span className="font-bold">≡</span>
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h3 className="font-semibold text-[var(--text-primary)] text-base sm:text-lg tracking-tight">
-                  {isKn ? 'ಪರಿಸರ ↔ ಸಸ್ಯ ಪರಸ್ಪರ ಸಂಬಂಧ' : 'Environment ↔ Plant Correlation'}
-                </h3>
-              </div>
-              <p className="text-xs text-[var(--text-muted)] mt-0.5">
-                {summary ? (isKn
-                  ? 'ನೀರಿನ ಸಂವೇದಕಗಳು ಮತ್ತು ಎಲೆಗಳ ದೃಶ್ಯ ಬದಲಾವಣೆಗಳ ವೈಜ್ಞಾನಿಕ ಪರಸ್ಪರ ಸಂಬಂಧ'
-                  : 'Evidence-based associations between nutrient solution and visual foliage'
-                ) : (isKn ? 'ಸಾಕಷ್ಟು ಡೇಟಾ ಇಲ್ಲ' : 'Insufficient historical data')}
-              </p>
-            </div>
+      {/* ── 1. Header Bar ── */}
+      <div
+        style={{
+          padding: '1.125rem 1.25rem',
+          borderBottom: '1px solid var(--border-subtle)',
+          display: 'flex',
+          flexWrap: 'wrap',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: '0.75rem',
+        }}
+      >
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <span
+              style={{
+                fontSize: '0.625rem',
+                fontFamily: 'var(--font-mono, monospace)',
+                fontWeight: 800,
+                letterSpacing: '0.08em',
+                textTransform: 'uppercase',
+                padding: '0.2rem 0.5rem',
+                borderRadius: '2px',
+                background: 'var(--color-emerald-ink)',
+                color: 'var(--color-champagne)',
+              }}
+            >
+              SYNTHESIS
+            </span>
+            <h2
+              style={{
+                fontSize: '1rem',
+                fontWeight: 800,
+                letterSpacing: '-0.01em',
+                color: 'var(--text-primary)',
+                margin: 0,
+              }}
+            >
+              {isKn ? 'ಪರಿಸರ ↔ ಸಸ್ಯ ಪರಸ್ಪರ ಸಂಬಂಧ' : 'Environment ↔ Plant Correlation'}
+            </h2>
           </div>
-
-          {summary && (
-            <div className="flex items-center gap-2 self-end sm:self-center">
-              {/* Status Badge */}
-              <span
-                className={`px-2.5 py-1 text-xs font-medium rounded-full border flex items-center gap-1.5 ${
-                  summary.status === 'active_associations'
-                    ? 'bg-[var(--bg-tint-teal)] text-[var(--color-teal)] border-[var(--color-teal)]/30'
-                    : summary.status === 'insufficient_history'
-                    ? 'bg-[var(--bg-tint-amber)] text-[var(--color-amber)] border-[var(--color-amber)]/30'
-                    : summary.status === 'sensor_unavailable'
-                    ? 'bg-[var(--bg-tint-red)] text-[var(--color-red)] border-[var(--color-red)]/30'
-                    : 'bg-[var(--bg-canvas)] text-[var(--text-muted)] border-[var(--border-default)]'
-                }`}
-              >
-                <span
-                  className={`w-1.5 h-1.5 rounded-full ${
-                    summary.status === 'active_associations'
-                      ? 'bg-[var(--color-teal)] animate-pulse'
-                      : summary.status === 'insufficient_history'
-                      ? 'bg-[var(--color-amber)]'
-                      : summary.status === 'sensor_unavailable'
-                      ? 'bg-[var(--color-red)]'
-                      : 'bg-[var(--text-muted)]'
-                  }`}
-                />
-                {localizedSummary?.statusLabel || summary.status.replace('_', ' ')}
-              </span>
-            </div>
-          )}
+          <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', margin: '0.25rem 0 0' }}>
+            {isKn
+              ? 'ನೀರಿನ ಸಂವೇದಕಗಳು ಮತ್ತು ಎಲೆಗಳ ದೃಶ್ಯ ಬದಲಾವಣೆಗಳ ಸಾಕ್ಷ್ಯಾಧಾರಿತ ವಿಶ್ಲೇಷಣೆ.'
+              : 'Evidence-based cross-modal synthesis between solution chemistry and foliar health.'}
+          </p>
         </div>
+
+        {summary && (
+          <span
+            style={{
+              fontSize: '0.6875rem',
+              fontFamily: 'var(--font-mono, monospace)',
+              fontWeight: 700,
+              textTransform: 'uppercase',
+              padding: '0.2rem 0.6rem',
+              borderRadius: '2px',
+              border: '1px solid var(--border-default)',
+              color: 'var(--text-secondary)',
+              background: 'var(--bg-canvas)',
+            }}
+          >
+            {localizedSummary?.statusLabel || summary.status.replace(/_/g, ' ')}
+          </span>
+        )}
       </div>
 
-      {!summary || !localizedSummary ? (
-        <div className="p-8 text-center flex flex-col items-center justify-center text-[var(--text-muted)] bg-[var(--bg-canvas)]">
-          <span className="text-3xl mb-3 opacity-20">≡</span>
-          <p className="text-sm font-medium">{isKn ? 'ಪರಸ್ಪರ ಸಂಬಂಧವನ್ನು ನಿರ್ಧರಿಸಲು ಸಾಕಷ್ಟು ಡೇಟಾ ಇಲ್ಲ.' : 'Not enough historical data to determine a meaningful relationship.'}</p>
-          <p className="text-xs opacity-70 mt-1">{isKn ? 'ಹೆಚ್ಚಿನ ಡೇಟಾ ಲಭ್ಯವಾದಾಗ ಇದು ನವೀಕರಿಸಲ್ಪಡುತ್ತದೆ.' : 'This will populate as more environment and plant observations are gathered.'}</p>
+      {/* ── 2. Card Body ── */}
+      {!summary || summary.status === 'insufficient_history' || !localizedSummary ? (
+        <div
+          style={{
+            padding: '2.5rem 1.5rem',
+            textAlign: 'center',
+            background: 'var(--bg-canvas)',
+            color: 'var(--text-muted)',
+          }}
+        >
+          <div style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-dim)', marginBottom: '0.5rem' }}>
+            ≡
+          </div>
+          <p style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-primary)', margin: 0 }}>
+            {isKn
+              ? 'ಪರಸ್ಪರ ಸಂಬಂಧವನ್ನು ನಿರ್ಧರಿಸಲು ಸಾಕಷ್ಟು ಡೇಟಾ ಇಲ್ಲ.'
+              : 'Not enough historical data to compute statistical correlation.'}
+          </p>
+          <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>
+            {isKn
+              ? 'ಪರಿಸರ ಸಂವೇದಕಗಳು ಮತ್ತು ಸಸ್ಯ ತಪಾಸಣೆಗಳ ಡೇಟಾ ಸಂಗ್ರಹವಾದಂತೆ ಇದು ಸಕ್ರಿಯಗೊಳ್ಳುತ್ತದೆ.'
+              : 'Coincident shift trajectories require at least 3 paired observation cycles.'}
+          </p>
         </div>
       ) : (
-        <>
-      {/* CARD BODY */}
-      <div className="p-4 sm:p-6 space-y-5">
-        {/* CASE 1: SENSORS UNAVAILABLE */}
-        {summary.status === 'sensor_unavailable' && (
-          <div className="p-4 rounded-xl bg-[var(--bg-tint-red)] border border-[var(--color-red)]/30 text-[var(--text-primary)]">
-            <div className="flex items-start gap-3">
-              <span className="text-[var(--color-red)] font-bold shrink-0 mt-0.5">⚠</span>
-              <div>
-                <h4 className="text-sm font-semibold text-[var(--color-red)]">{localizedSummary.headline}</h4>
-                <p className="text-xs text-[var(--color-red)]/80 mt-1 leading-relaxed">{localizedSummary.why}</p>
-                <div className="mt-3 p-2.5 rounded-lg bg-[var(--bg-canvas)] border border-[var(--color-red)]/30 text-xs text-[var(--color-red)]">
-                  <span className="font-semibold">{isKn ? 'ಕ್ರಮ: ' : 'Action: '}</span>
-                  {localizedSummary.action}
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* CASE 2: INSUFFICIENT HISTORY */}
-        {summary.status === 'insufficient_history' && (
-          <div className="p-4 rounded-xl bg-[var(--bg-tint-amber)] border border-[var(--color-amber)]/30 text-[var(--text-primary)]">
-            <div className="flex items-start gap-3">
-              <span className="text-[var(--color-amber)] font-bold shrink-0 mt-0.5">⏱</span>
-              <div className="flex-1">
-                <h4 className="text-sm font-semibold text-[var(--color-amber)]">{localizedSummary.headline}</h4>
-                <p className="text-xs text-[var(--color-amber)]/80 mt-1 leading-relaxed">{localizedSummary.why}</p>
-                <div className="mt-3 flex items-center justify-between text-xs text-[var(--color-amber)]/90 bg-[var(--bg-canvas)] p-2.5 rounded-lg border border-[var(--color-amber)]/30">
-                  <span>
-                    {isKn ? 'ದಾಖಲಾದ ಜೋಡಿ ಡೇಟಾ: ' : 'Paired Observations: '}
-                    <strong>{summary.sampleSize} / 3</strong>
-                  </span>
-                  <span>{isKn ? 'ಕನಿಷ್ಠ 3 ಅಗತ್ಯ' : 'Need at least 3 for trend'}</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* CASE 3: ACTIVE OR STABLE ASSOCIATIONS */}
-        {(summary.status === 'active_associations' || summary.status === 'no_clear_association') && activeAssoc && localizedAssoc && (
-          <div className="space-y-4">
-            {/* Association Badges Bar */}
-            <div className="mb-4">
-              <span className="text-[11px] uppercase tracking-wider font-semibold text-[var(--text-muted)] block mb-2">
-                {isKn ? 'ಸಂಬಂಧದ ಸ್ಥಿತಿ' : 'Association Status'}
+        <div style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+          {/* Association Status Panel: STATUS | EVIDENCE | CONFIDENCE */}
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+              gap: '0.875rem',
+              width: '100%',
+            }}
+          >
+            {/* Status Field */}
+            <div
+              style={{
+                background: 'var(--bg-canvas)',
+                border: '1px solid var(--border-default)',
+                borderRadius: 'var(--radius-sm, 4px)',
+                padding: '0.875rem 1rem',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '0.25rem',
+              }}
+            >
+              <span
+                style={{
+                  fontSize: '0.625rem',
+                  fontFamily: 'var(--font-mono, monospace)',
+                  fontWeight: 700,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.05em',
+                  color: 'var(--text-muted)',
+                }}
+              >
+                {isKn ? 'ಸ್ಥಿತಿ' : 'STATUS'}
               </span>
-              <div className="flex flex-wrap items-center gap-2">
-                <span
-                  className={`px-3 py-1 text-sm font-semibold rounded-lg border ${getStrengthBadgeClass(
-                    activeAssoc.associationStrength
-                  )}`}
-                >
-                  {getLocalizedAssociationStrength(activeAssoc.associationStrength, language)}
-                </span>
-
-                <span className="px-3 py-1 text-sm font-medium rounded-lg bg-[var(--bg-canvas)] text-[var(--text-secondary)] border border-[var(--border-default)]">
-                  {getLocalizedAssociationType(activeAssoc.associationType, language)}
-                </span>
-
-                <span
-                  className={`px-3 py-1 text-sm font-mono font-medium rounded-lg border ${getConfidenceBadgeClass(
-                    activeAssoc.confidence
-                  )}`}
-                >
-                  {isKn ? 'ವಿಶ್ವಾಸಾರ್ಹತೆ: ' : 'Confidence: '}
-                  {activeAssoc.confidence}
-                </span>
-
-                {activeAssoc.lagHours && (
-                  <span className="px-3 py-1 text-sm font-mono rounded-lg bg-[var(--bg-canvas)] text-[var(--text-secondary)] border border-[var(--border-default)] flex items-center gap-1">
-                    <span className="font-bold">⏱</span>
-                    {activeAssoc.lagHours}h {isKn ? 'ವಿಳಂಬ' : 'Lag'}
-                  </span>
-                )}
-              </div>
+              <span style={{ fontSize: '0.875rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+                {activeAssoc
+                  ? getLocalizedAssociationStrength(activeAssoc.associationStrength, language)
+                  : summary.status === 'no_clear_association'
+                  ? (isKn ? 'ಯಾವುದೇ ಸಂಖ್ಯಾಶಾಸ್ತ್ರೀಯ ಸಂಬಂಧವಿಲ್ಲ' : 'No statistical association')
+                  : localizedSummary.statusLabel}
+              </span>
             </div>
 
-            {/* FARMER MODE DISPLAY */}
-            {userMode === 'farmer' ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Step 1: Environment */}
-                <div className="p-4 rounded-xl bg-[var(--bg-canvas)] border border-[var(--border-default)] transition-colors">
-                  <div className="flex items-center gap-2 text-[var(--color-teal)] text-[11px] font-semibold uppercase tracking-wider mb-2">
-                    <span className="font-bold text-lg leading-none mt-[-2px]">≈</span>
-                    <span>{isKn ? 'ಪರಿಸರ' : 'Environment'}</span>
+            {/* Evidence Field */}
+            <div
+              style={{
+                background: 'var(--bg-canvas)',
+                border: '1px solid var(--border-default)',
+                borderRadius: 'var(--radius-sm, 4px)',
+                padding: '0.875rem 1rem',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '0.25rem',
+              }}
+            >
+              <span
+                style={{
+                  fontSize: '0.625rem',
+                  fontFamily: 'var(--font-mono, monospace)',
+                  fontWeight: 700,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.05em',
+                  color: 'var(--text-muted)',
+                }}
+              >
+                {isKn ? 'ಪುರಾವೆ' : 'EVIDENCE'}
+              </span>
+              <span style={{ fontSize: '0.875rem', fontWeight: 700, color: 'var(--color-teal)' }}>
+                {activeAssoc
+                  ? getLocalizedAssociationType(activeAssoc.associationType, language)
+                  : (isKn ? 'ಏಕಕಾಲಿಕ ಬದಲಾವಣೆಗಳು' : 'Coincident shifts')}
+              </span>
+            </div>
+
+            {/* Confidence Field */}
+            <div
+              style={{
+                background: 'var(--bg-canvas)',
+                border: '1px solid var(--border-default)',
+                borderRadius: 'var(--radius-sm, 4px)',
+                padding: '0.875rem 1rem',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '0.25rem',
+              }}
+            >
+              <span
+                style={{
+                  fontSize: '0.625rem',
+                  fontFamily: 'var(--font-mono, monospace)',
+                  fontWeight: 700,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.05em',
+                  color: 'var(--text-muted)',
+                }}
+              >
+                {isKn ? 'ವಿಶ್ವಾಸಾರ್ಹತೆ' : 'CONFIDENCE'}
+              </span>
+              <span
+                style={{
+                  fontSize: '0.875rem',
+                  fontWeight: 700,
+                  color: 'var(--color-green)',
+                }}
+              >
+                {activeAssoc ? activeAssoc.confidence : 'MODERATE'}
+              </span>
+            </div>
+          </div>
+
+          {/* Evidence Relationship Layout: ENVIRONMENT -> ↓ -> PLANT */}
+          {activeAssoc && (
+            <div
+              style={{
+                background: 'var(--bg-canvas)',
+                border: '1px solid var(--border-default)',
+                borderRadius: 'var(--radius-sm, 4px)',
+                padding: '1.25rem',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '1rem',
+              }}
+            >
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: '1fr auto 1fr',
+                  alignItems: 'center',
+                  gap: '1rem',
+                }}
+              >
+                {/* ENVIRONMENT Panel */}
+                <div
+                  style={{
+                    background: 'var(--bg-surface)',
+                    border: '1px solid var(--border-default)',
+                    borderRadius: 'var(--radius-sm, 4px)',
+                    padding: '1rem',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '0.25rem',
+                  }}
+                >
+                  <span
+                    style={{
+                      fontSize: '0.625rem',
+                      fontFamily: 'var(--font-mono, monospace)',
+                      fontWeight: 800,
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.06em',
+                      color: 'var(--color-teal)',
+                    }}
+                  >
+                    ENVIRONMENT
+                  </span>
+                  <span style={{ fontSize: '0.875rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+                    {envMetricName}
+                  </span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.25rem' }}>
+                    <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--color-teal)' }}>
+                      {activeAssoc.environmentDirection || 'Observed shift'}
+                    </span>
+                    {activeAssoc.environmentValue !== undefined && (
+                      <span style={{ fontSize: '0.6875rem', fontFamily: 'var(--font-mono, monospace)', color: 'var(--text-muted)' }}>
+                        ({activeAssoc.environmentBaseline !== undefined
+                          ? `${(activeAssoc.environmentValue - activeAssoc.environmentBaseline) > 0 ? '+' : ''}${(activeAssoc.environmentValue - activeAssoc.environmentBaseline).toFixed(1)} shift`
+                          : `${activeAssoc.environmentValue}`})
+                      </span>
+                    )}
                   </div>
-                  <div className="text-base font-semibold text-[var(--text-primary)] mb-0.5">{activeAssoc.environmentLabel}</div>
-                  <div className="text-sm text-[var(--color-teal)] mb-2">{activeAssoc.environmentDirection}</div>
-                  <p className="text-xs text-[var(--text-muted)] leading-snug pt-2 border-t border-[var(--border-default)]">{localizedAssoc.whatChanged}</p>
                 </div>
 
-                {/* Step 2: Plant */}
-                <div className="p-4 rounded-xl bg-[var(--bg-canvas)] border border-[var(--border-default)] transition-colors">
-                  <div className="flex items-center gap-2 text-[var(--color-green)] text-[11px] font-semibold uppercase tracking-wider mb-2">
-                    <span className="font-bold text-lg leading-none mt-[-2px]">★</span>
-                    <span>{isKn ? 'ಸಸ್ಯ' : 'Plant'}</span>
-                  </div>
-                  <div className="text-base font-semibold text-[var(--text-primary)] mb-0.5">{activeAssoc.plantLabel}</div>
-                  <div className="text-sm text-[var(--color-green)] mb-2">{activeAssoc.plantDirection}</div>
-                  <p className="text-xs text-[var(--text-muted)] leading-snug pt-2 border-t border-[var(--border-default)]">{localizedAssoc.whatHappenedTogether}</p>
+                {/* Relational Direction Indicator */}
+                <div
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: 'var(--text-dim)',
+                    fontWeight: 900,
+                    fontSize: '1.25rem',
+                  }}
+                >
+                  <span>↔</span>
                 </div>
 
-                {/* Step 3: What It Means */}
-                <div className="p-4 rounded-xl bg-[var(--bg-canvas)] border border-[var(--border-default)] transition-colors">
-                  <div className="flex items-center gap-2 text-[var(--color-amber)] text-[11px] font-semibold uppercase tracking-wider mb-2">
-                    <span className="font-bold text-lg leading-none mt-[-2px]">ℹ</span>
-                    <span>{isKn ? 'ಇದರ ಅರ್ಥವೇನು?' : 'What Does This Mean?'}</span>
+                {/* PLANT Panel */}
+                <div
+                  style={{
+                    background: 'var(--bg-surface)',
+                    border: '1px solid var(--border-default)',
+                    borderRadius: 'var(--radius-sm, 4px)',
+                    padding: '1rem',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '0.25rem',
+                  }}
+                >
+                  <span
+                    style={{
+                      fontSize: '0.625rem',
+                      fontFamily: 'var(--font-mono, monospace)',
+                      fontWeight: 800,
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.06em',
+                      color: 'var(--color-green)',
+                    }}
+                  >
+                    PLANT
+                  </span>
+                  <span style={{ fontSize: '0.875rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+                    {plantMetricName}
+                  </span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.25rem' }}>
+                    <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--color-green)' }}>
+                      {activeAssoc.plantDirection || 'Observed foliage response'}
+                    </span>
+                    <span style={{ fontSize: '0.6875rem', color: 'var(--text-muted)' }}>
+                      {activeAssoc.lagHours ? `${activeAssoc.lagHours}h delay` : 'Concurrent'}
+                    </span>
                   </div>
-                  <p className="text-sm text-[var(--text-secondary)] leading-relaxed">{localizedAssoc.whatItMeans}</p>
-                </div>
-
-                {/* Step 4: What Should I Do? */}
-                <div className="p-4 rounded-xl bg-[var(--bg-tint-green)] border border-[var(--color-green)]/30 transition-colors">
-                  <div className="flex items-center gap-2 text-[var(--color-green)] text-[11px] font-semibold uppercase tracking-wider mb-2">
-                    <span className="font-bold text-lg leading-none mt-[-2px]">✓</span>
-                    <span>{isKn ? 'ನಾನು ಏನು ಮಾಡಬೇಕು?' : 'What Should I Do?'}</span>
-                  </div>
-                  <p className="text-sm font-medium text-[var(--text-primary)] leading-relaxed">{localizedAssoc.whatToDo}</p>
                 </div>
               </div>
-            ) : (
-              /* TECHNICAL MODE DISPLAY */
-              <div className="space-y-3">
-                <div className="p-4 rounded-xl bg-slate-950/70 border border-slate-800">
-                  <div className="text-xs font-mono text-cyan-400 uppercase tracking-wider mb-1">
-                    {isKn ? 'ವೈಜ್ಞಾನಿಕ ಸಾರಾಂಶ (ಅಕಾರಣ ತತ್ವ)' : 'Empirical Scientific Association'}
-                  </div>
-                  <p className="text-xs sm:text-sm text-slate-200 leading-relaxed">{activeAssoc.summary}</p>
+
+              {/* What Does This Mean? & What Should I Do? */}
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+                  gap: '1rem',
+                  borderTop: '1px solid var(--border-subtle)',
+                  paddingTop: '0.875rem',
+                }}
+              >
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                  <span
+                    style={{
+                      fontSize: '0.625rem',
+                      fontFamily: 'var(--font-mono, monospace)',
+                      fontWeight: 700,
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.04em',
+                      color: 'var(--text-muted)',
+                    }}
+                  >
+                    {isKn ? 'ಇದರ ಅರ್ಥವೇನು?' : 'WHAT DOES THIS MEAN?'}
+                  </span>
+                  <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', margin: 0, lineHeight: 1.5 }}>
+                    {localizedAssoc?.whatItMeans || activeAssoc.summary}
+                  </p>
                 </div>
 
-                {/* Statistical Details Grid */}
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
-                  <div className="p-2.5 rounded-lg bg-slate-950/50 border border-slate-800">
-                    <span className="text-[11px] text-slate-400 block">
-                      {activeAssoc.correlationMethod === 'pearson' ? 'Pearson r' : 'Method'}
-                    </span>
-                    <span className="font-mono font-semibold text-slate-200 text-sm">
-                      {activeAssoc.correlationCoefficient !== undefined
-                        ? activeAssoc.correlationCoefficient.toFixed(3)
-                        : activeAssoc.correlationMethod}
-                    </span>
-                  </div>
-
-                  <div className="p-2.5 rounded-lg bg-slate-950/50 border border-slate-800">
-                    <span className="text-[11px] text-slate-400 block">{isKn ? 'ಪರಿಸರ ಅಳತೆ' : 'Environment Metric'}</span>
-                    <span className="font-semibold text-slate-200 text-sm">
-                      {activeAssoc.environmentLabel} ({activeAssoc.environmentDirection})
-                    </span>
-                  </div>
-
-                  <div className="p-2.5 rounded-lg bg-slate-950/50 border border-slate-800">
-                    <span className="text-[11px] text-slate-400 block">{isKn ? 'ಸಸ್ಯ ಅಳತೆ' : 'Plant Metric'}</span>
-                    <span className="font-semibold text-slate-200 text-sm">
-                      {activeAssoc.plantLabel} ({activeAssoc.plantDirection})
-                    </span>
-                  </div>
-
-                  <div className="p-2.5 rounded-lg bg-slate-950/50 border border-slate-800">
-                    <span className="text-[11px] text-slate-400 block">{isKn ? 'ಸಮಯ ವಿಂಡೋ' : 'Time Window'}</span>
-                    <span className="font-mono text-slate-200 text-sm">
-                      {activeAssoc.timeWindow} {activeAssoc.lagHours ? `(${activeAssoc.lagHours}h lag)` : ''}
-                    </span>
-                  </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                  <span
+                    style={{
+                      fontSize: '0.625rem',
+                      fontFamily: 'var(--font-mono, monospace)',
+                      fontWeight: 700,
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.04em',
+                      color: 'var(--color-emerald-ink)',
+                    }}
+                  >
+                    {isKn ? 'ನಾನು ಏನು ಮಾಡಬೇಕು?' : 'WHAT SHOULD I DO?'}
+                  </span>
+                  <p style={{ fontSize: '0.75rem', color: 'var(--text-primary)', fontWeight: 600, margin: 0, lineHeight: 1.5 }}>
+                    {localizedAssoc?.whatToDo || 'Maintain stable nutrient dosing and verify probe calibration.'}
+                  </p>
                 </div>
               </div>
-            )}
+            </div>
+          )}
 
-            {/* Multiple Associations Selector (if > 1) */}
-            {associations.length > 1 && (
-              <div className="pt-4 mt-2 border-t border-slate-800/60">
-                <span className="text-slate-400 text-[11px] uppercase tracking-wider font-semibold block mb-3">
-                  {isKn ? 'ಇತರ ಸಂಭವನೀಯ ಸಂಬಂಧಗಳು' : 'Other Associations'}
-                </span>
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-                  {associations.map((assoc, idx) => (
+          {/* ── 3. Other Associations Table (Structured Grid, Human Readable) ── */}
+          {associations.length > 0 && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
+              <span
+                style={{
+                  fontSize: '0.6875rem',
+                  fontFamily: 'var(--font-mono, monospace)',
+                  fontWeight: 800,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.06em',
+                  color: 'var(--text-muted)',
+                }}
+              >
+                {isKn ? 'ಇತರ ಸಂಭವನೀಯ ಸಂಬಂಧಗಳು' : 'ASSOCIATION MATRIX'}
+              </span>
+
+              <div
+                style={{
+                  border: '1px solid var(--border-default)',
+                  borderRadius: 'var(--radius-xs, 2px)',
+                  overflow: 'hidden',
+                }}
+              >
+                {/* Table Header */}
+                <div
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: '1.2fr 1.2fr 1fr',
+                    padding: '0.5rem 0.875rem',
+                    background: 'var(--bg-canvas)',
+                    borderBottom: '1px solid var(--border-default)',
+                    fontSize: '0.625rem',
+                    fontFamily: 'var(--font-mono, monospace)',
+                    fontWeight: 700,
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.04em',
+                    color: 'var(--text-muted)',
+                  }}
+                >
+                  <div>{isKn ? 'ಪರಿಸರ ಅಂಶ' : 'Environment Factor'}</div>
+                  <div>{isKn ? 'ಸಸ್ಯ ಮಾಪನ' : 'Plant Measure'}</div>
+                  <div>{isKn ? 'ಫಲಿತಾಂಶ' : 'Result'}</div>
+                </div>
+
+                {/* Table Rows */}
+                {associations.map((assoc, idx) => {
+                  const envName = formatHumanLabel(assoc.environmentMetric || assoc.environmentLabel, isKn);
+                  const plantName = formatHumanLabel(assoc.plantMetric || assoc.plantLabel, isKn);
+                  const resultStr = assoc.associationStrength === 'none'
+                    ? (isKn ? 'ಸಂಬಂಧವಿಲ್ಲ' : 'No statistical association')
+                    : getLocalizedAssociationStrength(assoc.associationStrength, language);
+
+                  return (
                     <div
                       key={assoc.id || idx}
-                      className={`p-3 rounded-xl border text-left flex flex-col gap-1.5 ${
-                        0 === idx
-                          ? 'bg-cyan-950/30 border-cyan-700/50 shadow-sm'
-                          : 'bg-slate-900/60 border-slate-800'
-                      }`}
+                      style={{
+                        display: 'grid',
+                        gridTemplateColumns: '1.2fr 1.2fr 1fr',
+                        padding: '0.625rem 0.875rem',
+                        background: idx % 2 === 0 ? 'var(--bg-surface)' : 'var(--bg-canvas)',
+                        borderBottom: idx < associations.length - 1 ? '1px solid var(--border-subtle)' : 'none',
+                        fontSize: '0.75rem',
+                        alignItems: 'center',
+                      }}
                     >
-                      <div className="flex items-center gap-2 text-sm font-semibold text-slate-200 truncate">
-                        <span className="truncate">{assoc.environmentLabel}</span>
-                        <span className="text-slate-500 shrink-0">↔</span>
-                        <span className="truncate">{assoc.plantLabel}</span>
-                      </div>
-                      <div className="text-xs text-slate-400">
-                        {getLocalizedAssociationStrength(assoc.associationStrength, language)}
+                      <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{envName}</div>
+                      <div style={{ color: 'var(--text-secondary)' }}>{plantName}</div>
+                      <div style={{ color: assoc.associationStrength === 'strong' ? 'var(--color-green)' : 'var(--text-muted)', fontWeight: 500 }}>
+                        {resultStr}
                       </div>
                     </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* MULTI-SENSOR CONCURRENT CHANGES WARNING */}
-        {summary.multiSensorAnalysis?.isMultiSensorEvent && (
-          <div className="p-3.5 rounded-xl bg-amber-950/20 border border-amber-800/40 text-amber-200 text-xs">
-            <div className="flex items-start gap-2.5">
-              <span className="font-bold text-amber-400 text-lg leading-none shrink-0 mt-0.5">≡</span>
-              <div>
-                <span className="font-semibold text-amber-300">
-                  {isKn ? 'ಬಹು-ಸಂವೇದಕ ಏಕಕಾಲಿಕ ಬದಲಾವಣೆ (Confounding Factors): ' : 'Concurrent Multi-Sensor Shift: '}
-                </span>
-                <span className="text-amber-200/90 leading-relaxed">{summary.multiSensorAnalysis.summary}</span>
+                  );
+                })}
               </div>
             </div>
-          </div>
-        )}
+          )}
 
-        {/* CONFOUNDING FACTORS & LIMITATIONS (COLLAPSIBLE) */}
-        {(summary.confoundingFactors.length > 0 || summary.limitations.length > 0) && (
-          <div className="border-t border-slate-800/80 pt-3">
+          {/* ── 4. Data Integrity & Scientific Limitations Note (Clean Collapsible) ── */}
+          <div
+            style={{
+              borderTop: '1px solid var(--border-subtle)',
+              paddingTop: '0.75rem',
+            }}
+          >
             <button
               type="button"
-              onClick={() => setIsExpanded(!isExpanded)}
-              className="flex items-center justify-between w-full text-xs text-slate-400 hover:text-slate-200 transition-colors py-1"
+              onClick={() => setIsLimitationsOpen(!isLimitationsOpen)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                width: '100%',
+                background: 'transparent',
+                border: 'none',
+                padding: '0.25rem 0',
+                cursor: 'pointer',
+                textAlign: 'left',
+              }}
             >
-              <span className="flex items-center gap-1.5 font-medium">
-                <span className="font-bold text-slate-500">?</span>
-                {isKn ? 'ಡೇಟಾ ಸಮಗ್ರತೆ ಮತ್ತು ಇತಿಮಿತಿಗಳು' : 'Data integrity and limitations'}
-                <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-slate-800 text-slate-400">
-                  {summary.confoundingFactors.length + summary.limitations.length}
-                </span>
+              <span
+                style={{
+                  fontSize: '0.6875rem',
+                  fontFamily: 'var(--font-mono, monospace)',
+                  fontWeight: 700,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.04em',
+                  color: 'var(--text-muted)',
+                }}
+              >
+                {isKn ? 'ಡೇಟಾ ಸಮಗ್ರತೆ ಮತ್ತು ಇತಿಮಿತಿಗಳು' : 'DATA INTEGRITY & SCIENTIFIC LIMITATIONS'}
               </span>
-              <span className="font-bold text-[10px]">{isExpanded ? '↑' : '↓'}</span>
+              <span style={{ fontSize: '0.6875rem', color: 'var(--text-muted)' }}>
+                {isLimitationsOpen ? 'Hide ▲' : 'Details ▼'}
+              </span>
             </button>
 
-            {isExpanded && (
-              <div className="mt-2.5 p-3 rounded-xl bg-slate-950/80 border border-slate-800 text-xs text-slate-300 space-y-2">
-                {summary.confoundingFactors.map((cf, i) => (
-                  <div key={i} className="flex items-start gap-2 text-amber-300/90">
-                    <span className="text-amber-500 mt-0.5">•</span>
-                    <span>{cf}</span>
-                  </div>
-                ))}
-                {summary.limitations.map((lim, i) => (
-                  <div key={i} className="flex items-start gap-2 text-slate-400">
-                    <span className="text-slate-500 mt-0.5">•</span>
-                    <span>{lim}</span>
-                  </div>
-                ))}
-                <div className="pt-2 border-t border-slate-800/60 text-[11px] text-slate-500 italic">
+            {isLimitationsOpen && (
+              <div
+                style={{
+                  marginTop: '0.5rem',
+                  padding: '0.875rem 1rem',
+                  background: 'var(--bg-canvas)',
+                  border: '1px solid var(--border-subtle)',
+                  borderRadius: 'var(--radius-xs, 2px)',
+                  fontSize: '0.6875rem',
+                  color: 'var(--text-secondary)',
+                  lineHeight: 1.6,
+                }}
+              >
+                <p style={{ margin: 0, marginBottom: '0.5rem' }}>
                   {isKn
-                    ? 'ಗಮನಿಸಿ: ಹೈಡ್ರೋಸ್ಮಾರ್ಟ್ ಕೇವಲ ಸಾಂದರ್ಭಿಕ ಸಂಬಂಧಗಳನ್ನು ಗುರುತಿಸುತ್ತದೆ. ಪ್ರತ್ಯೇಕ ಜೈವಿಕ ಸಾಕ್ಷ್ಯವನ್ನು ಸ್ವಯಂಚಾಲಿತವಾಗಿ ಸಾಬೀತುಪಡಿಸುವುದಿಲ್ಲ.'
-                    : 'Note: Identifies empirical associations and temporal co-occurrences. Does not claim unsupported biological causation.'}
-                </div>
+                    ? 'ಗಮನಿಸಿ: ಹೈಡ್ರೋಸ್ಮಾರ್ಟ್ ಸಂವೇದಕಗಳ ಅಂಕಿಅಂಶಗಳ ಆಧಾರದ ಮೇಲೆ ಪ್ರಾಯೋಗಿಕ ಸಾಂದರ್ಭಿಕ ಸಂಬಂಧಗಳನ್ನು ಮಾತ್ರ ಗುರುತಿಸುತ್ತದೆ. ಇದು ಸಂಪೂರ್ಣ ಜೈವಿಕ ಸಾಬೀತುಪಡಿಸುವಿಕೆಯನ್ನು ಸೂಚಿಸುವುದಿಲ್ಲ.'
+                    : 'Methodological Note: Correlation reflects empirical co-occurrence and lag analysis. In hydroponic closed-loops, multi-sensor shifts may present confounding variables. Interpret as diagnostic decision-support rather than isolated causality.'}
+                </p>
+                {summary.confoundingFactors && summary.confoundingFactors.length > 0 && (
+                  <div style={{ marginTop: '0.4rem' }}>
+                    <span style={{ fontWeight: 700, color: 'var(--color-amber)' }}>
+                      {isKn ? 'ಗೊಂದಲದ ಅಂಶಗಳು: ' : 'Confounding Factors: '}
+                    </span>
+                    {summary.confoundingFactors.join(', ')}
+                  </div>
+                )}
               </div>
             )}
           </div>
-        )}
-      </div>
-      </>
+        </div>
       )}
-    </div>
+    </section>
   );
 }

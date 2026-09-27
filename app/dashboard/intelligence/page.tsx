@@ -3,38 +3,10 @@
 import { useState, useMemo } from 'react';
 import { usePlantIntelligence } from '@/lib/intelligence/PlantIntelligenceContext';
 import { useESP32Serial } from '@/lib/esp32/ESP32SerialContext';
-import { StatusBadge } from '@/components/ui/StatusBadge';
-import { DataSourceBadge } from '@/components/ui/DataSourceBadge';
 import { EvidenceChain, EvidenceStep } from '@/components/ui/EvidenceChain';
 import { ModeToggle } from '@/components/ui/ModeToggle';
 import { LanguageToggle } from '@/components/ui/LanguageToggle';
 import { getFarmerCopy } from '@/lib/intelligence/farmerSemanticLayer';
-import { WhatChangedCard } from '@/components/ui/WhatChangedCard';
-import { EnvironmentPlantCard } from '@/components/ui/EnvironmentPlantCard';
-import { PlantAlertCard } from '@/components/ui/PlantAlertCard';
-
-import {
-  Brain,
-  Layers,
-  Eye,
-  Download,
-  Clock,
-  TrendingUp,
-  TrendingDown,
-  Minus,
-  Droplets,
-  HelpCircle,
-  CheckCircle2,
-  ChevronDown,
-  ChevronUp,
-  ShieldAlert,
-  Info,
-  Sparkles,
-  Cpu,
-  FileText,
-  AlertCircle
-} from 'lucide-react';
-import styles from './page.module.css';
 
 /**
  * Communicates system confidence naturally without deceptive pseudo-precision
@@ -66,16 +38,10 @@ export default function IntelligencePage() {
     language,
     setLanguage,
     latestReasoningEvent,
-    whatChangedSummary,
-    correlationSummary,
     correlations,
-    alertSummary,
-    dismissAlert,
-    acknowledgeAlert,
   } = usePlantIntelligence();
 
-  const { mode, isStale, latestReading } = useESP32Serial();
-  const [showSecondaryActions, setShowSecondaryActions] = useState(false);
+  const { isStale, latestReading } = useESP32Serial();
 
   const copy = getFarmerCopy(language);
   const isKn = language === 'kn';
@@ -121,75 +87,88 @@ export default function IntelligencePage() {
   const isTdsOff = Boolean(latestReading && (latestReading.tds < 700 || latestReading.tds > 1400));
   const isNutrientsOff = isPhOff || isTdsOff;
 
-  // 1. SIMPLE HUMAN-READABLE EXPLANATION FIRST
-  const simpleExplanation = useMemo(() => {
-    if (latestReasoningEvent?.farmerCopy?.whySummary) {
-      return isKn
-        ? `${latestReasoningEvent.farmerCopy.observableSummary} ${latestReasoningEvent.farmerCopy.whySummary}`
-        : `${latestReasoningEvent.farmerCopy.observableSummary} ${latestReasoningEvent.farmerCopy.whySummary}`;
+  // Reasoning areas: 1. What's happening, 2. Why, 3. What to do
+  const whatsHappeningText = useMemo(() => {
+    if (latestReasoningEvent?.farmerCopy?.observableSummary) {
+      return latestReasoningEvent.farmerCopy.observableSummary;
     }
-
     if (!farmerSemanticState.hasSufficientData) {
       return isKn
-        ? 'ಇನ್ನಷ್ಟು ಮಾಹಿತಿ ಬೇಕಾಗಿದೆ. ಡ್ಯಾಶ್‌ಬೋರ್ಡ್‌ನಿಂದ ಕ್ಯಾಮೆರಾ ಪ್ರಾರಂಭಿಸಿ ಮತ್ತು ಸೆನ್ಸರ್ ಸಂಪರ್ಕವನ್ನು ಖಚಿತಪಡಿಸಿಕೊಳ್ಳಿ.'
-        : 'Not enough information yet. Start the camera from the Dashboard and verify your sensor hardware is streaming.';
+        ? 'ವಿಶ್ಲೇಷಣೆ ನಡೆಸಲು ಇನ್ನಷ್ಟು ಮಾಹಿತಿ ಅಗತ್ಯವಿದೆ.'
+        : 'Telemetry and optical inspection streams are awaiting sufficient data points.';
     }
-
     if (farmerSemanticState.plantStatus === 'GOOD') {
       return isKn
-        ? 'ನಿಮ್ಮ ಗಿಡ ಚೆನ್ನಾಗಿದೆ. ಎಲೆಗಳು ಆರೋಗ್ಯಕರವಾಗಿ ಕಾಣಿಸುತ್ತಿವೆ ಮತ್ತು ನೀರು ಹಾಗೂ ಪೋಷಕಾಂಶಗಳ ಮಟ್ಟಗಳು ಸಮತೋಲನದಲ್ಲಿವೆ.'
-        : 'Your plant is doing well. The leaves appear healthy and the water and nutrient levels are balanced.';
+        ? 'ಎಲೆಗಳು ಆರೋಗ್ಯಕರವಾಗಿ ಕಾಣಿಸುತ್ತಿವೆ ಮತ್ತು ದ್ರಾವಣ ಸಮತೋಲನದಲ್ಲಿದೆ.'
+        : 'Foliar canopy metrics and closed-loop nutrient values demonstrate biological equilibrium.';
     }
-
-    if (isCameraChanged && (historicalDeltas.waterDelta !== null && historicalDeltas.waterDelta < -3)) {
-      return isKn
-        ? 'ನಿಮ್ಮ ಗಿಡಕ್ಕೆ ಗಮನ ಬೇಕಾಗಿದೆ ಏಕೆಂದರೆ ಕ್ಯಾಮೆರಾ ಎಲೆಗಳಲ್ಲಿ ಬದಲಾವಣೆಯನ್ನು ಕಂಡಿದೆ ಮತ್ತು ನೀರಿನ ಮಟ್ಟವೂ ಕಡಿಮೆಯಾಗಿದೆ.'
-        : 'Your plant may need attention because the camera noticed a change in leaf appearance and the water level has also decreased.';
-    }
-
     return isKn
-      ? 'ಕ್ಯಾಮೆರಾ ಮತ್ತು ಸೆನ್ಸರ್‌ಗಳ ವೀಕ್ಷಣೆಯ ಆಧಾರದ ಮೇಲೆ ನಿಮ್ಮ ಗಿಡಕ್ಕೆ ಗಮನ ಬೇಕಾಗಿದೆ.'
-      : 'Your plant may need attention based on combined camera and sensor observations.';
-  }, [latestReasoningEvent, farmerSemanticState.hasSufficientData, farmerSemanticState.plantStatus, isKn, isCameraChanged, historicalDeltas.waterDelta]);
+      ? 'ಕ್ಯಾಮೆರಾ ಮತ್ತು ಸಂವೇದಕಗಳ ವೀಕ್ಷಣೆಯಲ್ಲಿ ಬದಲಾವಣೆಗಳು ದಾಖಲಾಗಿವೆ.'
+      : 'Optical foliage signals and telemetry sensors show deviations from baseline.';
+  }, [latestReasoningEvent, farmerSemanticState, isKn]);
+
+  const whyText = useMemo(() => {
+    if (latestReasoningEvent?.farmerCopy?.whySummary) {
+      return latestReasoningEvent.farmerCopy.whySummary;
+    }
+    if (!farmerSemanticState.hasSufficientData) {
+      return isKn
+        ? 'ಹಾರ್ಡ್‌ವೇರ್ ಸಂವೇದಕ ಅಥವಾ ಕ್ಯಾಮೆರಾ ಆರಂಭಿಕ ಹಂತದಲ್ಲಿದೆ.'
+        : 'Sensor hardware link or camera vision pipeline is currently initializing.';
+    }
+    if (farmerSemanticState.plantStatus === 'GOOD') {
+      return isKn
+        ? 'ಎಲ್ಲಾ ಸಂವೇದಕ ರೀಡಿಂಗ್‌ಗಳು ಮತ್ತು ದೃಶ್ಯ ಸೂಚಕಗಳು ನಿಗದಿತ ವ್ಯಾಪ್ತಿಯಲ್ಲಿವೆ.'
+        : 'Observed pH, TDS, and water levels adhere closely to the species baseline target profile.';
+    }
+    return isKn
+      ? 'ಪರಿಸರ ಅಸ್ಥಿರತೆ ಅಥವಾ ಪೋಷಕಾಂಶಗಳ ಸಮತೋಲನದಲ್ಲಿ ಬದಲಾವಣೆ ಉಂಟಾಗಿದೆ.'
+      : 'Deviations correlate with nutrient concentration drift or reservoir water level changes.';
+  }, [latestReasoningEvent, farmerSemanticState, isKn]);
+
+  const whatToDoText = useMemo(() => {
+    if (latestReasoningEvent?.farmerCopy?.farmerAction) {
+      return latestReasoningEvent.farmerCopy.farmerAction;
+    }
+    if (activeRecommendations.length > 0) {
+      return `${activeRecommendations[0].title}. ${activeRecommendations[0].action}`;
+    }
+    return isKn
+      ? 'ಯಾವುದೇ ತುರ್ತು ಕ್ರಮದ ಅಗತ್ಯವಿಲ್ಲ. ನಿಯಮಿತ ನಿಗಾ ಮುಂದುವರಿಸಿ.'
+      : 'No intervention required. Maintain scheduled observation cycles.';
+  }, [latestReasoningEvent, activeRecommendations, isKn]);
 
   // Evidence Summary Cards
   const cameraEvidence = useMemo(() => {
     if (!hasVisualData || !latestDetection) {
       return {
         status: 'neutral' as const,
-        finding: isKn ? 'ಇನ್ನೂ ಯಾವುದೇ ಕ್ಯಾಮೆರಾ ವೀಕ್ಷಣೆ ಲಭ್ಯವಿಲ್ಲ' : 'No visual observation available yet',
-        subtext: isKn ? 'ಗಿಡದ ಎಲೆಗಳನ್ನು ವೀಕ್ಷಿಸಲು ಡ್ಯಾಶ್‌ಬೋರ್ಡ್‌ನಿಂದ ಕ್ಯಾಮೆರಾ ಆನ್ ಮಾಡಿ.' : 'Start the Live Plant Camera from Dashboard to inspect foliage.',
+        finding: isKn ? 'ಕ್ಯಾಮೆರಾ ವೀಕ್ಷಣೆ ಲಭ್ಯವಿಲ್ಲ' : 'Optical foliage inspection pending',
+        subtext: isKn ? 'ಗಿಡದ ಎಲೆಗಳನ್ನು ವೀಕ್ಷಿಸಲು ಡ್ಯಾಶ್‌ಬೋರ್ಡ್‌ನಿಂದ ಕ್ಯಾಮೆರಾ ಆನ್ ಮಾಡಿ.' : 'Activate camera stream from Dashboard to inspect foliar parameters.',
       };
     }
     if (!latestDetection.isPlantDetected) {
       return {
         status: 'warning' as const,
-        finding: isKn ? 'ಕ್ಯಾಮೆರಾದಲ್ಲಿ ಯಾವುದೇ ಗಿಡ ಕಂಡುಬಂದಿಲ್ಲ' : 'No plant detected in camera frame',
-        subtext: isKn ? 'ಗಿಡವನ್ನು ಡ್ಯಾಶ್‌ಬೋರ್ಡ್ ಕ್ಯಾಮೆರಾ ಮುಂದೆ ಸ್ಪಷ್ಟವಾಗಿ ಇರಿಸಿ.' : 'Position specimen clearly in front of the Dashboard camera.',
-      };
-    }
-    if (latestDetection.confidence && latestDetection.confidence < 45) {
-      return {
-        status: 'warning' as const,
-        finding: isKn ? 'ಕ್ಯಾಮೆರಾ ನೋಟ ಸ್ಪಷ್ಟವಾಗಿಲ್ಲ' : 'Camera view is unclear',
-        subtext: isKn ? 'ಕ್ಯಾಮೆರಾವನ್ನು ಗಿಡದ ಹತ್ತಿರಕ್ಕೆ ತಂದು ನೋಡಿ ಅಥವಾ ಬೆಳಕು ಹೆಚ್ಚಿಸಿ.' : 'Move closer to the plant or improve illumination.',
+        finding: isKn ? 'ಕ್ಯಾಮೆರಾದಲ್ಲಿ ಯಾವುದೇ ಗಿಡ ಕಂಡುಬಂದಿಲ್ಲ' : 'No specimen detected in camera frame',
+        subtext: isKn ? 'ಗಿಡವನ್ನು ಕ್ಯಾಮೆರಾ ಮುಂದೆ ಸ್ಪಷ್ಟವಾಗಿ ಇರಿಸಿ.' : 'Align plant clearly within optical inspection boundary.',
       };
     }
     if (isCameraChanged) {
       return {
         status: 'warning' as const,
-        finding: isKn ? 'ಗಿಡದ ನೋಟದಲ್ಲಿ ಬದಲಾವಣೆ ಕಂಡುಬಂದಿದೆ' : 'Plant appearance changed',
+        finding: isKn ? 'ಗಿಡದ ನೋಟದಲ್ಲಿ ಬದಲಾವಣೆ ಕಂಡುಬಂದಿದೆ' : 'Foliage canopy alteration detected',
         subtext: isKn
-          ? (isChlorosisPresent ? `ಎಲೆಗಳ ಮೇಲೆ ಬಣ್ಣಗೆಟ್ಟ ಗುರುತುಗಳು ಕಂಡುಬಂದಿವೆ (${latestVisualHealth?.chlorosisYellowPercent.toFixed(1)}% ಹಳದಿ ಪ್ರಮಾಣ).` : 'ಎಲೆಗಳ ಹಸಿರು ಪ್ರಮಾಣದಲ್ಲಿ ಇಳಿಕೆ ಕಂಡುಬಂದಿದೆ.')
-          : (isChlorosisPresent ? `Discoloration noticed on leaves (${latestVisualHealth?.chlorosisYellowPercent.toFixed(1)}% chlorosis ratio).` : 'Reduced green foliage canopy observed in optical frame.'),
+          ? (isChlorosisPresent ? `ಎಲೆಗಳ ಮೇಲೆ ಹಳದಿ ಪ್ರಮಾಣ (${latestVisualHealth?.chlorosisYellowPercent.toFixed(1)}%).` : 'ಎಲೆಗಳ ಹಸಿರು ಪ್ರಮಾಣದಲ್ಲಿ ಇಳಿಕೆ.')
+          : (isChlorosisPresent ? `Leaf discoloration observed (${latestVisualHealth?.chlorosisYellowPercent.toFixed(1)}% chlorosis ratio).` : 'Reduced canopy density observed.'),
       };
     }
     return {
       status: 'optimal' as const,
-      finding: isKn ? 'ಗಿಡದ ನೋಟ ಆರೋಗ್ಯಕರವಾಗಿ ಮತ್ತು ಹಸಿರಾಗಿ ಕಾಣಿಸುತ್ತಿದೆ' : 'Plant appearance looks healthy and green',
+      finding: isKn ? 'ಎಲೆಗಳು ಆರೋಗ್ಯಕರವಾಗಿ ಕಾಣಿಸುತ್ತಿವೆ' : 'Foliage appearance conforms to healthy baseline',
       subtext: isKn
-        ? `ಎಲೆಗಳ ವ್ಯಾಪ್ತಿ ${latestDetection.canopyCoveragePercent}% ರಷ್ಟಿದ್ದು ಸಮರೂಪದ ಹಸಿರು ಬಣ್ಣದಲ್ಲಿದೆ.`
-        : `Canopy coverage confirmed at ${latestDetection.canopyCoveragePercent}% with uniform green coloration.`,
+        ? `ಎಲೆಗಳ ವ್ಯಾಪ್ತಿ ${latestDetection.canopyCoveragePercent}% ರಷ್ಟಿದೆ.`
+        : `Canopy coverage confirmed at ${latestDetection.canopyCoveragePercent}% with uniform coloration.`,
     };
   }, [hasVisualData, latestDetection, isCameraChanged, isChlorosisPresent, latestVisualHealth, isKn]);
 
@@ -197,43 +176,21 @@ export default function IntelligencePage() {
     if (!isTelemetryAvailable || !latestReading) {
       return {
         status: 'neutral' as const,
-        finding: isKn ? 'ನೀರಿನ ಸೆನ್ಸರ್ ಮಾಹಿತಿ ಪ್ರಸ್ತುತ ಲಭ್ಯವಿಲ್ಲ' : 'Water sensor readings currently unavailable',
-        subtext: isKn ? 'ESP32 ಸಾಧನವನ್ನು ಸಂಪರ್ಕಿಸಿ ಅಥವಾ ಸಿಮ್ಯುಲೇಶನ್ ಆನ್ ಮಾಡಿ.' : 'Connect ESP32 receiver or engage simulation mode in IoT Station.',
+        finding: isKn ? 'ನೀರಿನ ಸೆನ್ಸರ್ ಮಾಹಿತಿ ಲಭ್ಯವಿಲ್ಲ' : 'Solution telemetry offline',
+        subtext: isKn ? 'ESP32 ಸಾಧನವನ್ನು ಸಂಪರ್ಕಿಸಿ.' : 'Verify ESP32 serial interface or engage telemetry simulation.',
       };
     }
-    if (isWaterLow && isNutrientsOff) {
+    if (isWaterLow || isNutrientsOff) {
       return {
         status: 'warning' as const,
-        finding: isKn ? 'ನೀರಿನ ಮಟ್ಟ ಕಡಿಮೆಯಾಗಿದೆ ಮತ್ತು ಪೋಷಕಾಂಶಗಳು ಅಸಮತೋಲನದಲ್ಲಿವೆ' : 'Water level decreased and nutrients are off balance',
-        subtext: isKn
-          ? `ಟ್ಯಾಂಕ್ ಸಾಮರ್ಥ್ಯ ${Math.round(latestReading.waterLevel)}% ಮತ್ತು pH ${latestReading.ph.toFixed(2)} ಆಗಿದೆ.`
-          : `Reservoir is at ${Math.round(latestReading.waterLevel)}% capacity and pH is ${latestReading.ph.toFixed(2)}.`,
-      };
-    }
-    if (isWaterLow) {
-      return {
-        status: 'warning' as const,
-        finding: isKn ? 'ನೀರಿನ ಮಟ್ಟ ಸಾಮಾನ್ಯಕ್ಕಿಂತ ಕಡಿಮೆಯಾಗಿದೆ' : 'Water level decreased below normal',
-        subtext: isKn
-          ? `ಪ್ರಸ್ತುತ ಟ್ಯಾಂಕ್ ಸಾಮರ್ಥ್ಯ ${Math.round(latestReading.waterLevel)}% ಆಗಿದೆ (ಕನಿಷ್ಠ 40% ಇರಬೇಕು).`
-          : `Current reservoir capacity is ${Math.round(latestReading.waterLevel)}% (nominal > 40%).`,
-      };
-    }
-    if (isNutrientsOff) {
-      return {
-        status: 'warning' as const,
-        finding: isKn ? 'ಪೋಷಕಾಂಶಗಳ ಸಮತೋಲನಕ್ಕೆ ಗಮನ ಬೇಕಾಗಿದೆ' : 'Nutrient balance needs attention',
-        subtext: isKn
-          ? `pH ${latestReading.ph.toFixed(2)} (ಗುರಿ 5.5 - 6.5) ಮತ್ತು TDS ${Math.round(latestReading.tds)} PPM ಆಗಿದೆ.`
-          : `pH is ${latestReading.ph.toFixed(2)} (target 5.5 - 6.5) and TDS is ${Math.round(latestReading.tds)} PPM.`,
+        finding: isKn ? 'ಪೋಷಕಾಂಶ ಅಥವಾ ನೀರಿನ ಮಟ್ಟದಲ್ಲಿ ವ್ಯತ್ಯಾಸ' : 'Solution chemistry drift detected',
+        subtext: `pH ${latestReading.ph.toFixed(2)} · TDS ${Math.round(latestReading.tds)} PPM · Reservoir ${Math.round(latestReading.waterLevel)}%`,
       };
     }
     return {
       status: 'optimal' as const,
-      finding: isKn ? 'ನೀರಿನ ಮಟ್ಟ ಮತ್ತು ಪೋಷಕಾಂಶಗಳು ಸಮತೋಲನದಲ್ಲಿವೆ' : 'Water level and nutrients are in balance',
-      subtext: isKn
-        ? `ಟ್ಯಾಂಕ್ ಸಾಮರ್ಥ್ಯ ${Math.round(latestReading.waterLevel)}% ಮತ್ತು ಪೋಷಕಾಂಶಗಳ ದ್ರಾವಣ ಸೂಕ್ತವಾಗಿದೆ.`
-        : `Reservoir capacity is ${Math.round(latestReading.waterLevel)}% and nutrient solution is optimal.`,
+      finding: isKn ? 'ನೀರಿನ ಮಟ್ಟ ಮತ್ತು ಪೋಷಕಾಂಶಗಳು ಸಮತೋಲನದಲ್ಲಿವೆ' : 'Nutrient balance and water level in nominal ranges',
+      subtext: `Reservoir ${Math.round(latestReading.waterLevel)}% · pH ${latestReading.ph.toFixed(2)} · TDS ${Math.round(latestReading.tds)} PPM`,
     };
   }, [isTelemetryAvailable, latestReading, isWaterLow, isNutrientsOff, isKn]);
 
@@ -241,162 +198,87 @@ export default function IntelligencePage() {
     if (observations.length < 2) {
       return {
         status: 'neutral' as const,
-        finding: isKn ? 'ಆರಂಭಿಕ ವೀಕ್ಷಣೆ ದಾಖಲಾಗಿದೆ' : 'Baseline observation established',
-        subtext: isKn
-          ? 'ಮೊದಲ ಹಂತದ ದಾಖಲೆ ಸಂಗ್ರಹಿಸಲಾಗಿದೆ. ಮುಂದಿನ ಪರಿಶೀಲನೆಗಳಲ್ಲಿ ಬದಲಾವಣೆಗಳು ಕಾಣಿಸುತ್ತವೆ.'
-          : 'Initial snapshot logged. Trends will emerge as observation cycles accumulate.',
+        finding: isKn ? 'ಆರಂಭಿಕ ವೀಕ್ಷಣೆ ದಾಖಲಾಗಿದೆ' : 'Baseline checkpoint established',
+        subtext: isKn ? 'ಮುಂದಿನ ಪರಿಶೀಲನೆಗಳಲ್ಲಿ ಬದಲಾವಣೆಗಳು ಕಾಣಿಸುತ್ತವೆ.' : 'Longitudinal shifts emerge across sequential observation cycles.',
       };
     }
     if (historicalDeltas.waterDelta !== null && historicalDeltas.waterDelta < -3) {
       return {
         status: 'warning' as const,
-        finding: isKn ? 'ಕಾಲಕ್ರಮೇಣ ಬದಲಾವಣೆ ಕಂಡುಬಂದಿದೆ' : 'Change observed over time',
-        subtext: isKn
-          ? `ರೆಕಾರ್ಡ್ ಮಾಡಿದ ಚಕ್ರಗಳಲ್ಲಿ ನೀರಿನ ಮಟ್ಟ ${Math.abs(Math.round(historicalDeltas.waterDelta))}% ರಷ್ಟು ಕಡಿಮೆಯಾಗಿದೆ.`
-          : `Water level decreased by ${Math.abs(Math.round(historicalDeltas.waterDelta))}% over recorded cycles.`,
+        finding: isKn ? 'ಕಾಲಕ್ರಮೇಣ ನೀರಿನ ಇಳಿಕೆ' : 'Longitudinal depletion recorded',
+        subtext: `Water level declined by ${Math.abs(Math.round(historicalDeltas.waterDelta))}% over recorded cycles.`,
       };
     }
     return {
       status: 'optimal' as const,
-      finding: isKn ? 'ಕಾಲಕ್ರಮೇಣ ಸ್ಥಿರತೆ ಕಾಯ್ದುಕೊಂಡಿದೆ' : 'Consistent stability over time',
-      subtext: isKn
-        ? `ಎಲ್ಲಾ ${observations.length} ಐತಿಹಾಸಿಕ ತಪಾಸಣೆಗಳಲ್ಲೂ ಸ್ಥಿರತೆ ಮುಂದುವರಿದಿದೆ.`
-        : `Parameters have remained stable across all ${observations.length} historical checkpoints.`,
+      finding: isKn ? 'ಕಾಲಕ್ರಮೇಣ ಸ್ಥಿರತೆ' : 'Consistent longitudinal stability',
+      subtext: `Parameters verified across ${observations.length} historical checkpoints.`,
     };
   }, [observations.length, historicalDeltas, isKn]);
 
-  // Botanical Evidence Chain Steps
+  // Evidence Chain Steps
   const evidenceChainSteps = useMemo((): EvidenceStep[] => {
     const isUnderStress = latestReasoningEvent
       ? latestReasoningEvent.plantState === 'ATTENTION' || latestReasoningEvent.plantState === 'CRITICAL'
       : (farmerSemanticState.plantStatus === 'ATTENTION' || farmerSemanticState.plantStatus === 'URGENT');
 
-    const steps: EvidenceStep[] = [];
-
-    // OBSERVATIONS
-    steps.push({
-      stage: 'OBSERVATIONS',
-      stageLabel: isKn ? 'ವೀಕ್ಷಣೆಗಳು' : undefined,
-      headline: cameraEvidence.finding,
-      detail: (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-          <span>{userMode === 'farmer' ? cameraEvidence.subtext : (latestDetection?.isPlantDetected ? `Optical canopy evaluated at ${latestDetection.canopyCoveragePercent}% coverage with ${latestVisualHealth?.visualHealthScore || 90}/100 visual health score.` : 'Standby mode — no foliage identified in camera frame.')}</span>
-        </div>
-      ),
-      status: cameraEvidence.status,
-    });
-
-    // ENVIRONMENT
-    steps.push({
-      stage: 'ENVIRONMENT',
-      stageLabel: isKn ? 'ವಾತಾವರಣ' : undefined,
-      headline: waterEvidence.finding,
-      detail: (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-          <span>{userMode === 'farmer' ? waterEvidence.subtext : (isTelemetryAvailable && latestReading ? `Electrode probe reads pH ${latestReading.ph.toFixed(2)} · TDS ${Math.round(latestReading.tds)} PPM · Reservoir ${Math.round(latestReading.waterLevel)}%.` : 'Telemetry offline — awaiting serial connection.')}</span>
-        </div>
-      ),
-      status: waterEvidence.status,
-    });
-
-    // HISTORICAL CONTEXT
-    steps.push({
-      stage: 'HISTORICAL CONTEXT',
-      stageLabel: isKn ? 'ಹಿಂದಿನ ಡೇಟಾ' : undefined,
-      headline: historyEvidence.finding,
-      detail: (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-          <span>{userMode === 'farmer' ? historyEvidence.subtext : `Longitudinal trajectory evaluated across ${observations.length} snapshots (pH drift: ${predictiveAnalytics.predictions.ph.driftPerDay.toFixed(2)}/day).`}</span>
-        </div>
-      ),
-      status: historyEvidence.status,
-    });
-
-    // ASSOCIATIONS
-    steps.push({
-      stage: 'ASSOCIATIONS',
-      stageLabel: isKn ? 'ಸಂಬಂಧಗಳು' : undefined,
-      headline: isKn ? 'ಪರಿಸರ ಮತ್ತು ಗಿಡದ ಆರೋಗ್ಯದ ಸಂಬಂಧ' : 'Environment to Plant Associations',
-      detail: (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-          <span>{userMode === 'farmer' 
-            ? (latestReasoningEvent?.interpretations.length ? latestReasoningEvent.interpretations[0] : (isKn ? 'ಯಾವುದೇ ಹೊಸ ಸಂಬಂಧಗಳು ಕಂಡುಬಂದಿಲ್ಲ.' : 'No new associations detected.')) 
-            : (correlations && correlations.length > 0 ? correlations.map(c => `${c.environmentMetric} ↔ ${c.plantMetric}`).join(', ') : 'No causal associations identified.')}</span>
-        </div>
-      ),
-      status: correlations && correlations.length > 0 ? 'warning' : 'optimal',
-    });
-
-    // REASONING
-    steps.push({
-      stage: 'REASONING',
-      stageLabel: isKn ? 'ಕಾರಣ ಮತ್ತು ವಿವರಣೆ' : undefined,
-      headline: isKn ? 'ಒಟ್ಟಾರೆ ತೀರ್ಮಾನ' : 'Overall Assessment',
-      detail: (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-          <span>{simpleExplanation}</span>
-          {userMode === 'technical' && latestReasoningEvent?.observations && latestReasoningEvent.observations.length > 0 && (
-            <ul style={{ margin: '8px 0 0 16px', padding: 0, fontSize: '11.5px', color: 'var(--text-secondary)' }}>
-              {latestReasoningEvent.observations.map((o, i) => <li key={i}>{o}</li>)}
-            </ul>
-          )}
-        </div>
-      ),
-      status: isUnderStress ? 'warning' : 'optimal',
-    });
-
-    // RECOMMENDATION
-    const primaryRecommendation = latestReasoningEvent?.recommendations[0] || activeRecommendations[0]?.action || (isKn ? 'ಎಲ್ಲಾ ವ್ಯವಸ್ಥೆಗಳು ಸರಿಯಾಗಿವೆ. ನಿಯಮಿತ ನಿಗಾ ಮುಂದುವರಿಸಿ.' : 'All systems nominal. Continue regular monitoring.');
-    steps.push({
-      stage: 'RECOMMENDATION',
-      stageLabel: isKn ? 'ಶಿಫಾರಸು' : undefined,
-      headline: userMode === 'farmer' ? (latestReasoningEvent?.farmerCopy?.farmerAction || farmerSemanticState.actionableSummary) : (activeRecommendations[0]?.title || 'Maintain nominal operational parameters'),
-      detail: (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-          <span>{primaryRecommendation}</span>
-        </div>
-      ),
-      status: isUnderStress ? 'warning' : 'optimal',
-    });
-
-    // LIMITATIONS
-    steps.push({
-      stage: 'LIMITATIONS',
-      stageLabel: isKn ? 'ಮಿತಿಗಳು' : undefined,
-      headline: isKn ? 'ವ್ಯವಸ್ಥೆಯ ಮಿತಿಗಳು' : 'System Constraints',
-      detail: (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-          <span>{latestReasoningEvent?.limitations.length ? latestReasoningEvent.limitations[0] : (isKn ? 'ಯಾವುದೇ ಮಿತಿಗಳಿಲ್ಲ.' : 'Full multimodal telemetry available. No active constraints.')}</span>
-          {userMode === 'technical' && (
-            <div style={{ display: 'flex', gap: '16px', marginTop: '8px', flexWrap: 'wrap' }}>
-               <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Camera Confidence: {latestDetection?.confidence ? `${latestDetection.confidence}%` : (latestDetection?.isPlantDetected ? '80%' : '0%')}</span>
-               <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Sensor Confidence: {isTelemetryAvailable ? '85%' : '0%'}</span>
-               <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Historical Confidence: {observations.length >= 5 ? '90%' : observations.length >= 2 ? '70%' : '30%'}</span>
-            </div>
-          )}
-        </div>
-      ),
-      status: 'neutral',
-    });
-
-    return steps;
+    return [
+      {
+        stage: 'OBSERVATIONS',
+        stageLabel: isKn ? 'ವೀಕ್ಷಣೆಗಳು' : 'Optical Foliage Check',
+        headline: cameraEvidence.finding,
+        detail: cameraEvidence.subtext,
+        status: cameraEvidence.status,
+      },
+      {
+        stage: 'ENVIRONMENT',
+        stageLabel: isKn ? 'ವಾತಾವರಣ' : 'Hydroponic Chemistry',
+        headline: waterEvidence.finding,
+        detail: waterEvidence.subtext,
+        status: waterEvidence.status,
+      },
+      {
+        stage: 'HISTORICAL CONTEXT',
+        stageLabel: isKn ? 'ಹಿಂದಿನ ಡೇಟಾ' : 'Longitudinal Baseline',
+        headline: historyEvidence.finding,
+        detail: historyEvidence.subtext,
+        status: historyEvidence.status,
+      },
+      {
+        stage: 'ASSOCIATIONS',
+        stageLabel: isKn ? 'ಸಂಬಂಧಗಳು' : 'Cross-Modal Synthesis',
+        headline: isKn ? 'ಪರಿಸರ ಮತ್ತು ಸಸ್ಯದ ಪ್ರತಿಕ್ರಿಯೆ' : 'Solution to Foliar Association',
+        detail: correlations && correlations.length > 0
+          ? `${correlations[0].environmentLabel} correlated with ${correlations[0].plantLabel}`
+          : 'No statistically significant causal links identified.',
+        status: correlations && correlations.length > 0 ? 'warning' : 'optimal',
+      },
+      {
+        stage: 'RECOMMENDATION',
+        stageLabel: isKn ? 'ಶಿಫಾರಸು' : 'Prescriptive Action',
+        headline: whatToDoText,
+        detail: 'Actionable guidance derived from verified sensor and optical evidence.',
+        status: isUnderStress ? 'warning' : 'optimal',
+      },
+      {
+        stage: 'LIMITATIONS',
+        stageLabel: isKn ? 'ಮಿತಿಗಳು' : 'Decision Bounds',
+        headline: isKn ? 'ವ್ಯವಸ್ಥೆಯ ಮಿತಿಗಳು' : 'Diagnostic Scope & Constraints',
+        detail: latestReasoningEvent?.limitations.length
+          ? latestReasoningEvent.limitations[0]
+          : 'Operating under complete multi-sensor closed-loop verification.',
+        status: 'neutral',
+      },
+    ];
   }, [
     isKn,
-    userMode,
     cameraEvidence,
     waterEvidence,
     historyEvidence,
-    latestDetection,
-    latestVisualHealth,
-    isTelemetryAvailable,
-    latestReading,
-    observations.length,
-    predictiveAnalytics.predictions.ph.driftPerDay,
+    correlations,
+    whatToDoText,
     latestReasoningEvent,
     farmerSemanticState.plantStatus,
-    farmerSemanticState.actionableSummary,
-    multimodalAssessment.explanations,
-    activeRecommendations
   ]);
 
   // Export diagnostic state JSON
@@ -446,169 +328,444 @@ export default function IntelligencePage() {
   const scenarioCode = latestReasoningEvent?.scenarioCode || 'STABLE_EQUILIBRIUM';
 
   return (
-    <div className={styles.container}>
-      
-      {/* 1. Header Row */}
-      <div className={styles.headerRow}>
-        <div className={styles.titleBlock}>
-          <span className="section-label">
-            {isKn ? copy.ui.diagnosticWorkspace : 'Diagnostic Workspace'}
-          </span>
-          <h1 className="display-title">
-            {isKn ? copy.ui.plantReasoningLab : 'Plant Reasoning Lab'}
-          </h1>
-          <p style={{ fontSize: '13px', color: 'var(--text-secondary)', margin: 0 }}>
-            {isKn ? copy.ui.reasoningSubtitle : 'Transparent, evidence-based multimodal plant intelligence.'}
-          </p>
-        </div>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-          <ModeToggle mode={userMode} onModeChange={setUserMode} size="sm" language={language} />
-          <LanguageToggle language={language} onLanguageChange={setLanguage} size="sm" />
-          {userMode === 'technical' && (
-            <button className="btn btn-secondary" onClick={handleExportDiagnostics} style={{ fontSize: '11.5px' }}>
-              <Download size={13} />
-              <span>{isKn ? 'ಡಯಾಗ್ನೋಸ್ಟಿಕ್ JSON ರಫ್ತು ಮಾಡಿ' : 'Export Diagnostic JSON'}</span>
-            </button>
-          )}
-        </div>
-      </div>
-
-      {/* ============================================================ */}
-      {/* SECTION 1: CURRENT PLANT STATE                               */}
-      {/* ============================================================ */}
-      <div className={styles.diagnosticBanner}>
-        {/* Plant State Badge */}
-        <div className={styles.bannerItem}>
-          <span className="section-label" style={{ fontSize: '10px' }}>
-            {isKn ? 'ಗಿಡದ ಒಟ್ಟಾರೆ ಸ್ಥಿತಿ' : 'PLANT HEALTH STATE'}
-          </span>
-          <div className={styles.bannerValue}>
+    <div
+      style={{
+        minHeight: '100vh',
+        backgroundColor: 'var(--bg-canvas)',
+        color: 'var(--text-primary)',
+        padding: '1.5rem',
+        width: '100%',
+        boxSizing: 'border-box',
+      }}
+    >
+      <div
+        style={{
+          width: '100%',
+          maxWidth: '1200px',
+          margin: '0 auto',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '1.5rem',
+        }}
+      >
+        {/* ── 1. Header Row ── */}
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'flex-end',
+            flexWrap: 'wrap',
+            gap: '1rem',
+            paddingBottom: '1.25rem',
+            borderBottom: '1px solid var(--border-default)',
+          }}
+        >
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
             <span
               style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '6px',
-                padding: '4px 10px',
-                borderRadius: 'var(--radius-sm)',
-                fontSize: '13px',
+                fontSize: '0.6875rem',
+                fontFamily: 'var(--font-mono, monospace)',
                 fontWeight: 800,
-                background: plantStateLabel === 'HEALTHY'
-                  ? 'rgba(46, 184, 114, 0.15)'
-                  : plantStateLabel === 'CRITICAL'
-                  ? 'rgba(217, 93, 98, 0.15)'
-                  : plantStateLabel === 'ATTENTION'
-                  ? 'rgba(229, 169, 60, 0.15)'
-                  : 'rgba(255, 255, 255, 0.08)',
-                color: plantStateLabel === 'HEALTHY'
-                  ? 'var(--color-green)'
-                  : plantStateLabel === 'CRITICAL'
-                  ? 'var(--color-red)'
-                  : plantStateLabel === 'ATTENTION'
-                  ? 'var(--color-amber)'
-                  : 'var(--text-secondary)',
-                border: `1px solid ${
-                  plantStateLabel === 'HEALTHY'
-                    ? 'rgba(46, 184, 114, 0.35)'
-                    : plantStateLabel === 'CRITICAL'
-                    ? 'rgba(217, 93, 98, 0.35)'
-                    : plantStateLabel === 'ATTENTION'
-                    ? 'rgba(229, 169, 60, 0.35)'
-                    : 'var(--border-subtle)'
-                }`,
+                letterSpacing: '0.08em',
+                textTransform: 'uppercase',
+                color: 'var(--color-emerald-ink)',
               }}
             >
-              <span
+              {isKn ? copy.ui.diagnosticWorkspace : 'DIAGNOSTIC WORKSPACE'}
+            </span>
+            <h1
+              style={{
+                fontSize: '1.625rem',
+                fontWeight: 800,
+                letterSpacing: '-0.02em',
+                color: 'var(--text-primary)',
+                margin: 0,
+              }}
+            >
+              {isKn ? copy.ui.plantReasoningLab : 'Plant Reasoning Lab'}
+            </h1>
+            <p style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)', margin: 0 }}>
+              {isKn ? copy.ui.reasoningSubtitle : 'Transparent, evidence-based multimodal plant intelligence.'}
+            </p>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', flexWrap: 'wrap' }}>
+            <ModeToggle mode={userMode} onModeChange={setUserMode} size="sm" language={language} />
+            <LanguageToggle language={language} onLanguageChange={setLanguage} size="sm" />
+            {userMode === 'technical' && (
+              <button
+                type="button"
+                onClick={handleExportDiagnostics}
                 style={{
-                  width: '7px',
-                  height: '7px',
-                  borderRadius: '50%',
-                  background: plantStateLabel === 'HEALTHY'
-                    ? 'var(--color-green)'
-                    : plantStateLabel === 'CRITICAL'
-                    ? 'var(--color-red)'
-                    : plantStateLabel === 'ATTENTION'
-                    ? 'var(--color-amber)'
-                    : 'var(--text-muted)',
+                  fontSize: '0.75rem',
+                  fontWeight: 600,
+                  fontFamily: 'var(--font-mono, monospace)',
+                  padding: '0.35rem 0.75rem',
+                  borderRadius: 'var(--radius-xs, 2px)',
+                  background: 'var(--bg-surface)',
+                  border: '1px solid var(--border-default)',
+                  color: 'var(--text-primary)',
+                  cursor: 'pointer',
                 }}
-              />
-              {plantStateLabel}
-            </span>
+              >
+                {isKn ? 'ಡಯಾಗ್ನೋಸ್ಟಿಕ್ ರಫ್ತು' : 'Export JSON'}
+              </button>
+            )}
           </div>
         </div>
 
-        {/* Identity Badge */}
-        <div className={styles.bannerItem}>
-          <span className="section-label" style={{ fontSize: '10px' }}>
-            {isKn ? 'ಸಸ್ಯ ಪ್ರಭೇದ' : 'BOTANICAL IDENTITY'}
-          </span>
-          <div className={styles.bannerValue} style={{ fontSize: '14px' }}>
-            <span style={{ color: 'var(--text-primary)', fontWeight: 700 }}>
-              {plantDisplayName}
-            </span>
-            <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontStyle: 'italic' }}>
-              ({botanicalScientific})
-            </span>
-          </div>
-        </div>
-
-        {/* Overall Confidence Badge */}
-        <div className={styles.bannerItem}>
-          <span className="section-label" style={{ fontSize: '10px' }}>
-            {isKn ? 'ವಿಶ್ವಾಸಾರ್ಹತೆಯ ಮಟ್ಟ' : 'REASONING CONFIDENCE'}
-          </span>
-          <div className={styles.bannerValue}>
+        {/* ── 2. Diagnostic State Banner ── */}
+        <div
+          style={{
+            backgroundColor: 'var(--bg-surface)',
+            border: '1px solid var(--border-default)',
+            borderRadius: 'var(--radius-sm, 4px)',
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+            width: '100%',
+          }}
+        >
+          {/* Health State */}
+          <div
+            style={{
+              padding: '1rem 1.25rem',
+              borderRight: '1px solid var(--border-default)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '0.25rem',
+            }}
+          >
             <span
               style={{
-                fontSize: '12.5px',
+                fontSize: '0.625rem',
+                fontFamily: 'var(--font-mono, monospace)',
                 fontWeight: 700,
-                color: reasoningConfidenceLevel === 'high'
-                  ? 'var(--color-green)'
-                  : reasoningConfidenceLevel === 'moderate'
-                  ? 'var(--color-teal)'
-                  : 'var(--color-amber)',
+                textTransform: 'uppercase',
+                letterSpacing: '0.06em',
+                color: 'var(--text-muted)',
               }}
             >
-              {reasoningConfidenceLevel.toUpperCase()} ({reasoningConfidenceScore}%)
+              {isKn ? 'ಗಿಡದ ಒಟ್ಟಾರೆ ಸ್ಥಿತಿ' : 'HEALTH STATE'}
             </span>
+            <div style={{ fontSize: '1rem', fontWeight: 800, color: plantStateLabel === 'HEALTHY' ? 'var(--color-green)' : 'var(--color-amber)' }}>
+              {plantStateLabel}
+            </div>
           </div>
-        </div>
 
-        {/* Scenario Code Badge */}
-        <div className={styles.bannerItem}>
-          <span className="section-label" style={{ fontSize: '10px' }}>
-            {isKn ? 'ಕಾರಣ ಸನ್ನಿವೇಶ ಸಂಕೇತ' : 'SCENARIO CODE'}
-          </span>
-          <div className={styles.bannerValue}>
+          {/* Monitored Specimen */}
+          <div
+            style={{
+              padding: '1rem 1.25rem',
+              borderRight: '1px solid var(--border-default)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '0.25rem',
+            }}
+          >
             <span
-              className="font-mono"
               style={{
-                fontSize: '11px',
-                background: 'rgba(255, 255, 255, 0.04)',
-                border: '1px solid var(--border-subtle)',
-                padding: '3px 8px',
-                borderRadius: 'var(--radius-xs)',
-                color: 'var(--color-teal)',
+                fontSize: '0.625rem',
+                fontFamily: 'var(--font-mono, monospace)',
+                fontWeight: 700,
+                textTransform: 'uppercase',
+                letterSpacing: '0.06em',
+                color: 'var(--text-muted)',
               }}
             >
-              {scenarioCode}
+              {isKn ? 'ಸಸ್ಯ ಪ್ರಭೇದ' : 'SPECIMEN'}
             </span>
+            <div style={{ fontSize: '0.9375rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+              {plantDisplayName}
+            </div>
+            <div style={{ fontSize: '0.6875rem', fontStyle: 'italic', color: 'var(--text-muted)' }}>
+              {botanicalScientific}
+            </div>
+          </div>
+
+          {/* Reasoning Confidence */}
+          <div
+            style={{
+              padding: '1rem 1.25rem',
+              borderRight: '1px solid var(--border-default)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '0.25rem',
+            }}
+          >
+            <span
+              style={{
+                fontSize: '0.625rem',
+                fontFamily: 'var(--font-mono, monospace)',
+                fontWeight: 700,
+                textTransform: 'uppercase',
+                letterSpacing: '0.06em',
+                color: 'var(--text-muted)',
+              }}
+            >
+              {isKn ? 'ವಿಶ್ವಾಸಾರ್ಹತೆ' : 'CONFIDENCE'}
+            </span>
+            <div style={{ fontSize: '0.9375rem', fontWeight: 700, color: 'var(--color-teal)' }}>
+              {reasoningConfidenceLevel.toUpperCase()} ({reasoningConfidenceScore}%)
+            </div>
+          </div>
+
+          {/* Scenario Code */}
+          <div
+            style={{
+              padding: '1rem 1.25rem',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '0.25rem',
+            }}
+          >
+            <span
+              style={{
+                fontSize: '0.625rem',
+                fontFamily: 'var(--font-mono, monospace)',
+                fontWeight: 700,
+                textTransform: 'uppercase',
+                letterSpacing: '0.06em',
+                color: 'var(--text-muted)',
+              }}
+            >
+              {isKn ? 'ಸನ್ನಿವೇಶ ಸಂಕೇತ' : 'SCENARIO CODE'}
+            </span>
+            <div style={{ fontSize: '0.8125rem', fontFamily: 'var(--font-mono, monospace)', fontWeight: 700, color: 'var(--text-secondary)' }}>
+              {scenarioCode}
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* ============================================================ */}
-      {/* SECTION 2: SCIENTIFIC REASONING CHAIN                        */}
-      {/* ============================================================ */}
-      <div style={{ marginTop: '16px' }}>
-        <EvidenceChain
-          steps={evidenceChainSteps}
-          confidenceScore={userMode === 'technical' ? reasoningConfidenceScore : undefined}
-          confidenceText={userMode === 'farmer' ? naturalConfidence : undefined}
-          confidenceLabel={isKn ? 'ವಿಶ್ವಾಸಾರ್ಹತೆ' : 'Confidence'}
-        />
-      </div>
+        {/* ── 3. Dedicated 3-Column Reasoning Section on Desktop ── */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', width: '100%' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <span
+              style={{
+                fontSize: '0.625rem',
+                fontFamily: 'var(--font-mono, monospace)',
+                fontWeight: 800,
+                letterSpacing: '0.08em',
+                textTransform: 'uppercase',
+                padding: '0.2rem 0.5rem',
+                borderRadius: '2px',
+                background: 'var(--color-emerald-ink)',
+                color: 'var(--color-champagne)',
+              }}
+            >
+              SYNTHESIS
+            </span>
+            <h2
+              style={{
+                fontSize: '0.875rem',
+                fontWeight: 800,
+                textTransform: 'uppercase',
+                letterSpacing: '0.04em',
+                color: 'var(--text-primary)',
+                margin: 0,
+              }}
+            >
+              {isKn ? 'ಕಾರಣ ವಿಶ್ಲೇಷಣಾ ಸಾರಾಂಶ' : 'MULTIMODAL REASONING SUMMARY'}
+            </h2>
+          </div>
 
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+              gap: '1rem',
+              width: '100%',
+            }}
+          >
+            {/* Column 1: What's Happening */}
+            <div
+              style={{
+                background: 'var(--bg-surface)',
+                border: '1px solid var(--border-default)',
+                borderRadius: 'var(--radius-sm, 4px)',
+                padding: '1.25rem',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '0.625rem',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <span
+                  style={{
+                    fontSize: '0.625rem',
+                    fontFamily: 'var(--font-mono, monospace)',
+                    fontWeight: 800,
+                    color: 'var(--text-dim)',
+                    background: 'var(--bg-canvas)',
+                    border: '1px solid var(--border-default)',
+                    borderRadius: '2px',
+                    width: '1.25rem',
+                    height: '1.25rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  1
+                </span>
+                <span
+                  style={{
+                    fontSize: '0.6875rem',
+                    fontWeight: 800,
+                    fontFamily: 'var(--font-mono, monospace)',
+                    color: 'var(--text-muted)',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.05em',
+                  }}
+                >
+                  {isKn ? '೧. ಏನಾಗುತ್ತಿದೆ?' : "1. WHAT'S HAPPENING?"}
+                </span>
+              </div>
+              <p
+                style={{
+                  fontSize: '0.8125rem',
+                  fontWeight: 500,
+                  color: 'var(--text-primary)',
+                  margin: 0,
+                  lineHeight: 1.5,
+                }}
+              >
+                {whatsHappeningText}
+              </p>
+            </div>
+
+            {/* Column 2: Why? */}
+            <div
+              style={{
+                background: 'var(--bg-surface)',
+                border: '1px solid var(--border-default)',
+                borderRadius: 'var(--radius-sm, 4px)',
+                padding: '1.25rem',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '0.625rem',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <span
+                  style={{
+                    fontSize: '0.625rem',
+                    fontFamily: 'var(--font-mono, monospace)',
+                    fontWeight: 800,
+                    color: 'var(--text-dim)',
+                    background: 'var(--bg-canvas)',
+                    border: '1px solid var(--border-default)',
+                    borderRadius: '2px',
+                    width: '1.25rem',
+                    height: '1.25rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  2
+                </span>
+                <span
+                  style={{
+                    fontSize: '0.6875rem',
+                    fontWeight: 800,
+                    fontFamily: 'var(--font-mono, monospace)',
+                    color: 'var(--text-muted)',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.05em',
+                  }}
+                >
+                  {isKn ? '೨. ಕಾರಣ / ಹಿನ್ನೆಲೆ' : '2. WHY? (ASSOCIATED FACTORS)'}
+                </span>
+              </div>
+              <p
+                style={{
+                  fontSize: '0.8125rem',
+                  color: 'var(--text-secondary)',
+                  margin: 0,
+                  lineHeight: 1.5,
+                }}
+              >
+                {whyText}
+              </p>
+            </div>
+
+            {/* Column 3: What to do */}
+            <div
+              style={{
+                background: 'var(--bg-surface)',
+                border: '1px solid var(--border-default)',
+                borderRadius: 'var(--radius-sm, 4px)',
+                padding: '1.25rem',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '0.625rem',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <span
+                  style={{
+                    fontSize: '0.625rem',
+                    fontFamily: 'var(--font-mono, monospace)',
+                    fontWeight: 800,
+                    color: 'var(--color-emerald-ink)',
+                    background: 'var(--color-champagne)',
+                    borderRadius: '2px',
+                    width: '1.25rem',
+                    height: '1.25rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  3
+                </span>
+                <span
+                  style={{
+                    fontSize: '0.6875rem',
+                    fontWeight: 800,
+                    fontFamily: 'var(--font-mono, monospace)',
+                    color: 'var(--color-emerald-ink)',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.05em',
+                  }}
+                >
+                  {isKn ? '೩. ಏನು ಮಾಡಬೇಕು?' : '3. WHAT TO DO?'}
+                </span>
+              </div>
+              <p
+                style={{
+                  fontSize: '0.8125rem',
+                  fontWeight: 600,
+                  color: 'var(--text-primary)',
+                  margin: 0,
+                  lineHeight: 1.5,
+                }}
+              >
+                {whatToDoText}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* ── 4. Scientific Evidence Chain ── */}
+        <div
+          style={{
+            backgroundColor: 'var(--bg-surface)',
+            border: '1px solid var(--border-default)',
+            borderRadius: 'var(--radius-sm, 4px)',
+            padding: '1.25rem',
+            width: '100%',
+            boxSizing: 'border-box',
+          }}
+        >
+          <EvidenceChain
+            steps={evidenceChainSteps}
+            confidenceScore={userMode === 'technical' ? reasoningConfidenceScore : undefined}
+            confidenceText={userMode === 'farmer' ? naturalConfidence : undefined}
+            confidenceLabel={isKn ? 'ವಿಶ್ವಾಸಾರ್ಹತೆ' : 'Confidence'}
+          />
+        </div>
+      </div>
     </div>
   );
 }
