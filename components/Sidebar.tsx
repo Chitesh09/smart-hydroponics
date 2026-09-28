@@ -7,17 +7,8 @@ import { useAuth } from '@/lib/auth/AuthContext';
 import { usePlantIntelligence } from '@/lib/intelligence/PlantIntelligenceContext';
 import { getFarmerCopy } from '@/lib/intelligence/farmerSemanticLayer';
 import { BrandLogo } from '@/components/ui/BrandLogo';
-import {
-  LayoutDashboard,
-  BarChart3,
-  Sparkles,
-  Radio,
-  Settings,
-  ChevronRight,
-  User,
-  LogOut,
-  Bell,
-} from 'lucide-react';
+import { ModeToggle } from '@/components/ui/ModeToggle';
+import { LanguageToggle } from '@/components/ui/LanguageToggle';
 import styles from './Sidebar.module.css';
 
 interface SidebarProps {
@@ -49,17 +40,17 @@ export function Sidebar({
       {
         title: copy.nav.observation,
         items: [
-          { href: '/dashboard', icon: LayoutDashboard, label: copy.nav.plantCommand },
+          { href: '/dashboard', mark: '◓', label: copy.nav.plantCommand },
         ],
       },
       {
         title: copy.nav.intelligence,
         items: [
-          { href: '/dashboard/intelligence', icon: Sparkles, label: copy.nav.reasoningLab },
-          { href: '/dashboard/analytics', icon: BarChart3, label: copy.nav.plantJourney },
+          { href: '/dashboard/intelligence', mark: '✦', label: copy.nav.reasoningLab },
+          { href: '/dashboard/analytics', mark: '≡', label: copy.nav.plantJourney },
           {
             href: '/dashboard/alerts',
-            icon: Bell,
+            mark: '!',
             label: language === 'kn' ? 'ಎಚ್ಚರಿಕೆಗಳು' : 'Alerts',
             badge: alertSummary?.activeAlerts?.length || 0,
           },
@@ -70,10 +61,10 @@ export function Sidebar({
     // IoT Station and Research Metrics are strictly TECHNICAL MODE ONLY
     const systemItems = [];
     if (userMode === 'technical') {
-      systemItems.push({ href: '/dashboard/devices', icon: Radio, label: copy.nav.iotStation });
-      systemItems.push({ href: '/dashboard/research', icon: BarChart3, label: language === 'kn' ? 'ಸಂಶೋಧನಾ ವರದಿ' : 'Research Metrics' });
+      systemItems.push({ href: '/dashboard/devices', mark: '☵', label: copy.nav.iotStation });
+      systemItems.push({ href: '/dashboard/research', mark: '▤', label: language === 'kn' ? 'ಸಂಶೋಧನಾ ವರದಿ' : 'Research Metrics' });
     }
-    systemItems.push({ href: '/dashboard/profile', icon: Settings, label: copy.nav.settings });
+    systemItems.push({ href: '/dashboard/profile', mark: '⚙', label: copy.nav.settings });
 
     sections.push({
       title: copy.nav.system,
@@ -111,7 +102,7 @@ export function Sidebar({
         {localizedNavSections.map((section) => (
           <div key={section.title} className={styles.navSection}>
             <div className={styles.sectionHeading}>{section.title}</div>
-            {section.items.map(({ href, icon: Icon, label, badge }: { href: string; icon: React.ComponentType<{ size?: number }>; label: string; badge?: number }) => {
+            {section.items.map(({ href, mark, label, badge }: { href: string; mark: string; label: string; badge?: number }) => {
               const isActive = pathname === href;
               return (
                 <Link
@@ -120,9 +111,7 @@ export function Sidebar({
                   className={`${styles.navItem} ${isActive ? styles.navItemActive : ''}`}
                   onClick={onClose}
                 >
-                  <div className={styles.navIcon}>
-                    <Icon size={16} />
-                  </div>
+                  <span className={styles.navMark}>{mark}</span>
                   <span style={{ flex: 1 }}>{label}</span>
                   {badge !== undefined && badge > 0 && (
                     <span style={{
@@ -137,13 +126,24 @@ export function Sidebar({
                       {badge}
                     </span>
                   )}
-                  {isActive && <ChevronRight size={13} style={{ color: 'var(--sidebar-text-muted)' }} />}
+                  {isActive && <span className={styles.activeChevron}>›</span>}
                 </Link>
               );
             })}
           </div>
         ))}
       </nav>
+
+      {/* Global Preferences: Single canonical location for Mode & Language */}
+      <div className={styles.globalPreferences}>
+        <div className={styles.sectionHeading}>
+          {language === 'kn' ? 'ಆದ್ಯತೆಗಳು' : 'PREFERENCES'}
+        </div>
+        <div className={styles.preferenceRow}>
+          <ModeToggle mode={userMode} onModeChange={setUserMode} language={language} size="sm" />
+          <LanguageToggle language={language} onLanguageChange={setLanguage} size="sm" />
+        </div>
+      </div>
 
       {/* Operator Session Footer */}
       <div className={styles.userFooter}>
@@ -159,9 +159,11 @@ export function Sidebar({
               alignItems: 'center',
               justifyContent: 'center',
               color: 'var(--color-green)',
+              fontSize: '12px',
+              fontWeight: 800,
             }}
           >
-            <User size={13} />
+            ◉
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.2 }}>
             <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-primary)' }}>
@@ -175,12 +177,12 @@ export function Sidebar({
 
         <button
           className="btn-ghost"
-          style={{ padding: '6px', color: 'var(--text-muted)' }}
+          style={{ padding: '6px 8px', color: 'var(--text-muted)', fontSize: '11px', fontFamily: 'var(--font-mono)' }}
           onClick={signOut}
           title={copy.nav.signOut}
           aria-label={copy.nav.signOut}
         >
-          <LogOut size={15} />
+          ⎋
         </button>
       </div>
     </aside>

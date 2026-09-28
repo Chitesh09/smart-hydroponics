@@ -43,6 +43,16 @@
 @media (max-width: 960px) {
   .plantHeroStage {
     grid-template-columns: 1fr;
+    padding: 16px;
+    gap: 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  .plantHeroStage {
+    padding: 12px;
+    gap: 14px;
+    border-radius: var(--radius-md);
   }
 }
 
@@ -51,6 +61,7 @@
   position: relative;
   width: 100%;
   aspect-ratio: 16 / 10;
+  max-height: 280px;
   background: #020907;
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
@@ -173,15 +184,34 @@
   color: var(--text-muted);
 }
 
-/* Plant Digital Twin Pillars */
-.twinPillars {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
-  padding: 12px;
-  background: var(--bg-surface);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-sm);
+@media (max-width: 640px) {
+  .commonName {
+    font-size: 22px;
+  }
+
+  .scoreNumber {
+    font-size: 28px;
+  }
+
+  .twinPillars {
+    grid-template-columns: repeat(2, 1fr);
+    padding: 10px;
+    gap: 6px;
+  }
+
+  .opticalStatusOverlay {
+    bottom: 8px;
+    left: 8px;
+    right: 8px;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+}
+
+@media (max-width: 360px) {
+  .twinPillars {
+    grid-template-columns: 1fr;
+  }
 }
 
 .pillarItem {

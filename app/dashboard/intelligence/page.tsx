@@ -4,8 +4,6 @@ import { useState, useMemo } from 'react';
 import { usePlantIntelligence } from '@/lib/intelligence/PlantIntelligenceContext';
 import { useESP32Serial } from '@/lib/esp32/ESP32SerialContext';
 import { EvidenceChain, EvidenceStep } from '@/components/ui/EvidenceChain';
-import { ModeToggle } from '@/components/ui/ModeToggle';
-import { LanguageToggle } from '@/components/ui/LanguageToggle';
 import { getFarmerCopy } from '@/lib/intelligence/farmerSemanticLayer';
 
 /**
@@ -390,8 +388,6 @@ export default function IntelligencePage() {
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', flexWrap: 'wrap' }}>
-            <ModeToggle mode={userMode} onModeChange={setUserMode} size="sm" language={language} />
-            <LanguageToggle language={language} onLanguageChange={setLanguage} size="sm" />
             {userMode === 'technical' && (
               <button
                 type="button"

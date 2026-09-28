@@ -301,3 +301,39 @@
     opacity: 0.4;
   }
 }
+
+@media (max-width: 640px) {
+  .stationCard {
+    padding: 16px 14px;
+    gap: 14px;
+  }
+
+  .channelRow {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+    padding: 10px 12px;
+  }
+
+  .paramsGrid {
+    grid-template-columns: repeat(2, 1fr);
+    padding: 10px 12px;
+    gap: 10px;
+  }
+
+  .actionsRow {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+}
+
+@media (max-width: 360px) {
+  .paramsGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .stationTitle {
+    font-size: 16px;
+  }
+}

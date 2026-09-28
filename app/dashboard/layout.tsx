@@ -1,14 +1,13 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { Sidebar } from '@/components/Sidebar';
 import { useAuth } from '@/lib/auth/AuthContext';
 import { ESP32SerialProvider, useESP32Serial } from '@/lib/esp32/ESP32SerialContext';
 import { CameraProvider } from '@/lib/camera/CameraContext';
-import { PlantIntelligenceProvider } from '@/lib/intelligence/PlantIntelligenceContext';
+import { PlantIntelligenceProvider, usePlantIntelligence } from '@/lib/intelligence/PlantIntelligenceContext';
 import { BrandLogo } from '@/components/ui/BrandLogo';
-import { Menu } from 'lucide-react';
 import styles from './layout.module.css';
 
 export default function DashboardLayout({
@@ -34,6 +33,7 @@ function DashboardLayoutContent({
 }) {
   const { isAuthenticated, loading: authLoading } = useAuth();
   const { mode, latestReading, isStale } = useESP32Serial();
+  const { language } = usePlantIntelligence();
   const [simSystemStatus, setSimSystemStatus] = useState<'stable' | 'correcting' | 'fault'>('stable');
   const [alertCount, setAlertCount] = useState(0);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
@@ -84,6 +84,19 @@ function DashboardLayoutContent({
     return () => clearInterval(interval);
   }, [mode]);
 
+  // Section identity label for compact mobile top header
+  const sectionTitle = useMemo(() => {
+    const isKn = language === 'kn';
+    if (pathname === '/dashboard') return isKn ? 'ಪ್ಲಾಂಟ್ ಕಮಾಂಡ್' : 'Plant Command';
+    if (pathname.startsWith('/dashboard/intelligence')) return isKn ? 'ಕಾರಣ ಲ್ಯಾಬ್' : 'Reasoning Lab';
+    if (pathname.startsWith('/dashboard/analytics')) return isKn ? 'ಸಸ್ಯ ಪ್ರವಾಸ' : 'Plant Journey';
+    if (pathname.startsWith('/dashboard/alerts')) return isKn ? 'ಎಚ್ಚರಿಕೆಗಳು' : 'Alerts';
+    if (pathname.startsWith('/dashboard/devices')) return isKn ? 'IoT ಸ್ಟೇಷನ್' : 'IoT Station';
+    if (pathname.startsWith('/dashboard/research')) return isKn ? 'ಸಂಶೋಧನೆ' : 'Research';
+    if (pathname.startsWith('/dashboard/profile')) return isKn ? 'ಸೆಟ್ಟಿಂಗ್ಸ್' : 'Settings';
+    return 'HydroSmart';
+  }, [pathname, language]);
+
   // While determining Firebase authentication state, render loading shell
   if (authLoading) {
     return (
@@ -114,26 +127,28 @@ function DashboardLayoutContent({
 
   return (
     <div className={styles.layout}>
-      {/* Mobile Top Header (Visible only on mobile/tablet viewports) */}
+      {/* Mobile Top Header: Compact section identity, essential status, and menu toggle */}
       <header className={styles.mobileHeader}>
-        <button 
-          className={styles.menuBtn} 
-          onClick={() => setIsMobileOpen(!isMobileOpen)}
-          aria-label="Toggle navigation drawer"
-        >
-          <Menu size={22} />
-        </button>
-        <div className={styles.mobileLogo}>
-          <BrandLogo size={22} showText />
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <button 
+            type="button"
+            className={styles.menuBtn} 
+            onClick={() => setIsMobileOpen(!isMobileOpen)}
+            aria-label="Toggle navigation drawer"
+          >
+            <span className={styles.hamburgerMark}>≡</span>
+          </button>
+          <span className={styles.mobileSectionTitle}>{sectionTitle}</span>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', fontFamily: 'var(--font-mono)' }}>
-          <span style={{ 
-            width: '6px', 
-            height: '6px', 
-            borderRadius: '50%', 
-            background: mode === 'real' && !isStale ? 'var(--color-green)' : 'var(--color-warning)'
-          }} />
-          <span style={{ color: 'var(--text-secondary)' }}>{mode === 'real' ? 'LIVE' : 'DEMO'}</span>
+
+        <div className={styles.mobileStatusBadge}>
+          <span 
+            className={styles.mobileStatusDot}
+            style={{ 
+              background: mode === 'real' && !isStale ? 'var(--color-green)' : mode === 'real' ? 'var(--color-warning)' : 'var(--color-teal)'
+            }} 
+          />
+          <span className={styles.mobileStatusText}>{mode === 'real' ? (isStale ? 'STALE' : 'LIVE') : 'SIM'}</span>
         </div>
       </header>
 

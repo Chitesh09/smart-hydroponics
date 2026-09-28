@@ -10,8 +10,6 @@ import { useRouter } from 'next/navigation';
 import { useESP32Serial } from '@/lib/esp32/ESP32SerialContext';
 import { usePlantIntelligence } from '@/lib/intelligence/PlantIntelligenceContext';
 import { getFarmerCopy, getLocalizedSensorQuality, getLocalizedCalibrationStatus } from '@/lib/intelligence/farmerSemanticLayer';
-import { ModeToggle } from '@/components/ui/ModeToggle';
-import { LanguageToggle } from '@/components/ui/LanguageToggle';
 import ESP32Connection from '@/components/esp32/ESP32Connection';
 import {
   Cpu,
@@ -219,8 +217,6 @@ export default function DeviceManagementPage() {
         </div>
 
         <div className={styles.actionRow}>
-          <ModeToggle mode={userMode} onModeChange={setUserMode} language={language} size="sm" />
-          <LanguageToggle language={language} onLanguageChange={setLanguage} size="sm" />
 
           {/* Simulation vs Real Mode Toggle */}
           <div style={{

@@ -12,6 +12,7 @@ import {
   getLocalizedAssociationType,
   getLocalizedAssociationStrength,
 } from '@/lib/intelligence/farmerSemanticLayer';
+import styles from './EnvironmentPlantCard.module.css';
 
 interface EnvironmentPlantCardProps {
   summary?: CorrelationAnalysisSummary | null;
@@ -301,14 +302,7 @@ export function EnvironmentPlantCard({
                 gap: '1rem',
               }}
             >
-              <div
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: '1fr auto 1fr',
-                  alignItems: 'center',
-                  gap: '1rem',
-                }}
-              >
+              <div className={styles.evidenceFlow}>
                 {/* ENVIRONMENT Panel */}
                 <div
                   style={{
@@ -350,19 +344,10 @@ export function EnvironmentPlantCard({
                   </div>
                 </div>
 
-                {/* Relational Direction Indicator */}
-                <div
-                  style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    color: 'var(--text-dim)',
-                    fontWeight: 900,
-                    fontSize: '1.25rem',
-                  }}
-                >
-                  <span>↔</span>
+                {/* Relational Direction Indicator: ↔ on desktop, ↓ on mobile */}
+                <div className={styles.directionIndicator}>
+                  <span className={styles.arrowDesktop}>↔</span>
+                  <span className={styles.arrowMobile}>↓</span>
                 </div>
 
                 {/* PLANT Panel */}

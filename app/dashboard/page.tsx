@@ -10,8 +10,6 @@ import ESP32Connection from '@/components/esp32/ESP32Connection';
 import { LiveLineChart } from '@/components/LiveLineChart';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { DataSourceBadge } from '@/components/ui/DataSourceBadge';
-import { ModeToggle } from '@/components/ui/ModeToggle';
-import { LanguageToggle } from '@/components/ui/LanguageToggle';
 import { FarmerActionCard } from '@/components/ui/FarmerActionCard';
 import { WhatChangedCard } from '@/components/ui/WhatChangedCard';
 import { EnvironmentPlantCard } from '@/components/ui/EnvironmentPlantCard';
@@ -242,9 +240,7 @@ export default function Dashboard() {
           <h1 className="display-title">{greeting}</h1>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-          <ModeToggle mode={userMode} onModeChange={setUserMode} size="sm" language={language} />
-          <LanguageToggle language={language} onLanguageChange={setLanguage} size="sm" />
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
           <DataSourceBadge mode={mode} isStale={isStale} hasData={latestReading !== null} />
           {secondsAgo !== null && (
             <span className="scientific-meta">

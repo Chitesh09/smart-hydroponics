@@ -1,0 +1,107 @@
+.summaryContainer {
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm, 4px);
+  overflow: hidden;
+  width: 100%;
+}
+
+.severityRow {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  border-bottom: 1px solid var(--border-default);
+}
+
+.severityCard {
+  padding: 1.125rem 0.75rem;
+  text-align: center;
+  border-right: 1px solid var(--border-default);
+  background: var(--bg-surface);
+}
+
+.severityCard:last-child {
+  border-right: none;
+}
+
+.severityLabel {
+  font-size: 0.6875rem;
+  font-weight: 800;
+  font-family: var(--font-mono, monospace);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 0.35rem;
+}
+
+.severityCount {
+  font-size: 1.875rem;
+  font-weight: 800;
+  font-family: var(--font-mono, monospace);
+  line-height: 1;
+}
+
+.tabRow {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  background: var(--bg-canvas);
+}
+
+.tabBtn {
+  padding: 0.75rem 0.5rem;
+  text-align: center;
+  border-right: 1px solid var(--border-default);
+  border-top: none;
+  border-bottom: none;
+  border-left: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-family: var(--font-mono, monospace);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.tabBtn:last-child {
+  border-right: none;
+}
+
+@media (max-width: 480px) {
+  .severityCard {
+    padding: 0.75rem 0.25rem;
+  }
+
+  .severityLabel {
+    font-size: 0.625rem;
+    letter-spacing: 0.04em;
+    margin-bottom: 0.25rem;
+  }
+
+  .severityCount {
+    font-size: 1.5rem;
+  }
+
+  .tabBtn {
+    padding: 0.5rem 0.2rem;
+    font-size: 0.5875rem;
+    gap: 0.2rem;
+  }
+}
+
+@media (max-width: 340px) {
+  .severityCount {
+    font-size: 1.25rem;
+  }
+
+  .severityLabel {
+    font-size: 0.5625rem;
+  }
+
+  .tabBtn {
+    font-size: 0.525rem;
+    padding: 0.4rem 0.15rem;
+  }
+}

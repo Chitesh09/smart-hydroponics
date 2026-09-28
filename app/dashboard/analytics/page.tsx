@@ -7,8 +7,6 @@ import { getFarmerCopy, getLocalizedMilestone } from '@/lib/intelligence/farmerS
 import { LiveLineChart } from '@/components/LiveLineChart';
 import { DataSourceBadge } from '@/components/ui/DataSourceBadge';
 import { StatusBadge } from '@/components/ui/StatusBadge';
-import { ModeToggle } from '@/components/ui/ModeToggle';
-import { LanguageToggle } from '@/components/ui/LanguageToggle';
 import { PlantProfileCard } from '@/components/ui/PlantProfileCard';
 import { WhatChangedCard } from '@/components/ui/WhatChangedCard';
 import { EnvironmentPlantCard } from '@/components/ui/EnvironmentPlantCard';
@@ -194,9 +192,7 @@ export default function AnalyticsPage() {
           <h1 className="display-title">{copy.analytics.title}</h1>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-          <ModeToggle mode={userMode} onModeChange={setUserMode} language={language} size="sm" />
-          <LanguageToggle language={language} onLanguageChange={setLanguage} size="sm" />
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
           <button
             className="btn btn-secondary"
             onClick={exportToCSV}
@@ -563,7 +559,7 @@ export default function AnalyticsPage() {
           </span>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: '20px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 280px), 1fr))', gap: '20px' }}>
           {/* pH / Water Acidity Chart */}
           <div
             style={{

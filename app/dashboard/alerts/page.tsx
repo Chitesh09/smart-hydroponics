@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { usePlantIntelligence } from '@/lib/intelligence/PlantIntelligenceContext';
 import { PlantAlertCard } from '@/components/ui/PlantAlertCard';
+import styles from './alerts.module.css';
 
 export default function AlertsPage() {
   const {
@@ -120,122 +121,52 @@ export default function AlertsPage() {
         </div>
 
         {/* ── 2. Proper Horizontal Summary Section ── */}
-        <div
-          style={{
-            backgroundColor: 'var(--bg-surface)',
-            border: '1px solid var(--border-default)',
-            borderRadius: 'var(--radius-sm, 4px)',
-            overflow: 'hidden',
-            width: '100%',
-          }}
-        >
+        <div className={styles.summaryContainer}>
           {/* Row 1 — Severity Levels: URGENT | ATTENTION | INFO */}
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(3, 1fr)',
-              borderBottom: '1px solid var(--border-default)',
-            }}
-          >
+          <div className={styles.severityRow}>
             {/* Urgent */}
-            <div
-              style={{
-                padding: '1.25rem 1rem',
-                textAlign: 'center',
-                borderRight: '1px solid var(--border-default)',
-                background: 'var(--bg-surface)',
-              }}
-            >
+            <div className={styles.severityCard}>
               <div
-                style={{
-                  fontSize: '0.6875rem',
-                  fontWeight: 800,
-                  fontFamily: 'var(--font-mono, monospace)',
-                  letterSpacing: '0.08em',
-                  textTransform: 'uppercase',
-                  color: 'var(--color-red)',
-                  marginBottom: '0.35rem',
-                }}
+                className={styles.severityLabel}
+                style={{ color: 'var(--color-red)' }}
               >
                 {isKn ? 'ತುರ್ತು' : 'URGENT'}
               </div>
               <div
-                style={{
-                  fontSize: '2rem',
-                  fontWeight: 800,
-                  fontFamily: 'var(--font-mono, monospace)',
-                  lineHeight: 1,
-                  color: 'var(--color-red)',
-                }}
+                className={styles.severityCount}
+                style={{ color: 'var(--color-red)' }}
               >
                 {urgentCount}
               </div>
             </div>
 
             {/* Attention */}
-            <div
-              style={{
-                padding: '1.25rem 1rem',
-                textAlign: 'center',
-                borderRight: '1px solid var(--border-default)',
-                background: 'var(--bg-surface)',
-              }}
-            >
+            <div className={styles.severityCard}>
               <div
-                style={{
-                  fontSize: '0.6875rem',
-                  fontWeight: 800,
-                  fontFamily: 'var(--font-mono, monospace)',
-                  letterSpacing: '0.08em',
-                  textTransform: 'uppercase',
-                  color: 'var(--color-amber)',
-                  marginBottom: '0.35rem',
-                }}
+                className={styles.severityLabel}
+                style={{ color: 'var(--color-amber)' }}
               >
                 {isKn ? 'ಗಮನಿಸಿ' : 'ATTENTION'}
               </div>
               <div
-                style={{
-                  fontSize: '2rem',
-                  fontWeight: 800,
-                  fontFamily: 'var(--font-mono, monospace)',
-                  lineHeight: 1,
-                  color: 'var(--color-amber)',
-                }}
+                className={styles.severityCount}
+                style={{ color: 'var(--color-amber)' }}
               >
                 {attentionCount}
               </div>
             </div>
 
             {/* Info */}
-            <div
-              style={{
-                padding: '1.25rem 1rem',
-                textAlign: 'center',
-                background: 'var(--bg-surface)',
-              }}
-            >
+            <div className={styles.severityCard}>
               <div
-                style={{
-                  fontSize: '0.6875rem',
-                  fontWeight: 800,
-                  fontFamily: 'var(--font-mono, monospace)',
-                  letterSpacing: '0.08em',
-                  textTransform: 'uppercase',
-                  color: 'var(--color-teal)',
-                  marginBottom: '0.35rem',
-                }}
+                className={styles.severityLabel}
+                style={{ color: 'var(--color-teal)' }}
               >
                 {isKn ? 'ಮಾಹಿತಿ' : 'INFO'}
               </div>
               <div
-                style={{
-                  fontSize: '2rem',
-                  fontWeight: 800,
-                  fontFamily: 'var(--font-mono, monospace)',
-                  lineHeight: 1,
-                  color: 'var(--color-teal)',
-                }}
+                className={styles.severityCount}
+                style={{ color: 'var(--color-teal)' }}
               >
                 {infoCount}
               </div>
@@ -243,36 +174,19 @@ export default function AlertsPage() {
           </div>
 
           {/* Row 2 — Status Lifecycle: ACTIVE | RESOLVED | DISMISSED */}
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(3, 1fr)',
-              background: 'var(--bg-canvas)',
-            }}
-          >
+          <div className={styles.tabRow}>
             {[
               { label: isKn ? 'ಸಕ್ರಿಯ' : 'ACTIVE', count: activeAlerts.length, tabKey: 'ACTIVE' as const },
               { label: isKn ? 'ಪರಿಹರಿಸಲಾಗಿದೆ' : 'RESOLVED', count: resolvedAlerts.length, tabKey: 'RESOLVED' as const },
               { label: isKn ? 'ವಜಾಗೊಳಿಸಲಾಗಿದೆ' : 'DISMISSED', count: dismissedAlerts.length, tabKey: 'DISMISSED' as const },
-            ].map((item, idx) => (
+            ].map((item) => (
               <button
                 key={item.tabKey}
                 type="button"
                 onClick={() => setActiveTab(item.tabKey)}
+                className={styles.tabBtn}
                 style={{
-                  padding: '0.75rem 1rem',
-                  textAlign: 'center',
-                  borderRight: idx < 2 ? '1px solid var(--border-default)' : 'none',
-                  borderTop: 'none',
-                  borderBottom: 'none',
-                  borderLeft: 'none',
                   background: activeTab === item.tabKey ? 'var(--bg-surface)' : 'transparent',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '0.5rem',
-                  cursor: 'pointer',
-                  fontFamily: 'inherit',
                 }}
               >
                 <span

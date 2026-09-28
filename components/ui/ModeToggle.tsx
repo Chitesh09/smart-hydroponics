@@ -1,7 +1,6 @@
 'use client';
 
 import React from 'react';
-import { Sprout, Microchip } from 'lucide-react';
 import { AssistantMode, SupportedLanguageCode } from '@/lib/assistant/assistantConfig';
 
 interface ModeToggleProps {
@@ -22,8 +21,8 @@ export function ModeToggle({ mode, onModeChange, language = 'en', size = 'md' }:
         alignItems: 'center',
         background: 'var(--bg-surface)',
         border: '1px solid var(--border-default)',
-        borderRadius: 'var(--radius-full)',
-        padding: '3px',
+        borderRadius: 'var(--radius-sm, 4px)',
+        padding: '2px',
         gap: '2px',
       }}
       role="radiogroup"
@@ -37,21 +36,20 @@ export function ModeToggle({ mode, onModeChange, language = 'en', size = 'md' }:
         style={{
           display: 'flex',
           alignItems: 'center',
-          gap: '6px',
-          padding: size === 'sm' ? '4px 10px' : '6px 14px',
+          gap: '5px',
+          padding: size === 'sm' ? '3px 8px' : '5px 12px',
           fontSize: size === 'sm' ? '11px' : '12px',
           fontWeight: 700,
-          borderRadius: 'var(--radius-full)',
-          border: 'none',
+          borderRadius: 'var(--radius-xs, 2px)',
+          border: isFarmer ? '1px solid #E8DFD5' : '1px solid transparent',
           cursor: 'pointer',
           transition: 'all 0.15s ease',
-          background: isFarmer ? 'var(--color-green)' : 'transparent',
-          color: isFarmer ? '#051311' : 'var(--text-secondary)',
-          boxShadow: isFarmer ? '0 2px 8px rgba(46, 184, 114, 0.25)' : 'none',
+          background: isFarmer ? 'var(--color-champagne, #F8E7C9)' : 'transparent',
+          color: isFarmer ? 'var(--color-emerald-ink, #064E3B)' : 'var(--text-secondary)',
         }}
       >
-        <Sprout size={size === 'sm' ? 12 : 14} />
-        <span>{isKn ? 'ರೈತರ ಮೋಡ್' : 'Farmer Mode'}</span>
+        <span style={{ fontSize: '9px', lineHeight: 1 }}>{isFarmer ? '●' : '○'}</span>
+        <span>{isKn ? 'ರೈತರ ಮೋಡ್' : 'Farmer'}</span>
       </button>
 
       <button
@@ -62,21 +60,20 @@ export function ModeToggle({ mode, onModeChange, language = 'en', size = 'md' }:
         style={{
           display: 'flex',
           alignItems: 'center',
-          gap: '6px',
-          padding: size === 'sm' ? '4px 10px' : '6px 14px',
+          gap: '5px',
+          padding: size === 'sm' ? '3px 8px' : '5px 12px',
           fontSize: size === 'sm' ? '11px' : '12px',
           fontWeight: 700,
-          borderRadius: 'var(--radius-full)',
-          border: 'none',
+          borderRadius: 'var(--radius-xs, 2px)',
+          border: !isFarmer ? '1px solid #E8DFD5' : '1px solid transparent',
           cursor: 'pointer',
           transition: 'all 0.15s ease',
-          background: !isFarmer ? 'var(--color-teal)' : 'transparent',
-          color: !isFarmer ? '#051311' : 'var(--text-secondary)',
-          boxShadow: !isFarmer ? '0 2px 8px rgba(28, 167, 160, 0.25)' : 'none',
+          background: !isFarmer ? 'var(--color-champagne, #F8E7C9)' : 'transparent',
+          color: !isFarmer ? 'var(--color-emerald-ink, #064E3B)' : 'var(--text-secondary)',
         }}
       >
-        <Microchip size={size === 'sm' ? 12 : 14} />
-        <span>{isKn ? 'ತಾಂತ್ರಿಕ ಮೋಡ್' : 'Technical Mode'}</span>
+        <span style={{ fontSize: '9px', lineHeight: 1 }}>{!isFarmer ? '●' : '○'}</span>
+        <span>{isKn ? 'ತಾಂತ್ರಿಕ ಮೋಡ್' : 'Technical'}</span>
       </button>
     </div>
   );

@@ -2,7 +2,6 @@
 
 import React from 'react';
 import { SupportedLanguageCode, SUPPORTED_LANGUAGES } from '@/lib/assistant/assistantConfig';
-import { Languages } from 'lucide-react';
 
 interface LanguageToggleProps {
   language: SupportedLanguageCode;
@@ -24,17 +23,25 @@ export function LanguageToggle({
         alignItems: 'center',
         background: 'var(--bg-surface)',
         border: '1px solid var(--border-default)',
-        borderRadius: 'var(--radius-full)',
-        padding: '3px',
+        borderRadius: 'var(--radius-sm, 4px)',
+        padding: '2px',
         gap: '2px',
       }}
       role="radiogroup"
       aria-label="Language Selection"
     >
       {showIcon && (
-        <div style={{ padding: '0 6px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center' }}>
-          <Languages size={size === 'sm' ? 12 : 14} />
-        </div>
+        <span
+          style={{
+            padding: '0 5px',
+            color: 'var(--text-dim)',
+            fontSize: '10px',
+            fontFamily: 'var(--font-mono, monospace)',
+            fontWeight: 700,
+          }}
+        >
+          LANG
+        </span>
       )}
 
       {SUPPORTED_LANGUAGES.map((opt) => {
@@ -49,17 +56,16 @@ export function LanguageToggle({
             style={{
               display: 'flex',
               alignItems: 'center',
-              gap: '5px',
-              padding: size === 'sm' ? '4px 10px' : '6px 14px',
+              gap: '4px',
+              padding: size === 'sm' ? '3px 8px' : '5px 12px',
               fontSize: size === 'sm' ? '11px' : '12px',
               fontWeight: 700,
-              borderRadius: 'var(--radius-full)',
-              border: 'none',
+              borderRadius: 'var(--radius-xs, 2px)',
+              border: isActive ? '1px solid #E8DFD5' : '1px solid transparent',
               cursor: 'pointer',
               transition: 'all 0.15s ease',
-              background: isActive ? 'var(--color-teal)' : 'transparent',
-              color: isActive ? '#051311' : 'var(--text-secondary)',
-              boxShadow: isActive ? '0 2px 8px rgba(28, 167, 160, 0.25)' : 'none',
+              background: isActive ? 'var(--color-champagne, #F8E7C9)' : 'transparent',
+              color: isActive ? 'var(--color-emerald-ink, #064E3B)' : 'var(--text-secondary)',
             }}
           >
             <span>{opt.nativeScript}</span>

@@ -6,8 +6,8 @@
 
 .main {
   flex: 1;
-  margin-left: 250px; /* Aligned with sidebar width */
-  padding: 32px 36px;
+  margin-left: 250px;
+  padding: 28px 32px;
   position: relative;
   z-index: 10;
   min-width: 0;
@@ -24,7 +24,7 @@
   inset: 0;
   background: rgba(7, 26, 23, 0.7);
   backdrop-filter: blur(4px);
-  z-index: 95;
+  z-index: 105;
   animation: fadeIn 0.2s cubic-bezier(0.4, 0, 0.2, 1) forwards;
 }
 
@@ -40,8 +40,8 @@
 
   .main {
     margin-left: 0;
-    margin-top: 56px;
-    padding: 20px 16px;
+    margin-top: calc(52px + env(safe-area-inset-top, 0px));
+    padding: 18px 16px 32px;
   }
 
   .mobileHeader {
@@ -52,24 +52,82 @@
     top: 0;
     left: 0;
     right: 0;
-    height: 56px;
+    height: calc(52px + env(safe-area-inset-top, 0px));
+    padding-top: env(safe-area-inset-top, 0px);
     background: var(--bg-surface);
     border-bottom: 1px solid var(--border-default);
-    padding: 0 16px;
+    padding-left: 14px;
+    padding-right: 14px;
     z-index: 90;
   }
 
   .menuBtn {
+    background: transparent;
+    border: 1px solid var(--border-subtle);
     color: var(--text-primary);
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 6px;
-    border-radius: var(--radius-sm);
+    width: 36px;
+    height: 36px;
+    border-radius: var(--radius-xs, 2px);
+    cursor: pointer;
+    transition: background 0.15s ease;
   }
 
-  .mobileLogo {
-    display: flex;
+  .menuBtn:hover, .menuBtn:active {
+    background: var(--bg-canvas);
+    border-color: var(--border-default);
+  }
+
+  .hamburgerMark {
+    font-size: 20px;
+    line-height: 1;
+    font-weight: 800;
+    color: var(--text-primary);
+  }
+
+  .mobileSectionTitle {
+    font-size: 13px;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--text-primary);
+  }
+
+  .mobileStatusBadge {
+    display: inline-flex;
     align-items: center;
+    gap: 5px;
+    padding: 3px 8px;
+    background: var(--bg-canvas);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-xs, 2px);
+    font-family: var(--font-mono, monospace);
+    font-size: 10px;
+    font-weight: 800;
+  }
+
+  .mobileStatusDot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+  }
+
+  .mobileStatusText {
+    color: var(--text-secondary);
+    letter-spacing: 0.05em;
+  }
+}
+
+@media (max-width: 480px) {
+  .main {
+    padding: 14px 12px 28px;
+  }
+}
+
+@media (max-width: 340px) {
+  .main {
+    padding: 12px 8px 24px;
   }
 }

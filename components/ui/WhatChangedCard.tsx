@@ -272,7 +272,7 @@ export function WhatChangedCard({
             <div
               style={{
                 display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 180px), 1fr))',
                 gap: '1rem',
                 borderBottom: '1px solid var(--border-subtle)',
                 paddingBottom: '1rem',
@@ -362,7 +362,7 @@ export function WhatChangedCard({
             <div
               style={{
                 display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 200px), 1fr))',
                 gap: '1rem',
               }}
             >
@@ -407,7 +407,7 @@ export function WhatChangedCard({
           {/* ── 4. Horizontal Event Filters & Multi-Row Events ── */}
           {summary.events.length > 0 && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-              {/* Event Filter Row: Real horizontal bar with clear dividers */}
+              {/* Event Filter Row: Clean wrapped pills */}
               <div
                 style={{
                   display: 'flex',
@@ -423,59 +423,56 @@ export function WhatChangedCard({
                   role="tablist"
                   aria-label="Event category filters"
                   style={{
-                    display: 'inline-flex',
+                    display: 'flex',
+                    flexWrap: 'wrap',
                     alignItems: 'center',
                     background: 'var(--bg-canvas)',
                     border: '1px solid var(--border-default)',
                     borderRadius: 'var(--radius-xs, 2px)',
-                    padding: '2px',
-                    gap: '2px',
+                    padding: '3px',
+                    gap: '4px',
                   }}
                 >
                   {[
-                    { id: 'all', label: isKn ? 'ಎಲ್ಲಾ ಬದಲಾವಣೆಗಳು' : 'All Events', count: summary.events.length },
+                    { id: 'all', label: isKn ? 'ಎಲ್ಲಾ' : 'All', count: summary.events.length },
                     { id: 'sensor', label: isKn ? 'ಸಂವೇದಕಗಳು' : 'Sensors', count: summary.sensorChanges.length },
                     { id: 'visual', label: isKn ? 'ದೃಶ್ಯ' : 'Visual', count: summary.visualChanges.length },
                     { id: 'growth', label: isKn ? 'ಬೆಳವಣಿಗೆ' : 'Growth', count: summary.growthChanges.length },
-                  ].map((tab, idx, arr) => {
+                  ].map((tab) => {
                     const isActive = activeTab === tab.id;
                     return (
-                      <React.Fragment key={tab.id}>
-                        <button
-                          type="button"
-                          role="tab"
-                          aria-selected={isActive}
-                          onClick={() => setActiveTab(tab.id as typeof activeTab)}
+                      <button
+                        key={tab.id}
+                        type="button"
+                        role="tab"
+                        aria-selected={isActive}
+                        onClick={() => setActiveTab(tab.id as typeof activeTab)}
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '0.35rem',
+                          padding: '0.3rem 0.65rem',
+                          borderRadius: '2px',
+                          border: isActive ? '1px solid #E8DFD5' : '1px solid transparent',
+                          fontSize: '0.6875rem',
+                          fontWeight: isActive ? 700 : 500,
+                          fontFamily: 'var(--font-mono, monospace)',
+                          cursor: 'pointer',
+                          background: isActive ? 'var(--color-champagne)' : 'transparent',
+                          color: isActive ? 'var(--color-emerald-ink)' : 'var(--text-secondary)',
+                          transition: 'all 0.15s',
+                        }}
+                      >
+                        <span>{tab.label}</span>
+                        <span
                           style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '0.35rem',
-                            padding: '0.3rem 0.65rem',
-                            borderRadius: '2px',
-                            border: 'none',
-                            fontSize: '0.6875rem',
-                            fontWeight: isActive ? 700 : 500,
-                            fontFamily: 'var(--font-mono, monospace)',
-                            cursor: 'pointer',
-                            background: isActive ? 'var(--color-emerald-ink)' : 'transparent',
-                            color: isActive ? 'var(--color-champagne)' : 'var(--text-secondary)',
-                            transition: 'all 0.15s',
+                            fontSize: '0.625rem',
+                            opacity: isActive ? 1 : 0.7,
                           }}
                         >
-                          <span>{tab.label}</span>
-                          <span
-                            style={{
-                              fontSize: '0.625rem',
-                              opacity: isActive ? 1 : 0.7,
-                            }}
-                          >
-                            ({tab.count})
-                          </span>
-                        </button>
-                        {idx < arr.length - 1 && (
-                          <span style={{ color: 'var(--border-subtle)', userSelect: 'none' }}>|</span>
-                        )}
-                      </React.Fragment>
+                          ({tab.count})
+                        </span>
+                      </button>
                     );
                   })}
                 </div>
