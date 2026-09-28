@@ -85,7 +85,9 @@ interface ESP32SerialContextType {
   lastUpdateTime: number | null;
   history: SensorReading[];
   error: string | null;
+  hasAuthorizedPort: boolean;
   connect: () => Promise<void>;
+  reconnect: () => Promise<boolean>;
   disconnect: () => Promise<void>;
   setMode: (mode: 'real' | 'simulation') => void;
 
@@ -647,11 +649,104 @@ export function ESP32SerialProvider({ children }: { children: React.ReactNode })
     } catch (streamErr) {
       console.warn('[ESP32 Web Serial] Reader stream error (cable disconnected/reboot):', streamErr);
       addTelemetryLog('error', 'Serial Stream Interrupted', 'Device disconnected or USB link severed.');
+      keepReadingRef.current = false;
+      if (readerRef.current) {
+        try { await readerRef.current.cancel(); } catch {}
+        readerRef.current = null;
+      }
+      if (portRef.current) {
+        try { await portRef.current.close(); } catch {}
+        portRef.current = null;
+      }
       setConnectionState('disconnected');
+      setModeState('simulation');
     }
   }, [activeDeviceId, addTelemetryLog]);
 
-  // Connect Web Serial Port
+  // Track previously authorized ports
+  const [hasAuthorizedPort, setHasAuthorizedPort] = useState<boolean>(false);
+
+  const checkAuthorizedPorts = useCallback(async (): Promise<SerialPort[]> => {
+    if (typeof window !== 'undefined' && 'serial' in navigator) {
+      try {
+        const ports = await (navigator as unknown as { serial: { getPorts: () => Promise<SerialPort[]> } }).serial.getPorts();
+        setHasAuthorizedPort(ports.length > 0);
+        return ports;
+      } catch {
+        setHasAuthorizedPort(false);
+        return [];
+      }
+    }
+    return [];
+  }, []);
+
+  // Safe reconnection using existing authorized port (NO user gesture requestPort required)
+  const reconnect = useCallback(async (): Promise<boolean> => {
+    if (typeof window === 'undefined' || !('serial' in navigator)) {
+      setError('Web Serial API is not supported in this browser.');
+      setConnectionState('error');
+      return false;
+    }
+
+    setError(null);
+    setConnectionState('connecting');
+
+    try {
+      const ports = await checkAuthorizedPorts();
+      if (ports.length === 0) {
+        setConnectionState('disconnected');
+        setError('No previously authorized serial port found. Click Connect ESP32 to pair.');
+        return false;
+      }
+
+      const port = ports[0];
+      portRef.current = port;
+
+      await port.open({ baudRate: 115200 });
+
+      setConnectionState('connected');
+      setModeState('real');
+      keepReadingRef.current = true;
+      lastHeartbeatRef.current = Date.now();
+      try {
+        sessionStorage.setItem('hydrosmart_esp32_desired', 'true');
+      } catch {}
+
+      setHasAuthorizedPort(true);
+
+      const portInfo = port.getInfo ? port.getInfo() : {};
+      setDevices((prev) =>
+        prev.map((d) =>
+          d.deviceId === activeDeviceId
+            ? {
+                ...d,
+                status: 'online',
+                portInfo: {
+                  usbVendorId: portInfo.usbVendorId,
+                  usbProductId: portInfo.usbProductId,
+                  portName: 'USB Serial (COM)',
+                },
+              }
+            : d
+        )
+      );
+
+      addTelemetryLog('success', 'ESP32 Reconnected', 'Reconnected to authorized serial port at 115200 Baud.');
+      readSerialLoop(port);
+      return true;
+    } catch (err: unknown) {
+      setConnectionState('error');
+      const errObject = err as { name?: string; message?: string };
+      const msg = errObject.message?.includes('busy') || errObject.message?.includes('denied')
+        ? 'COM port is busy. Close Arduino IDE or other serial monitors and retry.'
+        : `Unable to connect to ESP32: ${errObject.message || String(err)}`;
+      setError(msg);
+      addTelemetryLog('error', 'Reconnection Failed', msg);
+      return false;
+    }
+  }, [activeDeviceId, addTelemetryLog, checkAuthorizedPorts, readSerialLoop]);
+
+  // Connect Web Serial Port (Invokes browser port picker via user click)
   const connect = useCallback(async () => {
     setError(null);
     setConnectionState('connecting');
@@ -680,6 +775,11 @@ export function ESP32SerialProvider({ children }: { children: React.ReactNode })
       setModeState('real');
       keepReadingRef.current = true;
       lastHeartbeatRef.current = Date.now();
+      try {
+        sessionStorage.setItem('hydrosmart_esp32_desired', 'true');
+      } catch {}
+
+      setHasAuthorizedPort(true);
 
       const portInfo = port.getInfo ? port.getInfo() : {};
       setDevices((prev) =>
@@ -701,10 +801,10 @@ export function ESP32SerialProvider({ children }: { children: React.ReactNode })
       addTelemetryLog('success', 'ESP32 Connected', 'Serial port opened at 115200 Baud.');
       readSerialLoop(port);
     } catch (err: unknown) {
-      setConnectionState('disconnected');
       const errObject = err as { name?: string; message?: string };
 
       if (errObject.name === 'NotFoundError') {
+        setConnectionState('disconnected');
         setError('No serial device was selected from the pairing prompt.');
         addTelemetryLog('warning', 'Device Pairing Cancelled', 'No port selected.');
       } else if (
@@ -713,12 +813,14 @@ export function ESP32SerialProvider({ children }: { children: React.ReactNode })
         errObject.message?.includes('Access denied') ||
         errObject.message?.includes('device or resource busy')
       ) {
+        setConnectionState('error');
         const busyMsg = 'COM port busy or locked. Close Arduino Serial Monitor, PuTTY, or other tabs and try again.';
         setError(busyMsg);
         addTelemetryLog('error', 'Port Conflict / Access Denied', busyMsg);
       } else {
+        setConnectionState('error');
         const genMsg = errObject.message || String(err);
-        setError(`Failed to open serial port: ${genMsg}`);
+        setError(`Unable to connect to ESP32: ${genMsg}`);
         addTelemetryLog('error', 'Connection Error', genMsg);
       }
     }
@@ -727,6 +829,9 @@ export function ESP32SerialProvider({ children }: { children: React.ReactNode })
   // Disconnect Port
   const disconnect = useCallback(async () => {
     keepReadingRef.current = false;
+    try {
+      sessionStorage.removeItem('hydrosmart_esp32_desired');
+    } catch {}
 
     if (readerRef.current) {
       try {
@@ -750,7 +855,58 @@ export function ESP32SerialProvider({ children }: { children: React.ReactNode })
     setModeState('simulation');
     setIsStale(false);
     addTelemetryLog('info', 'ESP32 Disconnected', 'Switched to local simulated telemetry mode.');
-  }, [addTelemetryLog]);
+    checkAuthorizedPorts();
+  }, [addTelemetryLog, checkAuthorizedPorts]);
+
+  // Hardware plug/unplug OS-level event listeners
+  useEffect(() => {
+    if (typeof window === 'undefined' || !('serial' in navigator)) return;
+
+    checkAuthorizedPorts();
+
+    const handleSerialDisconnect = () => {
+      console.warn('[ESP32 Web Serial] Hardware unplugged or serial port disconnected at OS level.');
+      addTelemetryLog('warning', 'Hardware Disconnected', 'USB cable disconnected or serial port removed.');
+      disconnect();
+    };
+
+    const handleSerialConnect = () => {
+      checkAuthorizedPorts();
+    };
+
+    const serialObj = (navigator as unknown as { serial: EventTarget }).serial;
+    serialObj.addEventListener('disconnect', handleSerialDisconnect);
+    serialObj.addEventListener('connect', handleSerialConnect);
+
+    return () => {
+      serialObj.removeEventListener('disconnect', handleSerialDisconnect);
+      serialObj.removeEventListener('connect', handleSerialConnect);
+    };
+  }, [checkAuthorizedPorts, disconnect, addTelemetryLog]);
+
+  // Session-based auto-reconnect using authorized port without user gesture prompt
+  useEffect(() => {
+    if (typeof window === 'undefined' || !('serial' in navigator)) return;
+
+    let isMounted = true;
+    (navigator as unknown as { serial: { getPorts: () => Promise<SerialPort[]> } }).serial
+      .getPorts()
+      .then((ports) => {
+        if (!isMounted) return;
+        setHasAuthorizedPort(ports.length > 0);
+        try {
+          const wasDesired = sessionStorage.getItem('hydrosmart_esp32_desired') === 'true';
+          if (wasDesired && ports.length > 0 && connectionState === 'disconnected') {
+            reconnect();
+          }
+        } catch {}
+      })
+      .catch(() => {});
+
+    return () => {
+      isMounted = false;
+    };
+  }, [reconnect, connectionState]);
 
   const setMode = useCallback((newMode: 'real' | 'simulation') => {
     if (newMode === 'simulation' && connectionState === 'connected') {
@@ -806,7 +962,9 @@ export function ESP32SerialProvider({ children }: { children: React.ReactNode })
         lastUpdateTime,
         history,
         error,
+        hasAuthorizedPort,
         connect,
+        reconnect,
         disconnect,
         setMode,
         devices,

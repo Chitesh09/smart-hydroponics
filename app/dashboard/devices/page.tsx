@@ -12,6 +12,7 @@ import { usePlantIntelligence } from '@/lib/intelligence/PlantIntelligenceContex
 import { getFarmerCopy, getLocalizedSensorQuality, getLocalizedCalibrationStatus } from '@/lib/intelligence/farmerSemanticLayer';
 import { ModeToggle } from '@/components/ui/ModeToggle';
 import { LanguageToggle } from '@/components/ui/LanguageToggle';
+import ESP32Connection from '@/components/esp32/ESP32Connection';
 import {
   Cpu,
   Activity,
@@ -246,32 +247,15 @@ export default function DeviceManagementPage() {
               {copy.devices.realSerialBtn}
             </button>
           </div>
-
-          {supported && (
-            connectionState === 'connected' ? (
-              <button
-                onClick={disconnect}
-                className="btn btn-secondary"
-                style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px' }}
-              >
-                <Radio size={16} style={{ color: '#FF6B6B' }} />
-                {copy.devices.disconnectPort}
-              </button>
-            ) : (
-              <button
-                onClick={connect}
-                className="btn btn-primary"
-                style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px' }}
-              >
-                <Radio size={16} />
-                {copy.devices.connectPort}
-              </button>
-            )
-          )}
         </div>
       </div>
 
-      {/* 2. Top Metrics Overview Grid */}
+      {/* 2. ESP32 Station Hardware Connection Control Section */}
+      <div style={{ marginBottom: '20px' }}>
+        <ESP32Connection />
+      </div>
+
+      {/* 3. Top Metrics Overview Grid */}
       <div className={styles.metricsGrid}>
         {/* Node Status */}
         <div className={styles.metricCard} style={{ '--card-accent': isDeviceOnline ? '#B7FF3C' : '#FF6B6B' } as React.CSSProperties}>
@@ -395,7 +379,7 @@ export default function DeviceManagementPage() {
           <Activity size={18} style={{ color: '#00E5FF' }} /> {copy.devices.sensorDiagnostics}
         </h2>
         <div className={styles.sensorGrid}>
-          {Object.values(sensorHealth).map((sensor) => {
+          {Object.values(sensorHealth).filter(s => s.sensorKey !== 'temperature').map((sensor) => {
             const isWorking = sensor.state === 'working';
             const isFault = sensor.state === 'fault';
             const qualityLabel = getLocalizedSensorQuality(sensor.quality || 'VALID', language);

@@ -1,7 +1,6 @@
 'use client';
 
 import React from 'react';
-import { Cpu, Sparkles, WifiOff } from 'lucide-react';
 
 interface DataSourceBadgeProps {
   mode: 'real' | 'simulation';
@@ -33,7 +32,7 @@ export function DataSourceBadge({
           letterSpacing: '0.04em',
         }}
       >
-        <WifiOff size={11} />
+        <span style={{ fontSize: '8px' }}>×</span>
         <span>UNAVAILABLE</span>
       </span>
     );
@@ -45,8 +44,8 @@ export function DataSourceBadge({
         style={{
           display: 'inline-flex',
           alignItems: 'center',
-          gap: '5px',
-          padding: '2px 7px',
+          gap: '6px',
+          padding: '2px 8px',
           fontSize: '10.5px',
           fontWeight: 700,
           borderRadius: '4px',
@@ -58,7 +57,14 @@ export function DataSourceBadge({
           letterSpacing: '0.04em',
         }}
       >
-        <Cpu size={11} />
+        <span style={{
+          width: '6px',
+          height: '6px',
+          borderRadius: '50%',
+          background: isStale ? '#F2B84B' : '#20B8B0',
+          boxShadow: isStale ? 'none' : '0 0 6px #20B8B0',
+          display: 'inline-block',
+        }} />
         <span>{isStale ? 'ESP32 STALE' : 'ESP32 LIVE'}</span>
       </span>
     );
@@ -69,8 +75,8 @@ export function DataSourceBadge({
       style={{
         display: 'inline-flex',
         alignItems: 'center',
-        gap: '5px',
-        padding: '2px 7px',
+        gap: '6px',
+        padding: '2px 8px',
         fontSize: '10.5px',
         fontWeight: 700,
         borderRadius: '4px',
@@ -82,7 +88,13 @@ export function DataSourceBadge({
         letterSpacing: '0.04em',
       }}
     >
-      <Sparkles size={11} />
+      <span style={{
+        width: '6px',
+        height: '6px',
+        borderRadius: '50%',
+        background: '#F2B84B',
+        display: 'inline-block',
+      }} />
       <span>SIMULATION</span>
     </span>
   );
